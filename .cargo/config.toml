@@ -1,0 +1,4 @@
+# Cross-compiling for Windows from macOS with Homebrew's mingw-w64 (brew install mingw-w64).
+# Remove or override this section when building natively on Windows.
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"

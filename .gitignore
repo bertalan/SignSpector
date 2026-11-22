@@ -1,0 +1,12 @@
+/target/
+/dist/
+*.exe
+
+# Real signed documents (personal data): never committed
+/tests/corpus/
+/tests/out/
+
+.DS_Store
+
+# Claude Code personal settings
+/.claude/settings.local.json

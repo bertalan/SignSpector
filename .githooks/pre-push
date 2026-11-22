@@ -1,0 +1,15 @@
+#!/bin/sh
+# Enabled with: git config core.hooksPath .githooks
+# Second barrier before anything reaches the PUBLIC repository: scans every file of each pushed
+# commit, so a commit made with --no-verify cannot slip through.
+set -e
+zero=0000000000000000000000000000000000000000
+script="$(git rev-parse --show-toplevel)/scripts/check-public.sh"
+sh "$(git rev-parse --show-toplevel)/scripts/audit-status.sh" --gate-push
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ "$local_sha" = "$zero" ] && continue   # branch deletion
+    if [ "$remote_sha" = "$zero" ]; then range="$local_sha"; else range="$remote_sha..$local_sha"; fi
+    for c in $(git rev-list "$range"); do
+        sh "$script" --tree "$c" || { echo "Push blocked: commit $c" >&2; exit 1; }
+    done
+done

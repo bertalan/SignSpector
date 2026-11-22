@@ -1,0 +1,17 @@
+* text=auto eol=lf
+
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Signed XML: bytes must stay exactly as published by AgID
+assets/tsl-it.xml -text
+
+*.exe binary
+*.p7m binary
+*.p7s binary
+*.tsd binary
+*.m7m binary
+*.tsr binary
+
+# Fixtures are byte-exact (signed content, CRLF in MIME): never normalised
+tests/fixtures/** -text

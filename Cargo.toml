@@ -1,0 +1,51 @@
+[package]
+name = "signspector"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.100"
+description = "SignSpector: explodes signed and time-stamped files (.p7m, .p7s, .tsd, .m7m) and reports on their signatures"
+license = "MIT"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "signspector"
+path = "src/main.rs"
+
+[dependencies]
+
+[dev-dependencies]
+assert_cmd = "2.2.2"
+predicates = "3.1.4"
+
+[lints.rust]
+# Parsing untrusted envelopes: no unsafe in our code. Platform glue (Windows console, registry)
+# may opt out locally with #[allow(unsafe_code)] and a SAFETY comment.
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Malformed input must become an error, never a crash.
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+indexing_slicing = "warn"
+string_slice = "warn"
+unreachable = "warn"
+todo = "warn"
+unimplemented = "warn"
+module_name_repetitions = "allow"
+# Parsers of untrusted input (ber, cms, tsp...) also put `#![warn(clippy::arithmetic_side_effects)]`
+# at the top of the module: lengths read from a file must use checked arithmetic.
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+# An overflow we missed must stop that file (caught per file), not wrap silently.
+overflow-checks = true
