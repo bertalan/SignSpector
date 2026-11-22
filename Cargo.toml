@@ -3,7 +3,7 @@ name = "signspector"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.100"
-description = "SignSpector: explodes signed and time-stamped files (.p7m, .p7s, .tsd, .m7m) and reports on their signatures"
+description = "Finds signed and time-stamped files (.p7m, .p7s, .tsd, .m7m), verifies them and reports"
 license = "MIT"
 publish = false
 

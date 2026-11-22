@@ -115,8 +115,8 @@ Cross builds for all targets from macOS (mingw-w64, zig, cargo-zigbuild) are des
   checked against each other. Every reference is verified to exist, and unfinished work is
   surfaced.
 - **Privacy:** this repository is public, so test data is synthetic only. Real signed documents
-  contain personal data and never enter the repository; a pre-commit and pre-push check
-  enforces it.
+  contain personal data and never enter the repository; local git hooks (pre-commit,
+  commit-msg, pre-push) refuse it. After cloning: `git config core.hooksPath .githooks`.
 
 Requirements and design are in [docs/design.md](docs/design.md), the order of work in
 [docs/roadmap.md](docs/roadmap.md), contributor rules in [CLAUDE.md](CLAUDE.md).

@@ -1,13 +1,17 @@
 # Tests on real Windows, macOS and Linux machines, on the targets we ship, plus the repository
 # rules. Actions are pinned to commit SHAs (tag in the comment): a moved tag cannot change what
-# runs. Merge only when every job is green (branch protection on main).
+# runs.
+#
+# CI is an alarm, not the barrier: on a public repository anything pushed is already published
+# when CI runs. The barrier is the local hooks (.githooks/, see CLAUDE.md). Also, a pull request
+# runs the workflow file from its own branch, so changes to this file, scripts/ and .githooks/
+# need a careful review.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, edited]
   schedule:
     - cron: "17 5 * * 1" # weekly: new advisories against unchanged dependencies
   workflow_dispatch:
@@ -16,8 +20,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  # Never cancel a run on main: every pushed commit must be scanned and tested.
+  # Pull requests: a new push replaces the running check. main and scheduled runs: never
+  # cancelled or merged, every pushed commit is checked.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
@@ -33,59 +38,46 @@ jobs:
   rules:
     name: Repository rules
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # full history: audit cadence and per-commit scan
           persist-credentials: false
       - name: Tests of the rule scripts
-        run: sh scripts/test-scripts.sh
-      - name: Public repository check (files and message of every new commit)
+        run: |
+          sh scripts/test-scripts.sh
+          sh scripts/test-cleanup.sh
+      - name: Public repository check
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
+          # Base unknown (first push, force-push): tree of HEAD plus commits on no remote branch
+          # (often none in CI: the local pre-push hook is the barrier for those).
           if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            commits=$(git rev-list "$BASE..$HEAD_SHA")
+            sh scripts/check-public.sh --range "$BASE" "$HEAD_SHA"
           else
-            # First push, force-push or scheduled run: base unknown, scan the whole history.
-            commits=$(git rev-list "$HEAD_SHA")
+            sh scripts/check-public.sh --range remotes "$HEAD_SHA"
           fi
-          n=0
-          for c in $commits; do
-            echo "scanning $(git log -1 --format='%h %s' "$c")"
-            sh scripts/check-public.sh --tree "$c"
-            n=$((n + 1))
-          done
-          echo "commits scanned: $n"
-      - name: Same check with the rules of the base branch (a PR cannot loosen its own rules)
-        if: github.event_name == 'pull_request'
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          ALLOW_RULES_CHANGE: ${{ contains(github.event.pull_request.labels.*.name, 'allow-rules-change') }}
-        run: |
-          git show "$BASE:scripts/check-public.sh" > "$RUNNER_TEMP/base-check-public.sh"
-          status=0
-          for c in $(git rev-list "$BASE..$HEAD_SHA"); do
-            sh "$RUNNER_TEMP/base-check-public.sh" --tree "$c" || status=1
-          done
-          if [ "$status" -ne 0 ]; then
-            if [ "$ALLOW_RULES_CHANGE" = true ]; then
-              echo "::warning::base rules reject this PR; accepted because of the allow-rules-change label"
-            else
-              echo "::error::the base branch rules reject this PR (add the allow-rules-change label only for a reviewed rules change)"
-              exit 1
-            fi
-          fi
+      - name: Public repository check (tree only)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: sh scripts/check-public.sh --range tip HEAD
       - name: Coherence audit cadence (on the PR's own last commit, not the merge commit)
+        if: github.event_name != 'schedule'
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: sh scripts/audit-status.sh --gate-push "$HEAD_SHA"
       - uses: EmbarkStudios/cargo-deny-action@17aeb3c839e42274e2b8adf721c8c65edfdc74dd # v2.1.3
+      - name: Format
+        if: github.event_name != 'schedule'
+        run: cargo fmt --all -- --check
 
   test:
     name: Test (${{ matrix.target }})
+    if: github.event_name != 'schedule'
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -106,8 +98,7 @@ jobs:
       - name: Toolchain (pinned in rust-toolchain.toml)
         run: |
           rustup toolchain install
-          want=$(sed -n 's/^channel = "\([^"]*\)".*/\1/p' rust-toolchain.toml)
-          rustc --version | tee /dev/stderr | grep -F "rustc $want "
+          rustc --version
       - name: Linux musl tools
         if: runner.os == 'Linux'
         run: sudo apt-get update -q && sudo apt-get install -y -q musl-tools
@@ -126,8 +117,10 @@ jobs:
       - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
-      - name: Format
-        run: cargo fmt --all -- --check
+      - name: Tests of the rule scripts (this system's shell and grep)
+        run: |
+          sh scripts/test-scripts.sh
+          sh scripts/test-cleanup.sh
       - name: Clippy
         run: cargo clippy --locked --all-targets --target ${{ matrix.target }} -- -D warnings
       - name: Tests

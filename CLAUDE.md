@@ -6,20 +6,32 @@ the signed documents beside the originals. Runs on Windows, macOS and Linux.
 
 A new project in Rust. It takes the idea of an earlier Windows-only tool by the same author
 (`p7m-extract`, in C#, kept outside this repository in `../SignSpector-legacy/`), but it is
-**not a port**: requirements and design are in `docs/design.md`, the order of work in `docs/roadmap.md`; read both first. Look at the old
-code only when the user asks to.
+**not a port**: requirements and design are in `docs/design.md`, the order of work in
+`docs/roadmap.md`; read both first. Look at the old code only when the user asks to.
 
-## Way of working: TDD
+After cloning, enable the hooks once: `git config core.hooksPath .githooks`.
+
+## Way of working: TDD, for all code
+
+TDD applies to **everything that has logic**: Rust, shell scripts, git hooks, the CI workflow.
+No exception for "infrastructure".
 
 1. **Red**: write the test for one small behaviour first; run it and see it fail for the right
-   reason.
+   reason. For the CI workflow the red is a failing run on GitHub.
 2. **Green**: the smallest code that makes it pass.
 3. **Refactor** with all tests green; `cargo clippy --all-targets -- -D warnings` and
    `cargo fmt` clean.
-4. **Independent review**: run the `fable-reviewer` agent (different model) on the cycle's
-   changes; fix its findings or explain to the user why not.
-5. Commit only when the user asks. The pre-commit hook (`.githooks/`) runs the public-repository
-   check, the audit cadence gate, fmt, clippy and tests.
+4. **Proof**: every PR description quotes the red output (the failing test run) and the green
+   one. Rules that protect (scripts under `scripts/`, safety code) are also checked by breaking
+   each rule on a copy and seeing at least one test fail; a rule nobody's test notices gets a
+   test.
+5. **Independent review**: a **newly started** `fable-reviewer` agent (different model) for
+   every review, briefed only with the scope and where the requirements are: never resumed,
+   never given my conclusions or earlier findings. Fix its findings or explain to the user why
+   not.
+6. Commit only when the user asks. Hooks (`.githooks/`): pre-commit runs the public-repository
+   check, the audit cadence gate, the script tests when scripts or hooks change, fmt, clippy
+   and tests; commit-msg scans the message; pre-push scans every pushed commit.
 
 Logic lives in the library (`src/lib.rs` and modules); `src/main.rs` is only the command line.
 Unit tests sit beside the code (`#[cfg(test)]`); end-to-end tests of the executable go in
@@ -36,8 +48,7 @@ functions or options that never existed, work left half-done. Rules against it:
   draft PRs, red CI): finish it, or close it with a written reason, before starting anything new.
 - **Branches and PRs** (after the first push): one branch per roadmap step
   (`step/1.1-portable-names`), pushed early as a **draft PR**; marked ready only when CI is
-  green and `fable-reviewer` approved; merged into `main` with **rebase** (linear history: every commit counted by the audit cadence stays on `main`), branch deleted. **One step open at
-  a time.** A session never ends with a draft PR without a comment saying its state and next
+  green and `fable-reviewer` approved; merged into `main` with **rebase** (linear history). **One step open at a time.** A session never ends with a draft PR without a comment saying its state and next
   step; abandoned work is closed with the reason, never left open.
 - **Every 3 commits: coherence audit** by the `coherence-auditor` agent (Fable, fresh context,
   read-only): requirements vs tests vs code, every concrete reference checked for existence,
@@ -48,6 +59,11 @@ functions or options that never existed, work left half-done. Rules against it:
   evidence (`file:line` or command output); check it, then fix it in a normal TDD cycle. When a
   doc and the code disagree on *what the tool should do*, ask the user which one is right;
   never silently align the doc to the code or the code to the doc.
+- **After every audit, remove leftovers**: `sh scripts/cleanup.sh` lists them, `--apply` removes
+  the local ones (junk files, clean worktrees, merged local branches). Deletion happens **only
+  locally, from the development environment, never on GitHub**: merged remote branches,
+  stale or draft PRs found on GitHub are reported to the user, who decides there. Untracked
+  files that are not recognisable junk are listed for the user, never deleted silently.
 - Also run an audit, outside the cadence, after an interrupted session, a long pause, or when
   something "remembered" cannot be found in the files.
 
@@ -63,10 +79,15 @@ in the history even if deleted later. Before every commit and push:
 - Commit messages, issues and PR texts follow the same rules (they are public too).
 - Fixtures are synthetic only, with obviously fake identities (`Mario Rossi Test`,
   `example.com`, invalid codici fiscali).
-- `scripts/check-public.sh` enforces it: an allowlist of paths (a new kind of file needs a
-  deliberate change there) plus a content scan, run by the pre-commit hook on the index and by
-  the pre-push hook on every pushed commit. Never bypass it with `--no-verify`; a false
-  positive is fixed by changing the script, reviewed like code.
+- `scripts/check-public.sh` enforces part of it: an allowlist of paths (a new kind of file
+  needs a deliberate change there; no PR texts, notes or key files) plus a content scan of
+  files, file names, commit messages and identities, run by the pre-commit, commit-msg and
+  pre-push hooks. Never bypass them with `--no-verify`; a false positive is fixed by changing
+  the script, reviewed like code. It does **not** detect names of people, phone numbers, host
+  names or IPs: those need review.
+- **The hooks are the barrier, CI is only an alarm**: when CI runs, the push is already public.
+  A pull request also runs its own version of the workflow, so changes to `.github/`,
+  `scripts/` and `.githooks/` get a careful review.
 - Before the first push of a session, review the exact file list (`git show --stat`) with the
   user. Pushing is always the user's decision.
 

@@ -46,6 +46,13 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    "Public repository" section of `CLAUDE.md`); run `sh scripts/check-public.sh --staged`
    when changes are staged.
 
+## Proof of TDD
+
+The PR description must quote the red run (the failing tests before the change) and the green
+one. Missing proof is a finding. For code that protects (scripts under `scripts/`, safety
+code), break each rule on a copy (outside the repository) and check that a test fails; report
+every rule whose breakage no test notices.
+
 ## How to work
 
 - Run: `cargo nextest run`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`.

@@ -19,21 +19,25 @@ Read first: `CLAUDE.md`, `docs/design.md`, `docs/roadmap.md`, the latest report 
    unpushed commits, unmerged or stale branches, open and draft pull requests (with their
    age), red or missing CI runs, `TODO`/`FIXME`/`todo!`/`unimplemented!`/`#[ignore]`. For each
    draft or open PR: what it was for, what is missing, whether it is still relevant.
-2. **Requirements <-> tests <-> code.** For every requirement or roadmap step marked done:
+2. **Leftovers.** Run `sh scripts/cleanup.sh` (dry run) and report what it lists. Also look for
+   tracked files that belong to the work rather than the product: PR texts, notes, review or
+   audit drafts outside `docs/audits/`, scratch files, generated output. Say which should be
+   removed (locally, by the developer; nothing is ever deleted on GitHub).
+3. **Requirements <-> tests <-> code.** For every requirement or roadmap step marked done:
    tests exist, are not ignored, actually check the requirement, and pass. For every module
    and public function: which requirement it serves. Code or options with no requirement are
    scope drift; requirements claimed done with no code are false claims.
-3. **Hallucination check.** Every concrete reference in docs, comments, commit messages and
+4. **Hallucination check.** Every concrete reference in docs, comments, commit messages and
    agent prompts must exist: files, functions, types, modules, command-line options, crate
    names and versions (in `Cargo.toml`/`Cargo.lock`), scripts, hook behaviour, standards
    and laws cited. Verify each one; list those that do not exist or say something different.
-4. **Docs agree with each other.** `CLAUDE.md`, `design.md`, `roadmap.md`, the agent prompts,
+5. **Docs agree with each other.** `CLAUDE.md`, `design.md`, `roadmap.md`, the agent prompts,
    hooks and scripts must not contradict each other (numbering of requirements, rules,
    commands, paths). Note anything outdated.
-5. **Project rules.** Safety rules (R28–R34), accessibility (R35–R39), uninstall (R40–R43),
+6. **Project rules.** Safety rules (R28–R34), accessibility (R35–R39), uninstall (R40–R43),
    language rules (English in the repository, translated user interface), public-repository
    rules (`sh scripts/check-public.sh --tree HEAD`).
-6. **Health.** `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`,
+7. **Health.** `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`,
    `cargo nextest run`, `cargo test --doc`, `cargo deny check`; report the actual results.
 
 Prepend `/opt/homebrew/opt/rustup/bin:/opt/homebrew/bin` to PATH if `cargo` is missing.

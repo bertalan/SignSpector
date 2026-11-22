@@ -17,14 +17,16 @@ The order follows two ideas:
   branch and one draft PR per step, coherence audit every 3 commits (`CLAUDE.md`).
 - [x] 0.2 GitHub Actions CI (`.github/workflows/ci.yml`) on Windows, macOS, Linux, on the
   shipped targets (windows-gnu, linux-musl, macOS arm64 + x86_64 build): fmt, clippy, nextest,
-  doctests, release build, cargo deny (also weekly); public-repository scan of the files and
-  message of every new commit, also with the base branch's rules; audit cadence on the PR head;
-  tests of the rule scripts. Branch protection on `main` requires all jobs green.
+  doctests, release build, cargo deny (also weekly), tests of the rule scripts on all three
+  systems; public-repository scan of every new commit (`check-public.sh --range`); audit
+  cadence on the PR head. Branch protection on `main`: all jobs green, linear history, no
+  force-push. CI is an alarm; the local hooks are the barrier.
 - [ ] 0.3 Fixture generator `scripts/make-fixtures.sh` (Homebrew `openssl@3`): test CA, signers,
   simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only, private keys never committed
   (generated at test time or kept in `target/`).
 
 ## Phase 1: safe writing core (no cryptography)
+- [x] 1.0 **R1a envelope names** (`is_envelope`): delivered with the project setup (0.1).
 - [ ] 1.1 **R32 portable names** (`names` module). `portable_name(raw) -> PortableName { name,
   changed }`. Tests, one per rule: forbidden characters, control characters, trailing dot and
   space, reserved Windows names (any case, with extension, superscript digits), leading `-`

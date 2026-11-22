@@ -30,7 +30,7 @@ beside the originals, ready to open.
 - R4. Unwrap nested layers until the signed document is reached; report each layer.
 - R5. RFC 5544 TimeStampedData (`.tsd`) and `.m7m` (MIME with signature and time stamp).
 - R6. Detached `.p7s`: look for the signed file beside it.
-- R7. A malformed file never stops the run: it becomes a "problema" line for that file.
+- R7. A malformed file never stops the run: it becomes a "problem" line for that file (source wording in English, translated per R27).
 
 ### Verifying
 - R8. Each signature: digest of the content, signed attributes, signature (RSA PKCS#1 v1.5,
@@ -38,7 +38,7 @@ beside the originals, ready to open.
 - R9. Signer certificate: validity at the reference time (time stamp if present, otherwise
   signing time, otherwise now), key usage (non-repudiation), qualified / QSCD flags.
 - R10. Chain to a CA of the AgID trust list (embedded, refreshed online daily, usable offline);
-  optionally to the system trust store, labelled "riconosciuto dal sistema".
+  optionally to the system trust store, labelled "recognised by the system" (translated per R27).
 - R11. Countersignatures.
 - R12. Time stamps (RFC 3161): imprint matches, TSA signature and chain valid.
 - *To decide*: revocation (CRL/OCSP)? Brainpool curves? Download of missing intermediates (AIA)?
@@ -228,6 +228,9 @@ Library crate with one module per concern, the executable only parses arguments 
 
 | Module | Role | Candidate crates |
 |---|---|---|
+| `names` | portable file names, collision keys, free names (R32, R17) | `unicode-normalization` |
+| `i18n` | translation layer, language choice (R27) | to decide (1.4) |
+| `confirm` | counts, questions, typed answers, `ConfirmedPlan` (R28–R30) | `std::io::IsTerminal` |
 | `ber` | BER/DER reader, indefinite lengths, own code (RustCrypto `der` is DER-only) | none |
 | `cms` | SignedData, signer infos, attributes, countersignatures | `ber` |
 | `tsp` | RFC 3161 tokens, RFC 5544 `.tsd`, `.m7m` | `cms` |
@@ -235,13 +238,12 @@ Library crate with one module per concern, the executable only parses arguments 
 | `x509` | certificates, names, extensions, chain building | `x509-parser` |
 | `tsl` | AgID trust list: embedded copy, refresh, cache | `roxmltree`, `flate2`, `ureq` + rustls, `directories` |
 | `scan` | folder walk, per-file pipeline, parallelism | `std::thread::scope` |
-| `extract` | safe writing, name collisions, content type | `zip` |
+| `extract` | safe writer, write log, `undo` (R31, R33), content type (R18) | `zip` |
 | `report` | console, HTML, JSON | `serde_json`, `anstream` |
-| `menu` | context-menu install per OS | `winreg` (Windows) |
+| `menu` | context-menu install, manifest, `uninstall` (R21, R40–R43) | `winreg` (Windows) |
 | `main.rs` | arguments, help | `clap` |
 
-Order of work: `ber` -> `cms` -> `crypto` -> `x509` -> `tsp` -> `tsl` -> `scan` -> `report`
--> `extract` -> CLI -> `menu`. Each step in TDD (see `CLAUDE.md`).
+The order of work is in `roadmap.md` (safety-critical, pure parts first).
 
 ## Test data
 
@@ -271,6 +273,13 @@ The Windows executable must import only system DLLs (checked: `KERNEL32`, `ntdll
 confirm antivirus, SmartScreen and AppLocker accept a mingw-built executable.
 
 ## Open questions
+
+- `ring` as the crypto provider of rustls (for the TSL refresh over HTTPS): it contains C and
+  assembly, cross-compiles fine, and is the only provider not banned in `deny.toml`
+  (`aws-lc-rs` is). Accept it as an exception to "pure Rust", or look for a pure-Rust provider
+  (e.g. `rustls-rustcrypto`)? To decide before roadmap 3.3.
+- Until the translation layer exists (roadmap 1.4), the placeholder message in `src/main.rs` is
+  the only hard-coded user-facing text; it goes away with 1.4.
 
 - Does the company proxy require integrated authentication (NTLM/Kerberos) to reach
   `eidas.agid.gov.it`? If yes, Windows needs WinHTTP for the TSL refresh.
