@@ -85,8 +85,12 @@ if git rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
 else
     echo "branch $current: no upstream"
 fi
-unmerged=$(git for-each-ref --no-merged refs/heads/main --format='  %(refname)' refs/heads 2>/dev/null | sed 's|refs/heads/||')
-[ -n "$unmerged" ] && { echo "local branches not merged into main:"; printf '%s\n' "$unmerged"; }
+if git rev-parse -q --verify refs/heads/main >/dev/null; then
+    unmerged=$(git for-each-ref --no-merged refs/heads/main --format='  %(refname)' refs/heads | sed 's|refs/heads/||')
+    [ -n "$unmerged" ] && { echo "local branches not merged into main:"; printf '%s\n' "$unmerged"; }
+else
+    echo "no local branch main: unmerged branches not checked"
+fi
 remote_unmerged=$(git for-each-ref --no-merged refs/remotes/origin/main --format='  %(refname)' refs/remotes 2>/dev/null | sed 's|refs/remotes/||' | grep -v '/HEAD$' || true)
 [ -n "$remote_unmerged" ] && { echo "remote branches not merged into main:"; printf '%s\n' "$remote_unmerged"; }
 

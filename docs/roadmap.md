@@ -45,8 +45,9 @@ The order follows two ideas:
     the script's text (a word list) and with input on a pipe, never at a real terminal; the
     check "still merged into main" (with full ref names) just before a branch is deleted has
     no test (it guards a race);
-  - `audit-status.sh`: the "AUDIT DUE" line, the unfinished-work section and the "RED CHECKS
-    on open pull requests" line have no test;
+  - `audit-status.sh`: the "AUDIT DUE" line, the "RED CHECKS on open pull requests" line and,
+    in the unfinished-work section, uncommitted changes, stashes and the upstream line have
+    no test (unmerged local and remote branches do);
   - report-mode tests pass if the script prints nothing in that section.
   - from the targeted review of the third-round fixes:
     - the first push to a new remote scans the whole history and stops on the accepted
@@ -74,13 +75,14 @@ The order follows two ideas:
   the total; regular files only, symbolic links not followed and
   hidden folders skipped (both listed in the report),
   unreadable folders listed; count, total size, subfolders. Risky-folder detection (drive
-  roots, home, Desktop, Documents, system folders, > 10,000 envelopes).
+  roots, home, Desktop, Documents, system folders, network share roots, > 10,000 envelopes).
 - [ ] 1.6 **Confirmation logic** (R28–R30): pure functions turning (counts, folder, terminal,
   dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the
   answer: typed count (R28 risky folder,
   R29), yes/no default No (R19). Typestate `ConfirmedPlan`. Tests: Enter, `n`, wrong number,
   changing command, and `check` or `extract --plan` on a risky folder, refused from a
-  script; `check --plan` and the item lists of `--plan` run everywhere; symbolic links
+  script; `check --plan`, `extract --plan` on an ordinary folder and the item lists of
+  `--plan` run from a script; symbolic links
   resolved before the risky-folder check (all kinds of risky folder, not only shares);
   several folders (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
 - [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, removal of partial files,
@@ -113,13 +115,14 @@ The order follows two ideas:
   TSA); negative test: a forged or untrusted time stamp changes no verdict. Which time stamp
   counts when there are several.
 - [ ] 3.8 Content sniffing for names without a usable extension (R18).
-- [ ] 3.9 Revocation (R49): data embedded in the signature, CRL per CA with cache, one check
-  per certificate, "revocation not checked" offline. Negative tests: revoked before and after
-  the time stamp, no time stamp (judged now), stale or forged embedded data, forged or
-  oversized CRL, CRL older than the reference time, expired certificate no longer listed,
-  distribution point outside `http`/`https`. Also to define with the tests: revocation reasons
-  (`removeFromCRL`, `keyCompromise`); an embedded CRL older than the reference time when the
-  CA's CRL cannot be fetched ("revocation not checked").
+- [ ] 3.9 Revocation (R49): define the case of a revocation time equal to the time stamp; data
+  embedded in the signature, CRL per CA with cache, one check per certificate, "revocation not
+  checked" offline. Negative tests: revoked before and after the time stamp, no time stamp
+  (cannot be determined, never invalid), stale or forged embedded data, forged or oversized CRL,
+  CRL older than the reference time, expired certificate no longer listed, distribution point
+  outside `http`/`https`. Also to define with the tests: revocation reasons (`removeFromCRL`,
+  `keyCompromise`); an embedded CRL older than the reference time when the CA's CRL cannot be
+  fetched ("revocation not checked").
 
 ## Phase 4: output
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).

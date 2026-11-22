@@ -149,8 +149,8 @@ report), a risky one is refused, and nothing is written (R30).
   be skipped. Zero envelopes: say so and stop. **Risky folder**: root of a drive or volume,
   the user's home, Desktop, Documents, system folders (`C:\Windows`, `Program Files`,
   `/System`, `/usr`, `/etc`...), network share roots, or **more than 10,000 envelopes**: a
-  stronger warning and the user must type the number of envelopes. Every kind of risky
-  folder is judged on the path after resolving symbolic links.
+  stronger warning and the user must type the number of envelopes. Every path-based kind of
+  risky folder is judged on the path after resolving symbolic links.
 - R29. **Confirm before writing.** Extraction first builds the complete write plan and shows
   it: new documents, documents already present with identical content (not rewritten),
   documents saved under an alternative name `x (1).pdf`, and "existing files modified: 0"
@@ -215,8 +215,8 @@ report), a risky one is refused, and nothing is written (R30).
   `undo` with a modified file. Confirmation (R19, R28–R30):
   - from a script: every changing command, `check` and `extract --plan` on a risky folder,
     and `--interactive` without a desktop refused with exit 2; `check` on an ordinary folder,
-    `check --plan` anywhere and `--plan` of `undo`, the menus and `uninstall` run without a
-    question; output redirected counts as a script;
+    `check --plan` anywhere, `extract --plan` on an ordinary folder and `--plan` of `undo`,
+    the menus and `uninstall` run without a question; output redirected counts as a script;
   - `--interactive` with a terminal keeps the questions in the terminal;
   - `--plan` writes nothing, not even the report;
   - time: a back-dated signing-time attribute changes no verdict; without a time stamp the
