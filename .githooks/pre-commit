@@ -10,6 +10,12 @@ sh "$(git rev-parse --show-toplevel)/scripts/check-public.sh" --staged
 # Coherence audit every 3 commits (CLAUDE.md, "Coherence audits and unfinished work").
 sh "$(git rev-parse --show-toplevel)/scripts/audit-status.sh" --gate-commit
 
+# Changes to the rules themselves: run their tests.
+if git diff --cached --name-only | grep -Eq '^(scripts|\.githooks)/'; then
+    sh "$(git rev-parse --show-toplevel)/scripts/test-scripts.sh"
+    sh "$(git rev-parse --show-toplevel)/scripts/test-cleanup.sh"
+fi
+
 # Non-interactive shells (GUI git clients, editors, agents) do not read ~/.zshrc.
 { command -v cargo && command -v cargo-nextest; } >/dev/null || PATH="/opt/homebrew/opt/rustup/bin:/opt/homebrew/bin:$HOME/.cargo/bin:$PATH"
 if ! command -v cargo >/dev/null; then
