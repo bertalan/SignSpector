@@ -1,7 +1,7 @@
 # SignSpector
 
 Finds signed and time-stamped files (`.p7m`, `.p7s`, `.tsd`, `.m7m`) under a folder, verifies
-signatures and time stamps (AgID trust list) and writes an HTML report; on request it extracts
+signatures and time stamps (European trusted lists) and writes an HTML report; on request it extracts
 the signed documents beside the originals. Runs on Windows, macOS and Linux.
 
 A new project in Rust. It takes the idea of an earlier Windows-only tool by the same author
@@ -48,19 +48,25 @@ functions or options that never existed, work left half-done. Rules against it:
   draft PRs, red CI): finish it, or close it with a written reason, before starting anything new.
 - **Branches and PRs** (after the first push): one branch per roadmap step
   (`step/1.1-portable-names`), pushed early as a **draft PR**; marked ready only when CI is
-  green and `fable-reviewer` approved; merged into `main` with **rebase** (linear history). **One step open at a time.** A session never ends with a draft PR without a comment saying its state and next
+  green and `fable-reviewer` approved; merged into `main` **locally by fast-forward**
+  (`git switch main && git merge --ff-only step/x && git push`): the same commits CI checked,
+  linear history, pre-push hook run. The GitHub merge button is not used (it rewrites commits). **One step open at a time.** A session never ends with a draft PR without a comment saying its state and next
   step; abandoned work is closed with the reason, never left open.
-- **Every 3 commits: coherence audit** by the `coherence-auditor` agent (Fable, fresh context,
+- **Every 5 commits: coherence audit** by the `coherence-auditor` agent (Fable, fresh context,
   read-only): requirements vs tests vs code, every concrete reference checked for existence,
   docs agreeing with each other, unfinished work, project rules, health. Its report is saved as
   `docs/audits/NNNN-YYYY-MM-DD.md` and committed alone (`audit: NNNN`). The hooks enforce the
-  cadence: pre-commit refuses a 4th commit without an audit, pre-push refuses to push past it.
+  cadence: pre-commit refuses a 6th commit without an audit, pre-push refuses to push past it.
+  The gate is a reminder, not a proof: any added report satisfies it; the review of the report
+  is what counts.
 - **Findings are verified before acting**: the auditor can be wrong too. Each finding carries
   evidence (`file:line` or command output); check it, then fix it in a normal TDD cycle. When a
   doc and the code disagree on *what the tool should do*, ask the user which one is right;
   never silently align the doc to the code or the code to the doc.
 - **After every audit, remove leftovers**: `sh scripts/cleanup.sh` lists them, `--apply` removes
-  the local ones (junk files, clean worktrees, merged local branches). Deletion happens **only
+  the local ones (`.DS_Store`, `*.orig`, `*.rej` outside ignored folders; merged local
+  branches). Worktrees, backups (`*.bak`), editor files and other untracked files are only
+  listed; ignored folders (`tests/corpus/`, `target/`) are never touched. Deletion happens **only
   locally, from the development environment, never on GitHub**: merged remote branches,
   stale or draft PRs found on GitHub are reported to the user, who decides there. Untracked
   files that are not recognisable junk are listed for the user, never deleted silently.
@@ -85,6 +91,15 @@ in the history even if deleted later. Before every commit and push:
   pre-push hooks. Never bypass them with `--no-verify`; a false positive is fixed by changing
   the script, reviewed like code. It does **not** detect names of people, phone numbers, host
   names or IPs: those need review.
+- **GitHub settings** (set 2026-11-22, changed only with the user's explicit authorisation):
+  `main` protected (the four CI jobs green on an up-to-date commit, also for admins; linear
+  history; no force-push, no deletion; no PR required, merges are local fast-forwards); merge
+  commits and squash disabled; no automatic branch deletion; **only collaborators may open
+  PRs, issues and comments** (interaction limit, 6 months at most: the session report warns 30
+  days before it expires); fork PR workflows always need approval; only GitHub-owned actions
+  plus `Swatinem/rust-cache`, `taiki-e/install-action`, `EmbarkStudios/cargo-deny-action`,
+  pinned by SHA; wiki and projects off; vulnerability alerts on, no Dependabot PRs; secret
+  scanning with push protection on.
 - **The hooks are the barrier, CI is only an alarm**: when CI runs, the push is already public.
   A pull request also runs its own version of the workflow, so changes to `.github/`,
   `scripts/` and `.githooks/` get a careful review.
@@ -101,9 +116,10 @@ in the history even if deleted later. Before every commit and push:
   (`--lang`, see R27 in `docs/design.md`). Source strings are English; every user-facing text
   goes through the translation layer, never hard-coded, and each new text gets its Italian
   translation in the same change.
-- Dry run by default: without `extract`/`--apply` nothing is written except the report. The
-  same applies to commands that change the system (`install-menu`): without `--apply` they only
-  show what they would do.
+- `check` writes nothing but the report. `extract` and `undo` write only after the typed
+  confirmation (R28, R29), with no `--apply`. `--apply` exists only for commands that change
+  the system (`install-menu`, `uninstall-menu`, `uninstall`) and for `scripts/cleanup.sh`:
+  without it they only show what they would do.
 - Originals are only read, never modified, moved or renamed; existing files are never
   overwritten ("x.pdf" exists with other content -> "x (1).pdf").
 - **Never process right after a folder is chosen**: first count and ask for confirmation

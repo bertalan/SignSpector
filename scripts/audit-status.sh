@@ -9,7 +9,7 @@
 # An audit is a non-merge commit that only adds files under docs/audits/ (see CLAUDE.md, "Coherence
 # audits"); a commit mixing a report with other changes, or deleting one, does not count.
 set -u
-AUDIT_EVERY=3
+AUDIT_EVERY=5
 
 cd "$(git rev-parse --show-toplevel)" || exit 2
 
@@ -56,6 +56,11 @@ esac
 
 section() { printf '\n== %s\n' "$1"; }
 
+if [ "$(git config core.hooksPath)" != .githooks ]; then
+    echo "HOOKS NOT ENABLED in this clone: nothing stops a commit or push with personal data."
+    echo "Run: git config core.hooksPath .githooks"
+fi
+
 section "Audit cadence"
 echo "commits since last audit: $since (audit every $AUDIT_EVERY)"
 if [ -n "$last_audit" ]; then
@@ -89,6 +94,16 @@ sh scripts/cleanup.sh || true
 
 section "GitHub"
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    # Only collaborators may open PRs, issues and comments; GitHub limits this to 6 months.
+    repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null)
+    expires=$(gh api "repos/$repo/interaction-limits" --jq '.expires_at // ""' 2>/dev/null | cut -c1-10)
+    warn_from=$(date -u -v+30d +%Y-%m-%d 2>/dev/null || date -u -d '+30 days' +%Y-%m-%d)
+    if [ -z "$expires" ]; then
+        echo "INTERACTION LIMIT NOT ACTIVE: anyone can open PRs and issues. Renew it on GitHub:"
+        echo "  Settings > Moderation options > Interaction limits > Limit to repository collaborators (6 months)"
+    elif [ "$expires" != "$warn_from" ] && [ "$(printf '%s\n%s\n' "$expires" "$warn_from" | sort | head -n 1)" = "$expires" ]; then
+        echo "INTERACTION LIMIT EXPIRES on $expires: renew it on GitHub (Settings > Moderation options)."
+    fi
     prs=$(gh pr list --state open --json number,title,isDraft,updatedAt,headRefName \
         --jq '.[] | "#\(.number) \(if .isDraft then "DRAFT" else "open" end) \(.headRefName) updated \(.updatedAt[:10]): \(.title)"' 2>/dev/null)
     [ -n "$prs" ] && { echo "open pull requests:"; printf '%s\n' "$prs"; } || echo "no open pull requests"

@@ -1,7 +1,6 @@
 #!/bin/sh
 # The repository is PUBLIC: refuse anything that may carry personal or sensitive data.
 #   scripts/check-public.sh --staged          files in the index (pre-commit hook)
-#   scripts/check-public.sh --tree REV        files, message and identities of one commit
 #   scripts/check-public.sh --range BASE TIP  every commit of a push (pre-push hook, CI):
 #       BASE = a commit     commits in BASE..TIP
 #       BASE = remotes      commits of TIP not on any remote branch (new branch)
@@ -48,7 +47,10 @@ problem() { echo "  $1: $2" >&2; fail=1; }
 
 # Scans the file $tmp; $1 names it in messages.
 scan_tmp() {
-    content=$(grep -aE "$secret|$local_path|$codice_fiscale|$email" "$tmp") || return 0
+    content=$(grep -aE "$secret|$local_path|$codice_fiscale|$email" "$tmp")
+    rc=$?
+    [ "$rc" -eq 1 ] && return 0          # no match
+    [ "$rc" -eq 0 ] || cannot "grep failed on $1"
     printf '%s\n' "$content" | grep -aEq "$secret" && problem "$1" "private key or token"
     printf '%s\n' "$content" | grep -aEq "$local_path" && problem "$1" "local path with a user name"
     printf '%s\n' "$content" | grep -aEq "$codice_fiscale" && problem "$1" "possible codice fiscale"
@@ -105,12 +107,6 @@ case "${1:-}" in
     --staged)
         files=$(git -c core.quotepath=off diff --cached --name-only --diff-filter=ACMRT) || cannot "git diff failed"
         check_files ":" "$files" ;;
-    --tree)
-        rev=${2:-}; [ -n "$rev" ] || cannot "revision missing"
-        verify_commit "$rev"
-        files=$(tree_files "$rev") || exit 2
-        check_files "$rev:" "$files"
-        check_meta "$rev" ;;
     --range)
         base=${2:-}; tip=${3:-}
         [ -n "$base" ] && [ -n "$tip" ] || cannot "usage: --range BASE TIP"
@@ -137,7 +133,7 @@ case "${1:-}" in
         # Comment lines are scanned too: `git commit -m` keeps them in the commit.
         cp "$2" "$tmp" || cannot "cannot read $2"
         scan_tmp "commit message" ;;
-    *) echo "usage: $0 --staged | --tree REV | --range BASE TIP | --message FILE" >&2; exit 2 ;;
+    *) echo "usage: $0 --staged | --range BASE TIP | --message FILE" >&2; exit 2 ;;
 esac
 
 if [ "$fail" -ne 0 ]; then

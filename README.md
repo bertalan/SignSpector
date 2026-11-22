@@ -1,8 +1,8 @@
 # SignSpector
 
 **Cross-platform batch verifier for CAdES signatures and time stamps** (`.p7m`, `.p7s`, `.tsd`,
-`.m7m`) against the Italian AgID Trusted List, with an accessible HTML report and safe
-extraction of the signed documents.
+`.m7m`) against the European trusted lists (Italy, Romania, France and every other EU/EEA
+country), with an accessible HTML report and safe extraction of the signed documents.
 
 > **Status: early development.** Nothing is usable yet: the project is being built step by
 > step, test first. See the [roadmap](docs/roadmap.md) for what is done and what comes next.
@@ -20,8 +20,9 @@ Point SignSpector at a folder and it will:
   nested signatures, RFC 5544 time-stamped data;
 - **verify** each signature (RSA, RSA-PSS, ECDSA; SHA-1/2), the signer's certificate
   (validity, key usage, qualified status), the chain up to a CA of the
-  [AgID Trusted List](https://eidas.agid.gov.it/TL/TSL-IT.xml), countersignatures and RFC 3161
-  time stamps;
+  national trusted list of the certifier's country, reached through the
+  [EU List of Trusted Lists](https://ec.europa.eu/tools/lotl/eu-lotl.xml) and chosen
+  automatically from the signatures found, countersignatures and RFC 3161 time stamps;
 - **report** the results on the console and in a self-contained HTML report (and JSON for
   scripts);
 - **extract**, only on request, the signed documents beside the originals:
@@ -91,8 +92,8 @@ signspector install-menu --apply  # add the context-menu entries
 signspector uninstall --apply     # remove everything SignSpector installed
 ```
 
-Commands that change files or the system only show what they would do unless `--apply` is
-given.
+`extract` and `undo` write only after you confirm the plan by typing the number of files.
+Commands that change the system only show what they would do unless `--apply` is given.
 
 ## Building from source
 
@@ -111,7 +112,7 @@ Cross builds for all targets from macOS (mingw-w64, zig, cargo-zigbuild) are des
 - **Test-driven:** every behaviour starts as a failing test.
 - **Independent review:** each step is reviewed by a second AI model, different from the one
   that wrote the code, so that the review is not anchored on the author's reasoning.
-- **Coherence audits** every three commits: requirements, tests, code and documentation are
+- **Coherence audits** every five commits: requirements, tests, code and documentation are
   checked against each other. Every reference is verified to exist, and unfinished work is
   surfaced.
 - **Privacy:** this repository is public, so test data is synthetic only. Real signed documents

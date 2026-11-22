@@ -14,7 +14,7 @@ The order follows two ideas:
 
 ## Phase 0: groundwork
 - [x] 0.1 First commit and push to `main` (after review of the file list). From then on: one
-  branch and one draft PR per step, coherence audit every 3 commits (`CLAUDE.md`).
+  branch and one draft PR per step, coherence audit every 5 commits, merge by local fast-forward (`CLAUDE.md`).
 - [x] 0.2 GitHub Actions CI (`.github/workflows/ci.yml`) on Windows, macOS, Linux, on the
   shipped targets (windows-gnu, linux-musl, macOS arm64 + x86_64 build): fmt, clippy, nextest,
   doctests, release build, cargo deny (also weekly), tests of the rule scripts on all three
@@ -62,10 +62,15 @@ The order follows two ideas:
 ## Phase 3: verification
 - [ ] 3.1 `crypto`: digests, RSA PKCS#1 v1.5, RSA-PSS, ECDSA P-256/P-384/P-521 (R8).
 - [ ] 3.2 `x509`: certificate fields, key usage, qualified/QSCD statements, validity (R9).
-- [ ] 3.3 `tsl`: embedded AgID list, parsing, online refresh, cache, offline (R10).
-- [ ] 3.4 Chain building against the TSL and the system store (R10).
-- [ ] 3.5 Countersignatures (R11); `tsp`: RFC 3161, `.tsd`, `.m7m` (R5, R12); detached `.p7s` (R6).
-- [ ] 3.6 Content sniffing for names without a usable extension (R18).
+- [ ] 3.3 `xmldsig`: exclusive C14N and XML signature verification (R44), test first,
+  fuzzed like `ber`.
+- [ ] 3.4 `tsl`: LOTL and national lists, signatures verified, embedded LOTL + Italian list,
+  service history (R44, R48).
+- [ ] 3.5 Choice of lists from the certifiers' countries, download, cache, `--trust-lists`,
+  `--offline` (R45–R47).
+- [ ] 3.6 Chain building against the TSL and the system store (R10).
+- [ ] 3.7 Countersignatures (R11); `tsp`: RFC 3161, `.tsd`, `.m7m` (R5, R12); detached `.p7s` (R6).
+- [ ] 3.8 Content sniffing for names without a usable extension (R18).
 
 ## Phase 4: output
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).

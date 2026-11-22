@@ -1,6 +1,6 @@
 ---
 name: coherence-auditor
-description: Periodic coherence audit on a different model (Fable), every 3 commits and whenever unfinished work is suspected. Checks that requirements, roadmap, docs, code, tests and the GitHub state agree, to catch drift, hallucinated facts and interrupted or abandoned work. Read-only: returns a report to be saved in docs/audits/.
+description: Periodic coherence audit on a different model (Fable), every 5 commits and whenever unfinished work is suspected. Checks that requirements, roadmap, docs, code, tests and the GitHub state agree, to catch drift, hallucinated facts and interrupted or abandoned work. Read-only: returns a report to be saved in docs/audits/.
 model: fable
 tools: Read, Grep, Glob, Bash
 ---
@@ -36,7 +36,7 @@ Read first: `CLAUDE.md`, `docs/design.md`, `docs/roadmap.md`, the latest report 
    commands, paths). Note anything outdated.
 6. **Project rules.** Safety rules (R28–R34), accessibility (R35–R39), uninstall (R40–R43),
    language rules (English in the repository, translated user interface), public-repository
-   rules (`sh scripts/check-public.sh --tree HEAD`).
+   rules (`sh scripts/check-public.sh --range tip HEAD`).
 7. **Health.** `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`,
    `cargo nextest run`, `cargo test --doc`, `cargo deny check`; report the actual results.
 

@@ -37,8 +37,9 @@ beside the originals, ready to open.
   RSA-PSS, ECDSA P-256/P-384/P-521; SHA-1/256/384/512).
 - R9. Signer certificate: validity at the reference time (time stamp if present, otherwise
   signing time, otherwise now), key usage (non-repudiation), qualified / QSCD flags.
-- R10. Chain to a CA of the AgID trust list (embedded, refreshed online daily, usable offline);
-  optionally to the system trust store, labelled "recognised by the system" (translated per R27).
+- R10. Chain to a CA of a **European trusted list** (R44–R48): the national list of the
+  certifier's country, reached through the EU List of Trusted Lists; optionally to the system
+  trust store, labelled "recognised by the system" (translated per R27).
 - R11. Countersignatures.
 - R12. Time stamps (RFC 3161): imprint matches, TSA signature and chain valid.
 - *To decide*: revocation (CRL/OCSP)? Brainpool curves? Download of missing intermediates (AIA)?
@@ -51,17 +52,24 @@ beside the originals, ready to open.
 - *To decide*: layout and content of the report (start from the old tool's report as a sketch?).
 
 ### Extracting
-- R16. Dry run by default. `extract` (or `--apply`) writes the signed documents beside the
-  originals: `Relazione.pdf.p7m` -> `Relazione.pdf`.
+- R16. `check` (the default) writes nothing but the report. `extract` writes the signed
+  documents beside the originals (`Relazione.pdf.p7m` -> `Relazione.pdf`) after the two
+  confirmations of R28 and R29: no `--apply` is needed, the typed confirmation is the safeguard.
+  `signspector <dir> --apply` is kept as an alias of `extract` and goes through the same
+  confirmations.
 - R17. Never overwrite: same content already there -> nothing to do; different content ->
   `Relazione (1).pdf`. Originals are never modified, moved or renamed.
 - R18. Name without a usable extension: guess it from the content (PDF, ZIP-based office
   formats, XML, images).
 
 ### Using it
-- R19. Command line: `signspector check <dir>` (default), `signspector extract <dir>`;
-  options `--open`, `--report`, `--no-report`, `--threads`, `--offline`, `--trust-list <file>`,
-  `--json <file>`, `--lang <code>`. Help translated (R27).
+- R19. Command line. Commands: `check <dir>` (default), `extract <dir>`, `undo <report>`,
+  `install-menu`, `uninstall-menu`, `uninstall`. `--apply` exists only for the commands that
+  change the system (`install-menu`, `uninstall-menu`, `uninstall`), which have no write plan
+  to confirm; without it they only show what they would do. Options: `--open`, `--report`,
+  `--no-report`, `--json <file>`, `--threads`, `--offline`, `--trust-lists <auto|all|codes>`,
+  `--trust-list <file>`, `--lang <code>`, `--interactive`, `--plain`, `--no-color`, `--yes`,
+  `--expect <n>`. Help translated (R27).
 - R20. Interactive end of run (double-click on Windows, context menu, `--interactive`): after
   the analysis, offer to view the report or to extract; extraction goes through the write
   plan and its confirmation (R29) and reuses the analysis already done.
@@ -141,14 +149,45 @@ second, separate confirmation. Writing never replaces an existing file.
 - R33. **Undo.** The report records every file written with its SHA-256.
   `signspector undo <report>` removes only files written by SignSpector whose content still
   matches that hash; changed or missing files are listed and left alone; originals are never
-  touched. Like every command that changes files: dry run by default, it shows what it would
-  remove and asks for the typed count (R29), `--yes --expect <n>` without a terminal (R30).
+  touched. Like `extract`: it shows what it would remove and removes only after the typed
+  count (R29); `--yes --expect <n>` without a terminal (R30); no `--apply`.
 - R34. **Proof by tests.** A shared test helper snapshots the whole folder (paths + SHA-256)
   before and after every end-to-end test: originals identical, nothing changed but the
   confirmed plan. Dedicated tests: empty answer, `n`, wrong number; file appearing between
   plan and write; names with `..`, reserved names, forbidden characters, NFC/NFD and case
   collisions, over-long names; symbolic link pointing outside; disk full (simulated);
   no terminal without `--yes`; `undo` with a modified file.
+
+### European trusted lists
+Signatures may come from any EU/EEA country (Italy, Romania, France...). Trust is anchored in
+the EU **List of Trusted Lists** (LOTL, `https://ec.europa.eu/tools/lotl/eu-lotl.xml`,
+signed by the European Commission). It points to each national trusted list and names the
+certificates that sign it (checked 2026-11-22: LOTL no. 398, 43 pointers: EU-27, Iceland,
+Liechtenstein, Norway, United Kingdom).
+
+- R44. **Chain of trust.** The executable embeds the LOTL and the Commission's LOTL signing
+  certificates (published in the Official Journal of the EU). A national list is used only if
+  its XAdES signature verifies against the certificates the LOTL names for that country; the
+  LOTL only if it verifies against the embedded Commission certificates. Italy is one country
+  among the others; its list is also embedded so that the tool works offline out of the box.
+- R45. **Automatic choice.** The analysis collects the country of every certifier found in the
+  files (`C=` of the issuing CA) and loads only those lists: from the cache if still valid,
+  otherwise downloaded. The summary before confirmation names them, for example "signatures
+  from 3 countries: Italy, Romania, France; lists: Italy and France up to date, Romania
+  downloaded now".
+- R46. **Settable.** `--trust-lists auto` (default) / `all` / `it,ro,fr`; `--trust-list <file>`
+  loads a list by hand; `--offline` uses only the embedded copies and the cache. A missing list
+  is reported as such ("list of Romania not available offline"), never as an invalid signature.
+- R47. **Cache.** Lists are cached in the SignSpector cache folder and refreshed when their own
+  `NextUpdate` date passes; `uninstall` removes the cache (R40).
+- R48. **Verdicts.** Qualified status is checked at signing time using the service history in
+  the list (a service withdrawn later still validates an earlier signature). A certifier on no
+  list is reported as "not on a European trusted list", distinct from "invalid signature". Any
+  country listed in the official LOTL is accepted, the United Kingdom included. The report
+  names every list used (country, sequence number, issue date).
+- Cost: verifying XAdES needs XML canonicalisation (exclusive C14N) and XML signature
+  verification; no mature pure-Rust library exists, so it is written here, test first, as
+  carefully as the BER reader.
 
 ### Accessibility
 Legal frame (Italy/EU): Legge 4/2004 ("Legge Stanca", as amended by D.Lgs. 106/2018) and the
@@ -236,7 +275,8 @@ Library crate with one module per concern, the executable only parses arguments 
 | `tsp` | RFC 3161 tokens, RFC 5544 `.tsd`, `.m7m` | `cms` |
 | `crypto` | digests and signature checks | `sha1`, `sha2`, `rsa`, `p256`, `p384`, `p521`, `ecdsa` |
 | `x509` | certificates, names, extensions, chain building | `x509-parser` |
-| `tsl` | AgID trust list: embedded copy, refresh, cache | `roxmltree`, `flate2`, `ureq` + rustls, `directories` |
+| `xmldsig` | exclusive C14N, XML signature verification (R44) | `roxmltree`, own code |
+| `tsl` | LOTL and national lists: embedded copies, choice by country, refresh, cache (R44–R48) | `roxmltree`, `flate2`, `ureq` + rustls, `directories` |
 | `scan` | folder walk, per-file pipeline, parallelism | `std::thread::scope` |
 | `extract` | safe writer, write log, `undo` (R31, R33), content type (R18) | `zip` |
 | `report` | console, HTML, JSON | `serde_json`, `anstream` |
