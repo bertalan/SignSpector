@@ -40,7 +40,7 @@ damage them:
   files and asks before analysing. Writing needs a second confirmation on the complete write
   plan, by typing the number of documents to write. Folders such as a drive root or the home
   folder, or more than 10,000 files, get a stronger warning and the number of files must be
-  typed. From the context menu the same questions appear in a window. In scripts only the
+  typed. From the context menu the same confirmations appear in a window. In scripts only the
   analysis of an ordinary folder, its report and `--plan` (for `extract`, on an ordinary
   folder) run: extracting, undoing and
   uninstalling need a person to confirm.
@@ -102,7 +102,7 @@ Every command that changes something shows its plan first and acts only after yo
 `extract` asks you to type the number of documents it will write; `undo`, `install-menu`,
 `uninstall-menu` and `uninstall` ask a yes/no question, with No as the default. In scripts they
 refuse; `--plan`
-shows the plan and stops. From the context menu the same questions appear in a window, with
+shows the plan and stops. From the context menu the same confirmations appear in a window, with
 the focus on Cancel. There is no `--apply`, `--yes` or `--expect`.
 
 ## Building from source

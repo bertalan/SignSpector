@@ -76,8 +76,8 @@ beside the originals, ready to open.
     `install-menu`, `uninstall-menu`, `uninstall` change only what the tool itself made and
     ask a yes/no question. Yes/no questions default to No, Enter alone cancels, and the
     answers and the default are written out in words in the user's language (R35, R27);
-  - **from the context menu** (`--interactive`): the same questions in a native dialog (R38),
-    focus on Cancel;
+  - **from the context menu** (`--interactive`): the same confirmations (same number to type,
+    same default) in a native dialog (R38), with the summary of R30, focus on Cancel;
   - **from a script** (no terminal, no `--interactive`): nobody can answer, so they refuse.
 
   `check` and `extract` take one or more folders (several can be selected in the file manager).
@@ -144,7 +144,7 @@ named in a script has no person to ask: an ordinary folder is analysed (`check` 
 report), a risky one is refused (only counted by `check --plan`), and nothing is written
 (R30).
 
-- R28. **Confirm before analysing.** After the folder is chosen the tool only counts (no
+- R28. **Confirm before analysing.** After the folders are chosen the tool only counts (no
   envelope is opened) and asks, default No (Enter alone cancels):
   folder, number of envelopes, total size, number of subfolders, unreadable folders that will
   be skipped. Zero envelopes: say so and stop. **Risky folder**: root of a drive or volume,
@@ -160,13 +160,13 @@ report), a risky one is refused (only counted by `check --plan`), and nothing is
 - R30. **Three ways to confirm, never an implicit yes.**
   - Terminal (`std::io::IsTerminal` on input and output): questions in the console (R28, R29,
     R19).
-  - Context menu: no terminal, started with `--interactive`: the same questions in a native
-    dialog (R38). The dialog lists every selected folder with its number of files to process
-    (envelopes to analyse, R28; documents to write, R29), the total and the operation
-    proposed, then asks the question. When a number is required (R28 risky folder, R29) it is
-    typed in a text field and Confirm accepts only the right number; otherwise the dialog is
-    a yes/no question. In every dialog the focus starts on Cancel; Enter alone and closing
-    the window cancel; no time limit.
+  - Context menu: no terminal, started with `--interactive`: the same confirmations in a native
+    dialog (R38), with a shorter summary than the console. The dialog lists every selected
+    folder with its number of files to process (envelopes to analyse, R28; documents to write,
+    R29), the total and the operation proposed, then asks the question. When a number is
+    required (R28 risky folder, R29) it is typed in a text field and Confirm accepts only the
+    right number; otherwise the dialog is a yes/no question. In every dialog the focus starts on
+    Cancel; Enter alone and closing the window cancel; no time limit.
   - Script (no terminal, no `--interactive`): `extract`, `undo`, `install-menu`,
     `uninstall-menu`, `uninstall` and `check` on a risky folder (R28) stop with exit code 2
     and say that a person must confirm. A `y` or a number arriving on a pipe is not a

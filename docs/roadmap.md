@@ -36,20 +36,22 @@ The order follows two ideas:
   sentences, code and commands verbatim. Rewrite README, design, roadmap, CLAUDE.md and the
   agent prompts with it; comment in `rust-toolchain.toml` (targets and R25, how to update the
   pinned version); session report line when a newer stable Rust exists.
-- [ ] 0.5 Remaining gaps in the rule-script tests, found by the reviews of PR #1 and
+- [ ] 0.5 Remaining gaps in the rule-script tests, found by the reviews of PR #1 and PR #2 and
   accepted as known limits for now (each needs a test before the code changes):
   - `check-public.sh`: failures of `git show`, `ls-tree`, `diff-tree` are not each tested;
     names of people, phone numbers, IPs, base64 content and branch names are not detected
     (header "Known limits");
-  - `cleanup.sh`: the GitHub section duplicates `audit-status.sh`; "never asks" is checked on
-    the script's text (a word list) and with input on a pipe, never at a real terminal; the
-    check "still merged into main" (with full ref names) just before a branch is deleted has
-    no test (it guards a race);
-  - `audit-status.sh`: the "AUDIT DUE" line, the "RED CHECKS on open pull requests" line and,
-    in the unfinished-work section, uncommitted changes, stashes and the unpushed / not
-    pulled counts have no test (the current branch name, unmerged local and remote branches,
-    a missing `main` or `origin/main`, the `origin/HEAD` filter and "no tags or other refs"
-    do);
+  - `cleanup.sh`: on Windows 5 checks are skipped (names with `\` cannot exist there, and a
+    read-only folder does not stop `rm`), so those rules are tested on macOS and Linux only; on
+    Windows the double-quote check runs but does not exercise git's quoting; the numbers passed
+    to `skip` are written by hand; the GitHub section duplicates `audit-status.sh`; "never asks"
+    is checked on the script's text (a word list) and with input on a pipe, never at a real
+    terminal; the check "still merged into main" (with full ref names) just before a branch is
+    deleted has no test (it guards a race);
+  - `audit-status.sh`: in the unfinished-work section, uncommitted changes, stashes and the
+    unpushed / not pulled counts have no test (the "AUDIT DUE" and "RED CHECKS" lines, the
+    current branch name, unmerged local and remote branches, a missing `main` or
+    `origin/main`, the `origin/HEAD` filter and "no tags or other refs" do);
   - report-mode tests pass if the script prints nothing in that section.
   - from the targeted review of the third-round fixes:
     - the first push to a new remote scans the whole history and stops on the accepted
@@ -122,9 +124,9 @@ The order follows two ideas:
   checked" offline. Negative tests: revoked before and after the time stamp, revoked with no
   time stamp (cannot be determined, never invalid), stale or forged embedded data, forged or
   oversized CRL, CRL older than the reference time, expired certificate no longer listed,
-  distribution point outside `http`/`https`. Also to define with the tests: revocation reasons (`removeFromCRL`,
-  `keyCompromise`); an embedded CRL older than the reference time when the CA's CRL cannot be
-  fetched ("revocation not checked").
+  distribution point outside `http`/`https`. Also to define with the tests: revocation reasons
+  (`removeFromCRL`, `keyCompromise`); an embedded CRL older than the reference time when the
+  CA's CRL cannot be fetched ("revocation not checked").
 
 ## Phase 4: output
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).

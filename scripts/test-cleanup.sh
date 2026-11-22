@@ -24,6 +24,12 @@ failed=0
 ok()  { passed=$((passed + 1)); }
 bad() { failed=$((failed + 1)); echo "FAIL: $1" >&2; }
 check() { if eval "$2"; then ok; else bad "$1"; fi; } # check <description> <shell condition>
+# Windows (Git Bash): "\" is a path separator and '"' is not allowed in names, and a read-only
+# folder does not stop rm; the tests that need those are skipped there, and counted.
+skipped=0
+skip() { skipped=$((skipped + $1)); echo "SKIP ($1 checks): $2" >&2; }
+on_windows=0
+case $(uname -s) in MINGW*|MSYS*|CYGWIN*) on_windows=1 ;; esac
 
 git init -q --bare "$work/remote.git"
 mkdir -p "$work/r/scripts" && cd "$work/r" || exit 2
@@ -150,6 +156,7 @@ check "same-named tag: current branch said as checked out here" 'printf "%s" "$o
 git switch -q main; git branch -q -D cur; git tag -d cur >/dev/null
 
 # Names git has to quote (backslash, double quote): never removed, listed on one line.
+if [ "$on_windows" -eq 1 ]; then skip 4 "names with a backslash cannot exist on Windows"; else
 echo mine > 'odd\nname.txt'; echo junk > 'odd\name.orig'
 out=$(sh scripts/cleanup.sh 2>&1)
 check "quoted name: junk not removed"         '[ -f "odd\\name.orig" ]'
@@ -157,6 +164,7 @@ check "quoted name: not reported as removed"  '! printf "%s\n" "$out" | grep -q 
 check "quoted name: listed for review"        'printf "%s\n" "$out" | grep -q "^review (special characters, not removed): .*odd.*name.orig"'
 check "quoted name: printed on one line"      'printf "%s\n" "$out" | grep -q "^review.*odd.*nname.txt"'
 rm -f 'odd\nname.txt' 'odd\name.orig'
+fi
 
 # Names that must not be expanded, split or matched loosely.
 echo junk > 'my file.orig'; echo mine > plan.orig.txt; echo junk > '*.orig'
@@ -169,6 +177,8 @@ mkdir -p tests/out
 echo real > tests/out/report.orig; echo build > target/b.orig
 printf '\n' > .gitignore
 # Names git has to quote, inside protected folders: not even printed (reports are public).
+# (On Windows these names are stored differently and git's quoting is not exercised; the
+# check still runs there.)
 for d in tests/corpus tests/out target; do echo real > "$d/Mario \"Rossi\" Test.p7m"; done
 out=$(sh scripts/cleanup.sh --plan 2>&1)
 check "quoted names in protected folders not printed" '! printf "%s" "$out" | grep -Eq "tests/corpus|tests/out|target/"'
@@ -213,10 +223,12 @@ check "outside a repository: exit 2"          '[ $r -eq 2 ]'
 check "unknown option refused"                '! sh scripts/cleanup.sh --force >/dev/null 2>&1'
 
 # A removal that fails is reported in the exit status.
+if [ "$on_windows" -eq 1 ]; then skip 1 "a read-only folder does not stop rm on Windows"; else
 mkdir -p locked && echo junk > locked/g.orig && chmod 555 locked
 sh scripts/cleanup.sh >/dev/null 2>&1; r=$?
 chmod 755 locked
 check "failed removal: exit 1"                '[ $r -eq 1 ] && [ -f locked/g.orig ]'
+fi
 rm -rf locked f.orig
 
 # A branch merged into main is removed even when HEAD is on a branch that lacks it.
@@ -250,5 +262,5 @@ sh scripts/cleanup.sh >/dev/null 2>&1; r=$?
 check "case test: the cleanup really ran"     '[ $r -eq 0 ] && [ ! -e y.orig ]'
 check "protection ignores letter case"        '[ -f tests/Corpus/x.orig ] && [ -f tests/OUT/r.orig ] && [ -f TARGET/b.orig ]'
 
-echo "cleanup tests: $passed passed, $failed failed"
+echo "cleanup tests: $passed passed, $failed failed, $skipped skipped"
 [ "$failed" -eq 0 ]

@@ -358,6 +358,16 @@ PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTE
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "== GitHub"; expect "GitHub section ran (limit far away)" 0 $?
 fake_gh ""
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTERACTION LIMIT NOT ACTIVE"; expect "limit missing" 0 $?
+# The report says when an audit is due (5 commits since the last one), and not before.
+new_repo
+commit a; commit b; commit c; commit d
+sh scripts/audit-status.sh 2>&1 | grep -qx "AUDIT DUE";  expect "report: 4 commits, no AUDIT DUE" 1 $?
+commit e
+sh scripts/audit-status.sh 2>&1 | grep -qx "AUDIT DUE";  expect "report: 5 commits, AUDIT DUE" 0 $?
+# Red checks on an open pull request are reported (this line is what must stop new work).
+printf '#!/bin/sh\ncase "$*" in\n  "auth status"*) exit 0 ;;\n  *statusCheckRollup*) echo "#2 failing: Test (x86_64-pc-windows-gnu)" ;;\n  *) exit 0 ;;\nesac\n' > "$work/ghshim/gh"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+printf '%s\n' "$out" | grep -A1 "^RED CHECKS on open pull requests:" | grep -qx "#2 failing: Test (x86_64-pc-windows-gnu)"; expect "report: red checks on a PR shown" 0 $?
 # A tag called "main" does not hide unmerged branches or garble branch names in the report.
 new_repo
 git switch -q -c feat && echo f > f.txt && git add f.txt && git commit -qm feat && git tag main feat && git tag feat
