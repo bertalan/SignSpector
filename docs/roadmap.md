@@ -13,9 +13,9 @@ The order follows two ideas:
    before the long verification work. Problems in the flow show up early.
 
 ## Phase 0: groundwork
-- [ ] 0.1 First commit and push to `main` (after review of the file list). From then on: one
+- [x] 0.1 First commit and push to `main` (after review of the file list). From then on: one
   branch and one draft PR per step, coherence audit every 3 commits (`CLAUDE.md`).
-- [ ] 0.2 GitHub Actions CI on Windows, macOS, Linux: fmt, clippy, nextest, doctests, cargo deny,
+- [x] 0.2 GitHub Actions CI on Windows, macOS, Linux: fmt, clippy, nextest, doctests, cargo deny,
   `scripts/check-public.sh --tree HEAD`. Windows tests run here, no USB stick needed.
 - [ ] 0.3 Fixture generator `scripts/make-fixtures.sh` (Homebrew `openssl@3`): test CA, signers,
   simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only, private keys never committed
