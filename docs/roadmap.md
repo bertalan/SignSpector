@@ -46,9 +46,10 @@ The order follows two ideas:
     check "still merged into main" (with full ref names) just before a branch is deleted has
     no test (it guards a race);
   - `audit-status.sh`: the "AUDIT DUE" line, the "RED CHECKS on open pull requests" line and,
-    in the unfinished-work section, uncommitted changes, stashes and the upstream line have
-    no test (unmerged local and remote branches, a missing `main` or `origin/main`, and the
-    `origin/HEAD` filter do);
+    in the unfinished-work section, uncommitted changes, stashes and the unpushed / not
+    pulled counts have no test (the current branch name, unmerged local and remote branches,
+    a missing `main` or `origin/main`, the `origin/HEAD` filter and "no tags or other refs"
+    do);
   - report-mode tests pass if the script prints nothing in that section.
   - from the targeted review of the third-round fixes:
     - the first push to a new remote scans the whole history and stops on the accepted

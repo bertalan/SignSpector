@@ -373,6 +373,9 @@ printf '%s\n' "$out" | grep -q "refs/";               expect "report: only branc
 git update-ref -d refs/remotes/origin/main
 sh scripts/audit-status.sh 2>&1 | grep -q "no origin/main: unmerged remote branches not checked"; expect "report: missing origin/main is said" 0 $?
 rm -rf "$work/origin.git"
+# With no origin remote there is nothing to say about remote branches.
+git remote remove origin
+sh scripts/audit-status.sh 2>&1 | grep -q "no origin/main";  expect "report: no origin remote, no origin/main line" 1 $?
 # Without a local branch main the report says it cannot check, instead of staying silent.
 git branch -q -m main trunk
 sh scripts/audit-status.sh 2>&1 | grep -q "no local branch main: unmerged local branches not checked"; expect "report: missing main is said" 0 $?
