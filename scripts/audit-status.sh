@@ -92,8 +92,8 @@ section "Markers in code"
 markers=$(grep -rnE 'TODO|FIXME|XXX|todo!\(|unimplemented!\(|#\[ignore' src tests 2>/dev/null | grep -v '^tests/fixtures/' || true)
 [ -n "$markers" ] && printf '%s\n' "$markers" || echo "none"
 
-section "Leftovers (scripts/cleanup.sh dry run; --apply removes the local ones)"
-sh scripts/cleanup.sh || true
+section "Leftovers (scripts/cleanup.sh --plan; run scripts/cleanup.sh to remove the local ones)"
+sh scripts/cleanup.sh --plan || true
 
 section "GitHub"
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Tests for scripts/check-public.sh and scripts/audit-status.sh, run in throw-away git
-# repositories. Used by CI (rules job) and runnable by hand: sh scripts/test-scripts.sh
+# repositories. Run by the pre-commit hook when scripts or hooks change, by CI on all three
+# systems, and by hand: sh scripts/test-scripts.sh
 # Test identities and paths below are fake on purpose. Sensitive-looking data is written with
 # octal escapes (\143 = c, \125 = U, \113 = K, \141 = a, \115 = M, \104 = D, \100 = @) so that this file does not match the
 # patterns it tests; printf turns them into the real characters at run time.
@@ -231,6 +232,7 @@ staged "agent prompt allowed"         0 .claude/agents/x.md 'x\n'
 staged "script in a subfolder"        1 scripts/sub/x.sh 'x\n'
 staged "hook backup"                  1 .githooks/pre-commit.bak 'x\n'
 staged "other asset"                  1 assets/other.xml 'x\n'
+staged "no trusted list in the repository" 1 assets/tsl-it.xml '<x/>\n'
 staged "pfx in fixtures"              1 tests/fixtures/a.pfx 'x'
 staged "private key in source"        1 src/x.rs '// -----BEGIN RSA PRIVATE \113EY-----\n'
 staged "github fine-grained token"    1 src/x.rs '// github_\160at_11ABC\n'
@@ -297,6 +299,7 @@ staged "audit report allowed"           0 docs/audits/0009-2026-01-01.md 'x\n'
 # A NUL inside a match: no category recognises it, the file is still blocked.
 staged "NUL inside a match"             1 tests/fixtures/a.der 'x/\125sers/\000\n'
 sh scripts/check-public.sh --message "$work/no-such-file" 2>/dev/null; expect "missing message file" 2 $?
+sh scripts/check-public.sh --message "$work" 2>/dev/null;           expect "message path is a directory" 2 $?
 sh scripts/check-public.sh --range remotes HEAD 2>/dev/null;            expect "old 'remotes' mode refused" 2 $?
 # Shallow clones cannot see the history: never a pass.
 new_repo

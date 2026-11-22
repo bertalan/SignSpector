@@ -15,7 +15,8 @@
 #
 # Known limits (not detected): names of people, phone numbers, host names, IP addresses,
 # lower-case codici fiscali, text stored as UTF-16 (BMPString) or base64 (base64 envelopes:
-# fixtures must be DER), branch names. Review remains necessary.
+# fixtures must be DER), branch names; at commit time, text below a hand-typed copy of
+# git's scissors block (pre-push catches it). Review remains necessary.
 set -uf
 # Byte-wise matching: binary files (real .p7m) carry names and codici fiscali in clear text.
 export LC_ALL=C
@@ -29,14 +30,12 @@ trap 'rm -f "$tmp"' EXIT
 allowed='^(LICENSE|(README|CLAUDE|CHANGELOG|CONTRIBUTING|SECURITY)\.md|Cargo\.(toml|lock)|(rust-toolchain|clippy|deny|bacon|rustfmt)\.toml'
 allowed="$allowed"'|\.git(ignore|attributes)|\.githooks/[a-z-]+|\.cargo/config\.toml|\.config/nextest\.toml'
 allowed="$allowed"'|\.github/[A-Za-z0-9_/-]+\.ya?ml|\.claude/agents/[a-z0-9-]+\.md|scripts/[a-z0-9-]+\.sh'
-allowed="$allowed"'|src/[A-Za-z0-9_/]+\.rs|tests/[a-z0-9_]+\.rs|tests/fixtures/[A-Za-z0-9_./-]+|docs/(audits/)?[a-z0-9-]+\.md'
-allowed="$allowed"'|assets/tsl-it\.xml)$'
+allowed="$allowed"'|src/[A-Za-z0-9_/]+\.rs|tests/[a-z0-9_]+\.rs|tests/fixtures/[A-Za-z0-9_./-]+|docs/(audits/)?[a-z0-9-]+\.md)$'
 # Key material is never committed, not even test keys (fixtures generate them at test time).
 denied='\.(p12|pfx|key|pem)$'
 
 # 2. Content that must never appear. [x] brackets keep this file from matching itself.
-#    assets/tsl-it.xml is the official public AgID list: exempt. Only that file is allowed in
-#    assets/ on purpose: the EU LOTL is added here deliberately at roadmap 3.4.
+#    Trusted lists are never stored here: the release build downloads them (design R44).
 email='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
 # Whole addresses that may appear: fake test domains and no-reply addresses.
 email_ok='^([^@]+@(example\.(com|org|net)|[a-z0-9.-]+\.(test|invalid|example))|noreply@[a-z0-9.-]+|[0-9]+\+[A-Za-z0-9-]+@users\.noreply\.github\.com)$'
@@ -84,7 +83,6 @@ check_files() {
             problem "$f" "key material is never committed"
             continue
         fi
-        [ "$f" = assets/tsl-it.xml ] && continue
         git show "$1$f" > "$tmp" || cannot "cannot read $1$f"
         scan_tmp "$f"
     done
@@ -144,10 +142,12 @@ case "${1:-}" in
         fi
         echo "public check: $n commits and the tree of $(git rev-parse --short "$tip") scanned" ;;
     --message)
-        [ -r "${2:-}" ] || cannot "message file missing"
+        [ -f "${2:-}" ] && [ -r "$2" ] || cannot "message file missing or not a file"
         # Comment lines are scanned too (`git commit -m` keeps them), but not the diff that
-        # `git commit -v` appends: only git's own scissors block (the scissors line followed
-        # by git's warning line) is cut; a scissors line typed by hand hides nothing.
+        # `git commit -v` appends: the text is cut at git's scissors block (the scissors line
+        # followed by git's warning line). A lone scissors line is not cut. Known limit: a
+        # hand-typed copy of the whole block looks the same and is cut here too; pre-push
+        # scans the stored message and refuses it (tested in test-hooks.sh).
         awk -v sc='# ------------------------ >8 ------------------------' \
             -v warn='# Do not modify or remove the line above.' '
             held { if ($0 == warn) exit; print sc; held = 0 }

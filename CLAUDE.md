@@ -65,8 +65,8 @@ functions or options that never existed, work left half-done. Rules against it:
   evidence (`file:line` or command output); check it, then fix it in a normal TDD cycle. When a
   doc and the code disagree on *what the tool should do*, ask the user which one is right;
   never silently align the doc to the code or the code to the doc.
-- **After every audit, remove leftovers**: `sh scripts/cleanup.sh` lists them, `--apply` removes
-  the local ones (`.DS_Store`, `*.orig`, `*.rej` outside ignored folders; merged local
+- **After every audit, remove leftovers**: `sh scripts/cleanup.sh` lists them and, at a
+  terminal, removes the local ones after the typed count (`.DS_Store`, `*.orig`, `*.rej` outside ignored folders; merged local
   branches). Worktrees, backups (`*.bak`), editor files and other untracked files are only
   listed; ignored folders are never touched, and `tests/corpus/`, `tests/out/`, `target/`
   are protected even if `.gitignore` lacks them. Deletion happens **only
@@ -123,10 +123,10 @@ in the history even if deleted later. Before every commit and push:
   (`--lang`, see R27 in `docs/design.md`). Source strings are English; every user-facing text
   goes through the translation layer, never hard-coded, and each new text gets its Italian
   translation in the same change.
-- `check` writes nothing but the report. `extract` and `undo` write only after the typed
-  confirmation (R28, R29), with no `--apply`. `--apply` exists only for commands that change
-  the system (`install-menu`, `uninstall-menu`, `uninstall`) and for `scripts/cleanup.sh`:
-  without it they only show what they would do.
+- `check` writes nothing but the report. **There is no `--apply`**, neither in the tool nor in
+  `scripts/cleanup.sh`: every command that changes files or the system shows the exact plan and
+  acts only after the number of items is typed (R29); without a terminal it needs
+  `--yes --expect <n>` (R30); `--plan` shows the plan and stops.
 - Originals are only read, never modified, moved or renamed; existing files are never
   overwritten ("x.pdf" exists with other content -> "x (1).pdf").
 - **Never process right after a folder is chosen**: first count and ask for confirmation
@@ -153,7 +153,7 @@ in the history even if deleted later. Before every commit and push:
 Toolchain: rustup (pinned in `rust-toolchain.toml`) with targets for macOS arm64/x86_64,
 Windows (mingw-w64, linker in `.cargo/config.toml`) and Linux musl (`cargo zigbuild`).
 Commands in `docs/design.md`. Development happens on the user's Mac; Windows tests on real
-files happen on the Windows PC (files move on a USB stick).
+files happen on the Windows PC, where `tests/corpus/` lives.
 
 ## Test data
 

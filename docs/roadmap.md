@@ -21,27 +21,33 @@ The order follows two ideas:
   systems; public-repository scan of every new commit (`check-public.sh --range`); audit
   cadence on the PR head. Branch protection on `main`: all jobs green, linear history, no
   force-push. CI is an alarm; the local hooks are the barrier.
-- [ ] 0.5 Remaining gaps in the rule-script tests, found by the third review of PR #1 and
+- [ ] 0.3 Fixture generator `scripts/make-fixtures.sh` (Homebrew `openssl@3`): test CA, signers,
+  simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only, private keys never committed
+  (generated at test time or kept in `target/`).
+
+- [ ] 0.4 Writing guide (`docs/writing.md`): texts as answers to the reader's questions, no
+  machine-made patterns (after Wikipedia's "Signs of AI writing"), answer first, short
+  sentences, code and commands verbatim. Rewrite README, design, roadmap, CLAUDE.md and the
+  agent prompts with it; comment in `rust-toolchain.toml` (targets and R25, how to update the
+  pinned version); session report line when a newer stable Rust exists.
+- [ ] 0.5 Remaining gaps in the rule-script tests, found by the reviews of PR #1 and
   accepted as known limits for now (each needs a test before the code changes):
   - `check-public.sh`: failures of `git show`, `ls-tree`, `diff-tree` are not each tested;
     names of people, phone numbers, IPs, base64 content and branch names are not detected
     (header "Known limits");
-  - `cleanup.sh`: exit status after a failed `rm`; names with spaces or a literal `*` in
-    junk files; the GitHub section duplicates `audit-status.sh`;
-  - `audit-status.sh`: the "AUDIT DUE" line and the unfinished-work section have no test;
+  - `cleanup.sh`: exit status after a failed `rm`; the GitHub section duplicates
+    `audit-status.sh`;
+  - `audit-status.sh`: the "AUDIT DUE" line, the unfinished-work section and the "RED CHECKS
+    on open pull requests" line have no test;
   - report-mode tests pass if the script prints nothing in that section.
   - from the targeted review of the third-round fixes:
-    - the first push to a new remote (for example a USB stick) scans the whole history and
-      stops on the accepted exception `cd3620d` (CLAUDE.md): encode the exception in the script;
+    - the first push to a new remote scans the whole history and stops on the accepted
+      exception `cd3620d` (CLAUDE.md): encode the exception if a second remote is ever added;
     - nested annotated tags: only the outer message is scanned;
     - `core.commentChar` other than `#`: `git commit -v` is refused (fails closed);
     - `cleanup.sh` without a local `main`: git errors, exit 0;
     - untested: `cleanup.sh` `--no-merged` with a detached HEAD at an unmerged commit, the
       `GIT_WORK_TREE` refusal; a refused push and a crashing hook both exit 1.
-- [ ] 0.3 Fixture generator `scripts/make-fixtures.sh` (Homebrew `openssl@3`): test CA, signers,
-  simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only, private keys never committed
-  (generated at test time or kept in `target/`).
-
 ## Phase 1: safe writing core (no cryptography)
 - [x] 1.0 **R1a envelope names** (`is_envelope`): delivered with the project setup (0.1).
 - [ ] 1.1 **R32 portable names** (`names` module). `portable_name(raw) -> PortableName { name,
@@ -57,7 +63,8 @@ The order follows two ideas:
   `Relazione.pdf.p7m` -> `Relazione.pdf`, nested `.pdf.p7m.tsd`, uppercase extensions.
 - [ ] 1.4 **i18n skeleton** (R27): pick the mechanism (Fluent vs `rust-i18n`, decided with the
   user), English + Italian, `--lang`, OS language detection. Needed before any message below.
-- [ ] 1.5 **Walk and count** (R1b, R2, R28): regular files only, symbolic links not followed,
+- [ ] 1.5 **Walk and count** (R1b, R2, R28): regular files only, symbolic links not followed and
+  hidden folders skipped (both listed in the report),
   unreadable folders listed; count, total size, subfolders. Risky-folder detection (drive
   roots, home, Desktop, Documents, system folders, > 10,000 envelopes).
 - [ ] 1.6 **Confirmation logic** (R28–R30): pure functions turning (counts, folder, terminal or
@@ -101,7 +108,8 @@ The order follows two ideas:
 - [ ] 5.3 `uninstall` (R40–R43).
 
 ## Phase 6: release
-- [ ] 6.1 Builds for all targets; `.deb`, `.rpm`, `.tar.gz` (R24, R25); version tag (R26).
+- [ ] 6.1 Builds for all targets; `.deb`, `.rpm`, `.tar.gz` (R24, R25); one self-contained
+  executable per platform, pure Rust (R22, enforced by `cargo deny`); version tag (R26).
 - [ ] 6.2 Test on the company Windows PC (antivirus, SmartScreen, AppLocker) with the real corpus.
 - [ ] 6.3 Manual accessibility checks, `docs/accessibility.md` (R39); user guide (R37).
 - [ ] 6.4 `1.0.0` when ready to replace the old tool.

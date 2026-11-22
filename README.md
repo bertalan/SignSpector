@@ -65,7 +65,7 @@ and **WCAG 2.2 level AA** for the HTML report:
 ## Languages
 
 The interface speaks the operating system's language, or the one chosen with `--lang`. The
-report is written in the same language. English and Italian come first; more languages can be
+report is written in the same language, or in another one with `--report-lang`. English and Italian come first; more languages can be
 added without code changes.
 
 ## Platforms
@@ -88,12 +88,13 @@ and needs no administrator rights.
 signspector check   <folder>      # analyse and write the report (default)
 signspector extract <folder>      # analyse, show the write plan, extract after confirmation
 signspector undo    <report>      # remove the files a previous extraction wrote
-signspector install-menu --apply  # add the context-menu entries
-signspector uninstall --apply     # remove everything SignSpector installed
+signspector install-menu         # add the context-menu entries
+signspector uninstall            # remove everything SignSpector installed
 ```
 
-`extract` and `undo` write only after you confirm the plan by typing the number of files.
-Commands that change the system only show what they would do unless `--apply` is given.
+Every command that changes something shows its plan first and acts only after you type the
+number of items. Scripts confirm with `--yes --expect <n>`; `--plan` shows the plan and stops.
+There is no `--apply`.
 
 ## Building from source
 

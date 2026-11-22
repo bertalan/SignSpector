@@ -21,8 +21,9 @@ beside the originals, ready to open.
   `archivio.p7m` is not an envelope).
 - *To decide*: a file named exactly `.p7m` (no stem) is not an envelope today: list it in the
   report as skipped? Are stand-alone time-stamp responses `.tsr` an input format?
-- R2. Unreadable folders are reported and skipped; the walk goes on.
-- *To decide*: follow symbolic links? Skip hidden folders?
+- R2. Unreadable folders are reported and skipped; the walk goes on. Symbolic links are not
+  followed and hidden folders (name starting with `.`) are skipped; both are listed in the
+  report, so nothing is left out silently.
 
 ### Opening envelopes
 - R3. Read CMS SignedData in BER, including indefinite lengths (common in real files), and in
@@ -54,7 +55,7 @@ beside the originals, ready to open.
 ### Extracting
 - R16. `check` (the default) writes nothing but the report. `extract` writes the signed
   documents beside the originals (`Relazione.pdf.p7m` -> `Relazione.pdf`) after the two
-  confirmations of R28 and R29: no `--apply` is needed, the typed confirmation is the safeguard.
+  confirmations of R28 and R29: the typed confirmation is the safeguard.
 - R17. Never overwrite: same content already there -> nothing to do; different content ->
   `Relazione (1).pdf`. Originals are never modified, moved or renamed.
 - R18. Name without a usable extension: guess it from the content (PDF, ZIP-based office
@@ -62,16 +63,18 @@ beside the originals, ready to open.
 
 ### Using it
 - R19. Command line. Commands: `check <dir>` (default), `extract <dir>`, `undo <report>`,
-  `install-menu`, `uninstall-menu`, `uninstall`. `--apply` exists only for the commands that
-  change the system (`install-menu`, `uninstall-menu`, `uninstall`), which have no write plan
-  to confirm; without it they only show what they would do. Options: `--open`, `--report`,
-  `--no-report`, `--json <file>`, `--threads`, `--offline`, `--trust-lists <auto|all|codes>`,
-  `--trust-list <file>`, `--lang <code>`, `--interactive`, `--plain`, `--no-color`, `--yes`,
-  `--expect <n>`. Help translated (R27).
+  `install-menu`, `uninstall-menu`, `uninstall`. **There is no `--apply`.** Every command that
+  changes files or the system (`extract`, `undo`, `install-menu`, `uninstall-menu`,
+  `uninstall`) works the same way: it shows the exact plan and acts only after the number of
+  items is typed (R29); without a terminal it needs `--yes --expect <n>` (R30); `--plan` prints
+  the plan and exits without asking. `check` changes nothing. Options: `--open`, `--report`,
+  `--no-report`, `--report-lang <code>`, `--json <file>`, `--threads`, `--offline`,
+  `--trust-lists <auto|all|codes>`, `--trust-list <file>`, `--lang <code>`, `--interactive`,
+  `--plain`, `--no-color`, `--plan`, `--yes`, `--expect <n>`. Help translated (R27).
 - R20. Interactive end of run (double-click on Windows, context menu, `--interactive`): after
   the analysis, offer to view the report or to extract; extraction goes through the write
   plan and its confirmation (R29) and reuses the analysis already done.
-- R21. `install-menu` / `uninstall-menu` (dry run without `--apply`) for the file manager's
+- R21. `install-menu` / `uninstall-menu` (plan and typed confirmation, R19) for the file manager's
   context menu: Windows per-user registry keys (no admin, no PowerShell); macOS Quick Actions;
   Linux Nautilus script and Dolphin service menu. Full removal: `uninstall` (R40–R43).
 
@@ -93,8 +96,9 @@ beside the originals, ready to open.
   Source language English; first translation Italian; more can be added without code changes.
 - *To decide*: translation mechanism (e.g. Fluent `.ftl` files embedded in the executable, or
   `rust-i18n`), OS language detection (`sys-locale`), where the preference is saved, how
-  dates and numbers are formatted per language, whether the report can be produced in a
-  language other than the console's.
+  dates and numbers are formatted per language.
+- The report is written in the interface language by default; `--report-lang <code>` writes it
+  in another one (for example to send it to an office abroad).
 
 ### Confirmation and write safety
 Nothing is ever processed right after a folder is chosen, and nothing is written without a
@@ -129,7 +133,7 @@ second, separate confirmation. Writing never replaces an existing file.
   - Free disk space is checked before starting. Ctrl+C finishes the current file, stops, and
     the report records what was done.
 - R32. **Portable file names.** Names taken from envelopes (and the `(n)` variants) must be
-  valid on **Windows, macOS and Linux at the same time**, and on FAT32/exFAT USB sticks,
+  valid on **Windows, macOS and Linux at the same time**, and on FAT32/exFAT file systems,
   whatever system the tool runs on (archives move between systems):
   - removed or replaced: `/` `\` `:` `*` `?` `"` `<` `>` `|`, NUL and control characters
     U+0000–U+001F and U+007F; trailing dots and spaces; leading spaces;
@@ -148,7 +152,7 @@ second, separate confirmation. Writing never replaces an existing file.
   `signspector undo <report>` removes only files written by SignSpector whose content still
   matches that hash; changed or missing files are listed and left alone; originals are never
   touched. Like `extract`: it shows what it would remove and removes only after the typed
-  count (R29); `--yes --expect <n>` without a terminal (R30); no `--apply`.
+  count (R29); `--yes --expect <n>` without a terminal (R30).
 - R34. **Proof by tests.** A shared test helper snapshots the whole folder (paths + SHA-256)
   before and after every end-to-end test: originals identical, nothing changed but the
   confirmed plan. Dedicated tests: empty answer, `n`, wrong number; file appearing between
@@ -167,7 +171,10 @@ Liechtenstein, Norway, United Kingdom).
   certificates (published in the Official Journal of the EU). A national list is used only if
   its XAdES signature verifies against the certificates the LOTL names for that country; the
   LOTL only if it verifies against the embedded Commission certificates. Italy is one country
-  among the others; its list is also embedded so that the tool works offline out of the box.
+  among the others. The repository stores no trusted list: the release build downloads the
+  current LOTL and the Italian list and embeds them, so the tool works offline out of the box;
+  at the first run with network the tool refreshes them into its cache, which then takes
+  precedence (R47).
 - R45. **Automatic choice.** The analysis collects the country of every certifier found in the
   files (`C=` of the issuing CA) and loads only those lists: from the cache if still valid,
   otherwise downloaded. The summary before confirmation names them, for example "signatures
@@ -236,9 +243,9 @@ public administration checks the applicable obligations (e.g. accessibility stat
 ### Uninstalling
 - R40. **`signspector uninstall`** removes everything SignSpector added to the system, and
   only that: context menu entries, the Windows "Installed apps" entry (R42), trust-list cache,
-  saved preferences, logs. Same rules as every command that changes the system: dry run
-  without `--apply`, shows the exact list of what it would remove, typed-count confirmation
-  (R29), `--yes --expect <n>` without a terminal (R30); accessible like the rest (R35).
+  saved preferences, logs. Same rule as every command that changes something (R19): it shows
+  the exact list of what it would remove and removes only after the typed count (R29);
+  `--yes --expect <n>` without a terminal (R30); accessible like the rest (R35).
 - R41. **Only what we installed.** `install-menu` records every item it creates (path or
   registry key, plus a hash of the content) in a manifest in the SignSpector config folder;
   `uninstall` removes only manifest items that still match, reports changed or foreign items
@@ -247,7 +254,8 @@ public administration checks the applicable obligations (e.g. accessibility stat
 - R42. **Per platform.**
   - Windows: per-user, no admin: registry keys under `HKCU`, plus an uninstall entry in
     `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SignSpector` so the user finds it
-    in Settings → Apps; its `UninstallString` runs `signspector.exe uninstall --interactive`.
+    in Settings → Apps; its `UninstallString` runs `signspector.exe uninstall --interactive`,
+    which shows the list and asks for the typed count in a console window.
     A running `.exe` cannot delete itself: the tool says where it is so the user can delete it
     (no PowerShell, no scheduled tricks).
   - macOS: Quick Actions in `~/Library/Services`, caches in `~/Library/Caches/SignSpector`,
@@ -310,16 +318,19 @@ The Windows executable must import only system DLLs (checked: `KERNEL32`, `ntdll
 `api-ms-win-*`). First milestone on the company PC: run the placeholder `.exe` from `cmd` to
 confirm antivirus, SmartScreen and AppLocker accept a mingw-built executable.
 
+## Recorded exceptions
+
+- Until the translation layer exists (roadmap 1.4), the placeholder message in `src/main.rs` is
+  the only hard-coded user-facing text; it goes away with 1.4.
+
 ## Open questions
 
 - `ring` as the crypto provider of rustls (for the TSL refresh over HTTPS): it contains C and
   assembly, cross-compiles fine, and is the only provider not banned in `deny.toml`
   (`aws-lc-rs` is). Accept it as an exception to "pure Rust", or look for a pure-Rust provider
   (e.g. `rustls-rustcrypto`)? To decide before roadmap 3.5 (download of the lists).
-- Until the translation layer exists (roadmap 1.4), the placeholder message in `src/main.rs` is
-  the only hard-coded user-facing text; it goes away with 1.4.
-
-- Does the company proxy require integrated authentication (NTLM/Kerberos) to reach
-  `eidas.agid.gov.it`? If yes, Windows needs WinHTTP for the TSL refresh.
+- Does the company proxy require integrated authentication (NTLM/Kerberos) to reach the
+  trusted lists (`ec.europa.eu` for the LOTL, `eidas.agid.gov.it` and the other national
+  addresses)? If yes, Windows needs WinHTTP for the refresh.
 - Revocation checks: wanted? (The old tool did not do them.)
 - Brainpool curves, AIA download of missing intermediates: needed by the real files?

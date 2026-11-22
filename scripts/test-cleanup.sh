@@ -17,6 +17,11 @@ failed=0
 ok()  { passed=$((passed + 1)); }
 bad() { failed=$((failed + 1)); echo "FAIL: $1" >&2; }
 check() { if eval "$2"; then ok; else bad "$1"; fi; } # check <description> <shell condition>
+# Removes exactly what the plan lists: --yes --expect <number of items in the plan>.
+confirm_all() {
+    n=$(sh scripts/cleanup.sh --plan 2>/dev/null | grep -c '^would remove')
+    sh scripts/cleanup.sh --yes --expect "$n"
+}
 
 git init -q --bare "$work/remote.git"
 mkdir -p "$work/r/scripts" && cd "$work/r" || exit 2
@@ -49,16 +54,32 @@ git worktree add -q --detach "$work/wt-detached" main 2>/dev/null
 mkdir -p "$work/wt-clean/tests/corpus" && echo real > "$work/wt-clean/tests/corpus/doc.p7m"
 
 # Dry run: lists, deletes nothing.
-out=$(sh scripts/cleanup.sh 2>&1); r=$?
+out=$(sh scripts/cleanup.sh --plan 2>&1); r=$?
 check "dry run exits 0"                       '[ $r -eq 0 ]'
 check "dry run lists junk files"              'printf "%s" "$out" | grep -q "a.orig"'
 check "dry run lists merged branch"           'printf "%s" "$out" | grep -q "branch (merged): old"'
 check "dry run lists backups for review"      'printf "%s" "$out" | grep -q "review.*c.bak"'
 check "dry run lists unknown file for review" 'printf "%s" "$out" | grep -q "review.*notes.txt"'
+check "--plan stops after the list"          '! printf "%s" "$out" | grep -q "nothing removed\|Type [0-9]"'
 check "dry run deletes nothing"               '[ -f a.orig ] && git rev-parse -q --verify refs/heads/old >/dev/null'
 
-# Apply.
-out=$(sh scripts/cleanup.sh --apply 2>&1); r=$?
+# Confirmation: never implicit, the count must match exactly.
+sh scripts/cleanup.sh --yes --expect 99 >/dev/null 2>&1; r=$?
+check "wrong count: exit 2, nothing removed"  '[ $r -eq 2 ] && [ -f a.orig ]'
+sh scripts/cleanup.sh --yes >/dev/null 2>&1; r=$?
+check "--yes without --expect refused"        '[ $r -eq 2 ] && [ -f a.orig ]'
+sh scripts/cleanup.sh --expect 3 >/dev/null 2>&1; r=$?
+check "--expect without --yes refused"        '[ $r -eq 2 ] && [ -f a.orig ]'
+sh scripts/cleanup.sh --apply >/dev/null 2>&1; r=$?
+check "--apply no longer exists"              '[ $r -eq 2 ] && [ -f a.orig ]'
+n=$(sh scripts/cleanup.sh --plan | grep -c '^would remove')
+printf '%s\n' "$n" | sh scripts/cleanup.sh >/dev/null 2>&1
+check "answer on a pipe is not a confirmation" '[ -f a.orig ] && git rev-parse -q --verify refs/heads/old >/dev/null'
+out=$(sh scripts/cleanup.sh 2>&1)
+check "without a terminal it says how to confirm" 'printf "%s" "$out" | grep -q -- "--yes --expect $n"'
+
+# Confirmed removal.
+out=$(confirm_all 2>&1); r=$?
 check "apply exits 0"                         '[ $r -eq 0 ]'
 check "junk files removed"                    '[ ! -e a.orig ] && [ ! -e b.rej ] && [ ! -e .DS_Store ]'
 check "backups and editor files kept"         '[ -f c.bak ] && [ -f "d~" ] && [ -f sub/e.swp ] && [ -f "notes~old.txt" ]'
@@ -76,37 +97,37 @@ check "origin/HEAD is not a branch"           '! printf "%s" "$out" | grep -Eq "
 
 # Names that must not be expanded, split or matched loosely.
 echo junk > 'my file.orig'; echo mine > plan.orig.txt; echo junk > '*.orig'
-sh scripts/cleanup.sh --apply >/dev/null 2>&1
+confirm_all >/dev/null 2>&1
 check "name with a space removed whole"       '[ ! -e "my file.orig" ] && [ ! -e my ]'
 check "junk rule anchored at the end"         '[ -f plan.orig.txt ]'
 check "star name not expanded to tracked files" '[ -f kept.orig ] && [ ! -e "*.orig" ]'
 # tests/corpus/ is protected even when its ignore line is missing (old checkout, rebase).
 mkdir -p tests/out
-echo real > tests/out/report.orig
+echo real > tests/out/report.orig; echo build > target/b.orig
 printf '\n' > .gitignore
-sh scripts/cleanup.sh --apply >/dev/null 2>&1
+confirm_all >/dev/null 2>&1
 check "corpus protected without the ignore line" '[ -f tests/corpus/verbale.orig ]'
 check "tests/out protected without the ignore line" '[ -f tests/out/report.orig ]'
-check "target protected without the ignore line" '[ -f target/old.bak ] && [ -f dist/a.orig ] || [ -f target/old.bak ]'
+check "target protected without the ignore line" '[ -f target/b.orig ]'
 git checkout -q -- .gitignore
 # Detached HEAD: no garbage branch names, no failure.
 git switch -q --detach main
-out=$(sh scripts/cleanup.sh 2>&1); r=$?
+out=$(sh scripts/cleanup.sh --plan 2>&1); r=$?
 check "detached HEAD: exit 0"                 '[ $r -eq 0 ]'
 check "detached HEAD: no fake branch"         '! printf "%s" "$out" | grep -q "(HEAD"'
 git switch -q main
 
 # Run from another branch: main is never deleted.
 git switch -q wip
-sh scripts/cleanup.sh --apply >/dev/null 2>&1
+confirm_all >/dev/null 2>&1
 check "main kept when run from another branch" 'git rev-parse -q --verify refs/heads/main >/dev/null'
 git switch -q main
 
 # Inside a hook (temporary index): refuse, delete nothing.
 echo junk > f.orig
-GIT_INDEX_FILE="$work/other-index" sh scripts/cleanup.sh --apply >/dev/null 2>&1; r=$?
+GIT_INDEX_FILE="$work/other-index" confirm_all >/dev/null 2>&1; r=$?
 check "refuses with an inherited GIT_INDEX_FILE" '[ $r -eq 2 ] && [ -f f.orig ]'
-GIT_DIR="$work/r/.git" sh scripts/cleanup.sh --apply >/dev/null 2>&1; r=$?
+GIT_DIR="$work/r/.git" confirm_all >/dev/null 2>&1; r=$?
 check "refuses with an inherited GIT_DIR"     '[ $r -eq 2 ] && [ -f f.orig ]'
 (cd "$work" && sh "$work/r/scripts/cleanup.sh" >/dev/null 2>&1); r=$?
 check "outside a repository: exit 2"          '[ $r -eq 2 ]'
@@ -116,9 +137,9 @@ check "unknown option refused"                '! sh scripts/cleanup.sh --force >
 # disk is still protected. Fresh repository, so the folder exists only in that spelling.
 mkdir -p "$work/c" && cd "$work/c" && git init -q -b main && mkdir -p scripts && cp "$src/cleanup.sh" scripts/
 git add -A && git commit -qm init
-mkdir -p tests/Corpus TARGET && echo real > tests/Corpus/x.orig && echo build > TARGET/b.orig
-sh scripts/cleanup.sh --apply >/dev/null 2>&1
-check "protection ignores letter case"        '[ -f tests/Corpus/x.orig ] && [ -f TARGET/b.orig ]'
+mkdir -p tests/Corpus tests/OUT TARGET && echo real > tests/Corpus/x.orig && echo real > tests/OUT/r.orig && echo build > TARGET/b.orig
+confirm_all >/dev/null 2>&1
+check "protection ignores letter case"        '[ -f tests/Corpus/x.orig ] && [ -f tests/OUT/r.orig ] && [ -f TARGET/b.orig ]'
 
 echo "cleanup tests: $passed passed, $failed failed"
 [ "$failed" -eq 0 ]

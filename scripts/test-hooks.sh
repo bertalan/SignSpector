@@ -1,11 +1,11 @@
 #!/bin/sh
 # End-to-end tests of the git hooks: real pushes and commits in throw-away repositories,
-# through .githooks/pre-push and .githooks/commit-msg. Run: sh scripts/test-hooks.sh
-# (pre-commit runs cargo and is exercised by every real commit; its rule steps are the
-# scripts tested in test-scripts.sh.)
+# through .githooks/pre-commit (cargo stubbed), .githooks/commit-msg and .githooks/pre-push.
+# Run: sh scripts/test-hooks.sh
 # Sensitive-looking data is written with octal escapes (\143 = c) so that this file does
 # not match the patterns it tests.
 set -u
+export LC_ALL=C   # git's scissors warning line is matched in English
 for v in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$v"; done
 export GIT_AUTHOR_NAME=test GIT_AUTHOR_EMAIL=test@example.com
 export GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=test@example.com
@@ -26,8 +26,8 @@ leak=$(printf 'mario.rossi@gmail.\143om')
 
 # A repository with the real hooks and scripts, two bare remotes, an audit as first commit.
 new_repo() {
-    rm -rf "$work/r" "$work/origin.git" "$work/usb.git"
-    git init -q --bare "$work/origin.git"; git init -q --bare "$work/usb.git"
+    rm -rf "$work/r" "$work/origin.git" "$work/backup.git"
+    git init -q --bare "$work/origin.git"; git init -q --bare "$work/backup.git"
     mkdir -p "$work/r" && cd "$work/r" || exit 2
     git init -q -b main
     mkdir -p scripts .githooks docs/audits
@@ -35,7 +35,7 @@ new_repo() {
     cp "$top/.githooks/pre-push" "$top/.githooks/commit-msg" "$top/.githooks/pre-commit" .githooks/
     echo audit > docs/audits/0001.md
     git add -A && git commit -qm initial
-    git remote add origin "$work/origin.git"; git remote add usb "$work/usb.git"
+    git remote add origin "$work/origin.git"; git remote add backup "$work/backup.git"
     git config core.hooksPath .githooks
     git push -q origin main >/dev/null 2>&1
 }
@@ -69,7 +69,7 @@ git push -q origin main >/dev/null 2>&1;               expect "existing branch: 
 new_repo
 git switch -q -c topic
 add_doc leak "$leak"; git rm -q docs/leak.md; raw_commit -m "remove"
-git push -q --no-verify usb topic >/dev/null 2>&1
+git push -q --no-verify backup topic >/dev/null 2>&1
 git push -q origin topic >/dev/null 2>&1;              expect "second remote does not hide commits" 1 $?
 
 new_repo
@@ -103,6 +103,14 @@ hook_commit -F "$work/msg"; expect "hand-made scissors line: commit refused" 1 $
 raw_commit -F "$work/msg"
 git push -q origin main >/dev/null 2>&1;               expect "hand-made scissors line: push refused" 1 $?
 
+# A hand-typed copy of git's whole scissors block (two lines) cannot be told apart from git's
+# own: commit-msg cuts it (documented limit), pre-push still refuses the commit.
+new_repo
+echo w > docs/w.md; git add docs
+printf 'fix\n# ------------------------ >8 ------------------------\n# Do not modify or remove the line above.\ncontact %s\n' "$leak" > "$work/msg"
+hook_commit -F "$work/msg";                            expect "two-line scissors block: commit-msg cuts it (known limit)" 0 $?
+git push -q origin main >/dev/null 2>&1;               expect "two-line scissors block: push refused" 1 $?
+
 # --- pre-commit (cargo replaced by a stub: the rule steps are what is tested here) ---------
 new_repo
 printf '%s\n' "$leak" > docs/leak.md; git add docs
@@ -118,8 +126,17 @@ new_repo
 printf '#!/bin/sh\ntouch "%s/ran-$(basename "$0")"\n' "$work" > scripts/test-scripts.sh
 cp scripts/test-scripts.sh scripts/test-cleanup.sh; cp scripts/test-scripts.sh scripts/test-hooks.sh
 git add scripts; rm -f "$work"/ran-*
-hook_commit -m "touch scripts"
-[ -f "$work/ran-test-scripts.sh" ] && [ -f "$work/ran-test-hooks.sh" ]; expect "pre-commit: script tests run when scripts change" 0 $?
+hook_commit -m "touch scripts";                        expect "pre-commit: commit touching scripts allowed" 0 $?
+[ -f "$work/ran-test-scripts.sh" ] && [ -f "$work/ran-test-cleanup.sh" ] && [ -f "$work/ran-test-hooks.sh" ]
+expect "pre-commit: all script tests run when scripts change" 0 $?
+rm -f "$work"/ran-*
+echo "# note" >> .githooks/commit-msg; git add .githooks
+hook_commit -m "touch hooks";                          expect "pre-commit: commit touching hooks allowed" 0 $?
+[ -f "$work/ran-test-scripts.sh" ];                    expect "pre-commit: script tests run when hooks change" 0 $?
+rm -f "$work"/ran-*
+echo z > docs/z2.md; git add docs
+hook_commit -m "docs only"
+[ ! -e "$work/ran-test-scripts.sh" ];                  expect "pre-commit: no script tests for other changes" 0 $?
 
 # --- commit-msg --------------------------------------------------------------------------------
 new_repo
