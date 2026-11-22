@@ -21,6 +21,12 @@ The order follows two ideas:
   systems; public-repository scan of every new commit (`check-public.sh --range`); audit
   cadence on the PR head. Branch protection on `main`: all jobs green, linear history, no
   force-push. CI is an alarm; the local hooks are the barrier.
+- [x] 0.2.1 Confirmation rules simplified: the typed number only for files found in a folder
+  (R28, R29); `undo`, menus and `uninstall` ask yes/no; from the context menu the same
+  questions come in a native dialog; from a script nothing that changes anything runs (R30);
+  `check`/`extract` take several folders (a row each, the total typed); revocation without a
+  query per signature (R49); no `--yes`/`--expect`; `scripts/cleanup.sh` removes its safe
+  leftovers without asking.
 - [ ] 0.3 Fixture generator `scripts/make-fixtures.sh` (Homebrew `openssl@3`): test CA, signers,
   simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only, private keys never committed
   (generated at test time or kept in `target/`).
@@ -35,8 +41,9 @@ The order follows two ideas:
   - `check-public.sh`: failures of `git show`, `ls-tree`, `diff-tree` are not each tested;
     names of people, phone numbers, IPs, base64 content and branch names are not detected
     (header "Known limits");
-  - `cleanup.sh`: exit status after a failed `rm`; the GitHub section duplicates
-    `audit-status.sh`;
+  - `cleanup.sh`: the GitHub section duplicates `audit-status.sh`; "never asks" is checked on
+    the script's text and with input from `/dev/null`, never at a real terminal; the check "still merged
+    into main" just before a branch is deleted has no test (it guards a race);
   - `audit-status.sh`: the "AUDIT DUE" line, the unfinished-work section and the "RED CHECKS
     on open pull requests" line have no test;
   - report-mode tests pass if the script prints nothing in that section.
@@ -45,9 +52,8 @@ The order follows two ideas:
       exception `cd3620d` (CLAUDE.md): encode the exception if a second remote is ever added;
     - nested annotated tags: only the outer message is scanned;
     - `core.commentChar` other than `#`: `git commit -v` is refused (fails closed);
-    - `cleanup.sh` without a local `main`: git errors, exit 0;
-    - untested: `cleanup.sh` `--no-merged` with a detached HEAD at an unmerged commit, the
-      `GIT_WORK_TREE` refusal; a refused push and a crashing hook both exit 1.
+    - untested: `cleanup.sh` `--no-merged` with a detached HEAD at an unmerged commit; a
+      refused push and a crashing hook both exit 1.
 ## Phase 1: safe writing core (no cryptography)
 - [x] 1.0 **R1a envelope names** (`is_envelope`): delivered with the project setup (0.1).
 - [ ] 1.1 **R32 portable names** (`names` module). `portable_name(raw) -> PortableName { name,
@@ -63,13 +69,16 @@ The order follows two ideas:
   `Relazione.pdf.p7m` -> `Relazione.pdf`, nested `.pdf.p7m.tsd`, uppercase extensions.
 - [ ] 1.4 **i18n skeleton** (R27): pick the mechanism (Fluent vs `rust-i18n`, decided with the
   user), English + Italian, `--lang`, OS language detection. Needed before any message below.
-- [ ] 1.5 **Walk and count** (R1b, R2, R28): regular files only, symbolic links not followed and
+- [ ] 1.5 **Walk and count** (R1b, R2, R19, R28): one or more folders, a row per folder and
+  the total; regular files only, symbolic links not followed and
   hidden folders skipped (both listed in the report),
   unreadable folders listed; count, total size, subfolders. Risky-folder detection (drive
   roots, home, Desktop, Documents, system folders, > 10,000 envelopes).
-- [ ] 1.6 **Confirmation logic** (R28–R30): pure functions turning (counts, folder, terminal or
-  not, flags) into the question to ask and parsing the answer; typed count; `--yes --expect`.
-  Typestate `ConfirmedPlan`. Tests: Enter, `n`, wrong number, non-terminal without `--yes`.
+- [ ] 1.6 **Confirmation logic** (R28–R30): pure functions turning (counts, folder, terminal,
+  dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the answer: typed count (R28 risky folder,
+  R29), yes/no default No (R19). Typestate `ConfirmedPlan`. Tests: Enter, `n`, wrong number,
+  changing command, and `check` or `--plan` on a risky folder, refused from a script;
+  several folders (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
 - [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, removal of partial files,
   stays inside the folder (`..`, symbolic links), free-space check, re-check of originals.
   Folder snapshot test helper (R34) introduced here and used from now on.
@@ -95,6 +104,8 @@ The order follows two ideas:
 - [ ] 3.6 Chain building against the TSL and the system store (R10).
 - [ ] 3.7 Countersignatures (R11); `tsp`: RFC 3161, `.tsd`, `.m7m` (R5, R12); detached `.p7s` (R6).
 - [ ] 3.8 Content sniffing for names without a usable extension (R18).
+- [ ] 3.9 Revocation (R49): data embedded in the signature, CRL per CA with cache, one check
+  per certificate, "revocation not checked" offline.
 
 ## Phase 4: output
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).
@@ -104,7 +115,8 @@ The order follows two ideas:
 
 ## Phase 5: system integration
 - [ ] 5.1 Install manifest (R41).
-- [ ] 5.2 Context menu per OS (R21, R38); Windows "Installed apps" entry (R42).
+- [ ] 5.2 Context menu per OS (R21, R38) with the confirmation dialogs (R30); Windows
+  "Installed apps" entry (R42).
 - [ ] 5.3 `uninstall` (R40–R43).
 
 ## Phase 6: release

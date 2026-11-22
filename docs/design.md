@@ -43,38 +43,64 @@ beside the originals, ready to open.
   trust store, labelled "recognised by the system" (translated per R27).
 - R11. Countersignatures.
 - R12. Time stamps (RFC 3161): imprint matches, TSA signature and chain valid.
-- *To decide*: revocation (CRL/OCSP)? Brainpool curves? Download of missing intermediates (AIA)?
+- Revocation: R49. *To decide*: Brainpool curves? Download of missing intermediates (AIA)?
 
 ### Output
 - R13. Console summary per file, in the user's language (R27), with colours; exit codes 0 all fine / 1 problems /
   2 cannot run.
-- R14. HTML report (one self-contained file) in the analysed folder or at `--report <file>`.
+- R14. HTML report (one self-contained file) in each analysed folder, covering that folder
+  only, or at `--report <file>` (one file for the whole run).
 - R15. `--json <file>` with the same information, for scripts.
 - *To decide*: layout and content of the report (start from the old tool's report as a sketch?).
 
 ### Extracting
 - R16. `check` (the default) writes nothing but the report. `extract` writes the signed
   documents beside the originals (`Relazione.pdf.p7m` -> `Relazione.pdf`) after the two
-  confirmations of R28 and R29: the typed confirmation is the safeguard.
+  confirmations of R28 and R29: typing the number of documents is the safeguard.
 - R17. Never overwrite: same content already there -> nothing to do; different content ->
   `Relazione (1).pdf`. Originals are never modified, moved or renamed.
 - R18. Name without a usable extension: guess it from the content (PDF, ZIP-based office
   formats, XML, images).
 
 ### Using it
-- R19. Command line. Commands: `check <dir>` (default), `extract <dir>`, `undo <report>`,
-  `install-menu`, `uninstall-menu`, `uninstall`. **There is no `--apply`.** Every command that
-  changes files or the system (`extract`, `undo`, `install-menu`, `uninstall-menu`,
-  `uninstall`) works the same way: it shows the exact plan and acts only after the number of
-  items is typed (R29); without a terminal it needs `--yes --expect <n>` (R30); `--plan` prints
-  the plan and exits without asking. `check` changes nothing. Options: `--open`, `--report`,
-  `--no-report`, `--report-lang <code>`, `--json <file>`, `--threads`, `--offline`,
-  `--trust-lists <auto|all|codes>`, `--trust-list <file>`, `--lang <code>`, `--interactive`,
-  `--plain`, `--no-color`, `--plan`, `--yes`, `--expect <n>`. Help translated (R27).
+- R19. Command line. Commands: `check <dir>...` (default), `extract <dir>...`, `undo <report>`,
+  `install-menu`, `uninstall-menu`, `uninstall`. **There is no `--apply`, `--yes` or
+  `--expect`.** Every command that changes files or the system shows the exact plan first and
+  acts only after a person confirms. Where the person is decides how (R30):
+  - **at a terminal**: before analysing, a yes/no question (R28); for files found in a folder
+    the user types the number (risky folder, R28; documents to write, R29); `undo`,
+    `install-menu`, `uninstall-menu`, `uninstall` change only what the tool itself made and
+    ask a yes/no question. Yes/no questions default to No, Enter alone cancels, and the
+    answers and the default are written out in words in the user's language (R35, R27);
+  - **from the context menu** (`--interactive`): the same questions in a native dialog (R38),
+    focus on Cancel;
+  - **from a script** (no terminal, no `--interactive`): nobody can answer, so they refuse.
+
+  `check` and `extract` take one or more folders (several can be selected in the file manager).
+  They are counted and confirmed together: one summary with a row per folder (path and number
+  of files to process) and the total, one question for all. The number typed is the total. A
+  single risky folder makes the whole run risky, and the 10,000-envelope limit applies to the
+  total (R28). A folder with no envelopes is shown with 0; if all are empty the run stops.
+  The same folder given twice, or a folder inside another selected one, is counted once,
+  under the outer folder, and the summary says so.
+
+  `--interactive` says that a person is there even without a terminal: questions come in
+  native dialogs (R30) and the run ends with the interactive end of run (R20). The
+  context-menu entries and the Windows uninstall entry (R42) pass it. With a terminal the
+  questions stay in the terminal and R20 still applies. If no dialog can be shown (no
+  desktop session), `--interactive` refuses with exit code 2, like a script.
+
+  `--plan` shows what the command would do and stops before doing it: for `check` the count
+  of R28 (nothing opened), for `extract` the write plan of R29 (after the R28 question, since
+  building it opens every envelope), for the others the list of items. It never writes
+  anything. `check` changes nothing but the report.
+  Options: `--open`, `--report`, `--no-report`, `--report-lang <code>`, `--json <file>`,
+  `--threads`, `--offline`, `--trust-lists <auto|all|codes>`, `--trust-list <file>`,
+  `--lang <code>`, `--interactive`, `--plain`, `--no-color`, `--plan`. Help translated (R27).
 - R20. Interactive end of run (double-click on Windows, context menu, `--interactive`): after
   the analysis, offer to view the report or to extract; extraction goes through the write
   plan and its confirmation (R29) and reuses the analysis already done.
-- R21. `install-menu` / `uninstall-menu` (plan and typed confirmation, R19) for the file manager's
+- R21. `install-menu` / `uninstall-menu` (plan and yes/no question, R19) for the file manager's
   context menu: Windows per-user registry keys (no admin, no PowerShell); macOS Quick Actions;
   Linux Nautilus script and Dolphin service menu. Full removal: `uninstall` (R40–R43).
 
@@ -101,8 +127,10 @@ beside the originals, ready to open.
   in another one (for example to send it to an office abroad).
 
 ### Confirmation and write safety
-Nothing is ever processed right after a folder is chosen, and nothing is written without a
-second, separate confirmation. Writing never replaces an existing file.
+Nothing is ever processed right after a person chooses a folder, and nothing is written
+without a second, separate confirmation. Writing never replaces an existing file. A folder
+named in a script has no person to ask: an ordinary folder is analysed (`check` writes only the
+report), a risky one is refused, and nothing is written (R30).
 
 - R28. **Confirm before analysing.** After the folder is chosen the tool only counts (no
   envelope is opened) and asks, default No (Enter alone cancels):
@@ -116,10 +144,20 @@ second, separate confirmation. Writing never replaces an existing file.
   documents saved under an alternative name `x (1).pdf`, and "existing files modified: 0"
   (always zero, shown as a guarantee). The full list can be viewed. To proceed the user types
   the number of documents to write (language-neutral, cannot be confirmed by a stray key).
-- R30. **Non-interactive use.** Without a terminal (`std::io::IsTerminal`: scripts, redirected
-  input) there is no prompt and no implicit yes: the run needs `--yes --expect <n>` and stops
-  with exit code 2 if the count found differs from `<n>`. A `y` arriving on a pipe is not a
-  confirmation. The same applies to `undo` (R33).
+- R30. **Three ways to confirm, never an implicit yes.**
+  - Terminal (`std::io::IsTerminal` on input and output): questions in the console (R28, R29,
+    R19).
+  - Context menu: no terminal, started with `--interactive`: the same questions in a native
+    dialog (R38). The dialog lists every selected folder with its number of files to process
+    (envelopes to analyse, R28; documents to write, R29), the total and the operation
+    proposed, then asks the question. The number is typed in a text field and Confirm accepts
+    only the right number. In every dialog the focus starts on Cancel; Enter alone and closing
+    the window cancel; no time limit.
+  - Script (no terminal, no `--interactive`): `extract`, `undo`, `install-menu`,
+    `uninstall-menu`, `uninstall` and `check` on a risky folder (R28) stop with exit code 2
+    and say that a person must confirm. A `y` or a number arriving on a pipe is not a
+    confirmation. Only `check` on an ordinary folder and `--plan` run (`--plan` on a risky
+    folder is refused too).
 - R31. **Never overwrite, never write outside.**
   - In code, writing requires a `ConfirmedPlan` that only the confirmation step can build
     (typestate): a path that writes without confirmation does not compile. Originals are held
@@ -129,7 +167,8 @@ second, separate confirmation. Writing never replaces an existing file.
     is used. A partly written file (error, disk full) is removed, only if we created it.
   - Before writing, each original is re-checked against the analysis (size, mtime, SHA-256);
     if the folder changed, the plan is rebuilt and confirmed again.
-  - Every target must stay inside the chosen folder after resolving `..` and symbolic links.
+  - Every target must stay inside the selected folder its envelope was found in, after
+    resolving `..` and symbolic links.
   - Free disk space is checked before starting. Ctrl+C finishes the current file, stops, and
     the report records what was done.
 - R32. **Portable file names.** Names taken from envelopes (and the `(n)` variants) must be
@@ -151,14 +190,21 @@ second, separate confirmation. Writing never replaces an existing file.
 - R33. **Undo.** The report records every file written with its SHA-256.
   `signspector undo <report>` removes only files written by SignSpector whose content still
   matches that hash; changed or missing files are listed and left alone; originals are never
-  touched. Like `extract`: it shows what it would remove and removes only after the typed
-  count (R29); `--yes --expect <n>` without a terminal (R30).
+  touched. It shows what it would remove and removes it after a yes/no question (R19); never
+  from a script (R30).
 - R34. **Proof by tests.** A shared test helper snapshots the whole folder (paths + SHA-256)
   before and after every end-to-end test: originals identical, nothing changed but the
   confirmed plan. Dedicated tests: empty answer, `n`, wrong number; file appearing between
   plan and write; names with `..`, reserved names, forbidden characters, NFC/NFD and case
   collisions, over-long names; symbolic link pointing outside; disk full (simulated);
-  no terminal without `--yes`; `undo` with a modified file.
+  every changing command and `check` on a risky folder refused from a script; `undo` with a modified file; for the
+  yes/no question (R19): Enter alone cancels, `y` on a pipe is refused, a number is not a yes;
+  for the dialogs (R30): only the right number confirms, the focus starts on Cancel, Enter
+  alone and closing the window cancel, every selected folder with its count, the total and the
+  operation are shown. How confirmed runs are tested: the confirmation step reads its answers
+  from a source the library tests fill in (unit and integration tests of extraction and
+  undo), and the executable is tested end to end under a pseudo-terminal and for its
+  refusals. There is no environment variable, hidden option or build flag that confirms.
 
 ### European trusted lists
 Signatures may come from any EU/EEA country (Italy, Romania, France...). Trust is anchored in
@@ -183,7 +229,7 @@ Liechtenstein, Norway, United Kingdom).
 - R46. **Settable.** `--trust-lists auto` (default) / `all` / `it,ro,fr`; `--trust-list <file>`
   loads a list by hand; `--offline` uses only the embedded copies and the cache. A missing list
   is reported as such ("list of Romania not available offline"), never as an invalid signature.
-- R47. **Cache.** Lists are cached in the SignSpector cache folder and refreshed when their own
+- R47. **Cache.** Lists (and the CRLs of R49) are cached in the SignSpector cache folder and refreshed when their own
   `NextUpdate` date passes; `uninstall` removes the cache (R40).
 - R48. **Verdicts.** Qualified status is checked at signing time using the service history in
   the list (a service withdrawn later still validates an earlier signature). A certifier on no
@@ -193,6 +239,18 @@ Liechtenstein, Norway, United Kingdom).
 - Cost: verifying XAdES needs XML canonicalisation (exclusive C14N) and XML signature
   verification; no mature pure-Rust library exists, so it is written here, test first, as
   carefully as the BER reader.
+- R49. **Revocation without a query per signature.** Whether a certificate was revoked at
+  signing time is checked in this order, and network traffic grows with the number of
+  certificates, never with the number of files:
+  - first the revocation data already inside the signature (CAdES -LT/-LTA levels): no
+    network;
+  - otherwise the CRL of the issuing CA, downloaded once per run and cached until its own
+    `nextUpdate` in the SignSpector cache folder (removed by `uninstall`, R40); OCSP only when
+    the CA publishes no CRL;
+  - one result per certificate: the same certificate found in a thousand files is checked
+    once;
+  - with `--offline`, or when the data cannot be fetched, the report says "revocation not
+    checked", never "invalid signature".
 
 ### Accessibility
 Legal frame (Italy/EU): Legge 4/2004 ("Legge Stanca", as amended by D.Lgs. 106/2018) and the
@@ -231,9 +289,10 @@ public administration checks the applicable obligations (e.g. accessibility stat
 - R37. **Documentation and help** (EN 301 549 ch. 12): `--help` and the user guide are plain
   text / HTML (no scanned or untagged PDF), translated, and include a section describing the
   accessibility features (`--plain`, `--no-color`, keyboard use, screen readers).
-- R38. **Context menu and dialogs**: only native OS menus and, if ever added, native dialogs
-  (e.g. `rfd`), which inherit the OS accessibility; clear entry labels in the user's language.
-  No custom-drawn GUI.
+- R38. **Context menu and dialogs**: only native OS menus and native dialogs, which inherit
+  the OS accessibility (screen readers, keyboard); clear labels in the user's language. The
+  dialogs ask the confirmations of R30 for runs started from the context menu. No
+  custom-drawn GUI, no PowerShell.
 - R39. **Verification.** Automated: unit tests on the HTML structure (lang, headings, table
   headers, no colour-only status) and an accessibility checker on sample reports in CI (e.g.
   `axe-core` or `pa11y`); console tests with `NO_COLOR` and `--plain`. Manual before each
@@ -242,10 +301,10 @@ public administration checks the applicable obligations (e.g. accessibility stat
 
 ### Uninstalling
 - R40. **`signspector uninstall`** removes everything SignSpector added to the system, and
-  only that: context menu entries, the Windows "Installed apps" entry (R42), trust-list cache,
+  only that: context menu entries, the Windows "Installed apps" entry (R42), trust-list and CRL cache,
   saved preferences, logs. Same rule as every command that changes something (R19): it shows
-  the exact list of what it would remove and removes only after the typed count (R29);
-  `--yes --expect <n>` without a terminal (R30); accessible like the rest (R35).
+  the exact list of what it would remove and removes it after a yes/no question; never from
+  a script (R30); accessible like the rest (R35).
 - R41. **Only what we installed.** `install-menu` records every item it creates (path or
   registry key, plus a hash of the content) in a manifest in the SignSpector config folder;
   `uninstall` removes only manifest items that still match, reports changed or foreign items
@@ -255,7 +314,7 @@ public administration checks the applicable obligations (e.g. accessibility stat
   - Windows: per-user, no admin: registry keys under `HKCU`, plus an uninstall entry in
     `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SignSpector` so the user finds it
     in Settings → Apps; its `UninstallString` runs `signspector.exe uninstall --interactive`,
-    which shows the list and asks for the typed count in a console window.
+    which shows the list in a native dialog with the focus on Cancel (R30).
     A running `.exe` cannot delete itself: the tool says where it is so the user can delete it
     (no PowerShell, no scheduled tricks).
   - macOS: Quick Actions in `~/Library/Services`, caches in `~/Library/Caches/SignSpector`,
@@ -275,12 +334,12 @@ Library crate with one module per concern, the executable only parses arguments 
 |---|---|---|
 | `names` | portable file names, collision keys, free names (R32, R17) | `unicode-normalization` |
 | `i18n` | translation layer, language choice (R27) | to decide (1.4) |
-| `confirm` | counts, questions, typed answers, `ConfirmedPlan` (R28–R30) | `std::io::IsTerminal` |
+| `confirm` | counts, questions, answers (typed count or yes/no), `ConfirmedPlan` (R28–R30) | `std::io::IsTerminal` |
 | `ber` | BER/DER reader, indefinite lengths, own code (RustCrypto `der` is DER-only) | none |
 | `cms` | SignedData, signer infos, attributes, countersignatures | `ber` |
 | `tsp` | RFC 3161 tokens, RFC 5544 `.tsd`, `.m7m` | `cms` |
 | `crypto` | digests and signature checks | `sha1`, `sha2`, `rsa`, `p256`, `p384`, `p521`, `ecdsa` |
-| `x509` | certificates, names, extensions, chain building | `x509-parser` |
+| `x509` | certificates, names, extensions, chain building, revocation (R49) | `x509-parser` |
 | `xmldsig` | exclusive C14N, XML signature verification (R44) | `roxmltree`, own code |
 | `tsl` | LOTL and national lists: embedded copies, choice by country, refresh, cache (R44–R48) | `roxmltree`, `flate2`, `ureq` + rustls, `directories` |
 | `scan` | folder walk, per-file pipeline, parallelism | `std::thread::scope` |
@@ -332,5 +391,4 @@ confirm antivirus, SmartScreen and AppLocker accept a mingw-built executable.
 - Does the company proxy require integrated authentication (NTLM/Kerberos) to reach the
   trusted lists (`ec.europa.eu` for the LOTL, `eidas.agid.gov.it` and the other national
   addresses)? If yes, Windows needs WinHTTP for the refresh.
-- Revocation checks: wanted? (The old tool did not do them.)
 - Brainpool curves, AIA download of missing intermediates: needed by the real files?

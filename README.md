@@ -22,7 +22,9 @@ Point SignSpector at a folder and it will:
   (validity, key usage, qualified status), the chain up to a CA of the
   national trusted list of the certifier's country, reached through the
   [EU List of Trusted Lists](https://ec.europa.eu/tools/lotl/eu-lotl.xml) and chosen
-  automatically from the signatures found, countersignatures and RFC 3161 time stamps;
+  automatically from the signatures found, whether the certificate was revoked (from data in the
+  signature or the CA's revocation list, not one query per signature), countersignatures
+  and RFC 3161 time stamps;
 - **report** the results on the console and in a self-contained HTML report (and JSON for
   scripts);
 - **extract**, only on request, the signed documents beside the originals:
@@ -36,9 +38,10 @@ damage them:
 - **Dry run by default.** Without an explicit `extract`, nothing is written except the report.
 - **Confirmation before anything happens.** After a folder is chosen, the tool only counts the
   files and asks before analysing. Writing needs a second confirmation on the complete write
-  plan, by typing the number of files. Folders such as a drive root or the home folder, or
-  more than 10,000 files, get a stronger warning. Scripts must state the expected count
-  (`--yes --expect <n>`).
+  plan, by typing the number of documents to write. Folders such as a drive root or the home folder, or
+  more than 10,000 files, get a stronger warning. From the context menu the same
+  questions appear in a window. In scripts only the analysis of an ordinary folder and its
+  report run: extracting, undoing and uninstalling need a person to confirm.
 - **Originals are read-only.** They are never modified, moved or renamed.
 - **Nothing is ever overwritten.** Every file is created with an exclusive "create new"
   operation, so the operating system itself refuses to overwrite. Name clashes become
@@ -85,16 +88,19 @@ and needs no administrator rights.
 ## Planned usage
 
 ```sh
-signspector check   <folder>      # analyse and write the report (default)
-signspector extract <folder>      # analyse, show the write plan, extract after confirmation
+signspector check   <folder>...   # analyse and write a report in each folder (default)
+signspector extract <folder>...   # analyse, show the write plan, extract after confirmation
 signspector undo    <report>      # remove the files a previous extraction wrote
 signspector install-menu         # add the context-menu entries
+signspector uninstall-menu       # remove only the context-menu entries
 signspector uninstall            # remove everything SignSpector installed
 ```
 
-Every command that changes something shows its plan first and acts only after you type the
-number of items. Scripts confirm with `--yes --expect <n>`; `--plan` shows the plan and stops.
-There is no `--apply`.
+Every command that changes something shows its plan first and acts only after you confirm:
+`extract` asks you to type the number of documents it will write; `undo`, `install-menu`,
+`uninstall-menu` and `uninstall` ask a yes/no question, with No as the default. In scripts they refuse; `--plan`
+shows the plan and stops. From the context menu the same questions appear in a window, with
+the focus on Cancel. There is no `--apply`, `--yes` or `--expect`.
 
 ## Building from source
 

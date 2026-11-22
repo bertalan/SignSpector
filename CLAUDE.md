@@ -65,13 +65,16 @@ functions or options that never existed, work left half-done. Rules against it:
   evidence (`file:line` or command output); check it, then fix it in a normal TDD cycle. When a
   doc and the code disagree on *what the tool should do*, ask the user which one is right;
   never silently align the doc to the code or the code to the doc.
-- **After every audit, remove leftovers**: `sh scripts/cleanup.sh` lists them and, at a
-  terminal, removes the local ones after the typed count (`.DS_Store`, `*.orig`, `*.rej` outside ignored folders; merged local
-  branches). Worktrees, backups (`*.bak`), editor files and other untracked files are only
+- **After every audit, remove leftovers**: `sh scripts/cleanup.sh` removes the local ones,
+  without asking, and says what it removed (`.DS_Store`, `*.orig`, `*.rej` anywhere outside
+  ignored folders, also inside untracked ones; local branches already merged into main);
+  `--plan` only lists them. The removing form is run by the main session after an audit;
+  agents (auditor, reviewer) run only `sh scripts/cleanup.sh --plan`. Worktrees,
+  backups (`*.bak`), editor files and other untracked files are only
   listed; ignored folders are never touched, and `tests/corpus/`, `tests/out/`, `target/`
   are protected even if `.gitignore` lacks them. Deletion happens **only
-  locally, from the development environment, never on GitHub**: merged remote branches,
-  stale or draft PRs found on GitHub are reported to the user, who decides there. Untracked
+  locally, from the development environment, never on GitHub**: merged remote branches stay
+  there as history; stale or draft PRs found on GitHub are reported to the user. Untracked
   files that are not recognisable junk are listed for the user, never deleted silently.
 - Also run an audit, outside the cadence, after an interrupted session, a long pause, or when
   something "remembered" cannot be found in the files.
@@ -123,16 +126,23 @@ in the history even if deleted later. Before every commit and push:
   (`--lang`, see R27 in `docs/design.md`). Source strings are English; every user-facing text
   goes through the translation layer, never hard-coded, and each new text gets its Italian
   translation in the same change.
-- `check` writes nothing but the report. **There is no `--apply`**, neither in the tool nor in
-  `scripts/cleanup.sh`: every command that changes files or the system shows the exact plan and
-  acts only after the number of items is typed (R29); without a terminal it needs
-  `--yes --expect <n>` (R30); `--plan` shows the plan and stops.
+- `check` writes nothing but the report. **There is no `--apply`, `--yes` or `--expect`.**
+  Every command that changes files or the system shows the exact plan first. The number is
+  typed only for files found in a folder (risky folder, R28; documents to write, R29); `undo`,
+  menus and `uninstall` ask a yes/no question, default No, answers in words (R19, R35). From
+  the context menu the same questions come in a native dialog, focus on Cancel; from a script
+  they refuse (R30); `--plan` shows the plan and stops. These rules are for the tool; the
+  developer script `scripts/cleanup.sh` is the one exception (it removes only junk and merged
+  branches, without asking, see above). Never ask the developer to type numbers in chat: the
+  typed count is a rule of the tool, not of the conversation.
 - Originals are only read, never modified, moved or renamed; existing files are never
   overwritten ("x.pdf" exists with other content -> "x (1).pdf").
-- **Never process right after a folder is chosen**: first count and ask for confirmation
-  (R28); writing needs a second confirmation on the full write plan, with the number typed
-  (R29); no implicit yes without a terminal (R30). Writing only through a `ConfirmedPlan`,
-  files created with `create_new`, never outside the chosen folder (R31). File names valid on
+- **Never process right after a person chooses a folder**: first count and ask for
+  confirmation (R28; from a script an ordinary folder is analysed without a question, a risky
+  one is refused); writing needs a second confirmation on the full write plan, with the number typed
+  (R29); no implicit yes, ever (R30: terminal, dialog from the context menu, refusal in
+  scripts). Writing only through a `ConfirmedPlan`, files created with `create_new`, never
+  outside the chosen folder (R31). File names valid on
   Windows, macOS and Linux at once (R32). Any change here needs the tests of R34.
 - **Accessibility is a requirement, not a polish step** (EN 301 549; WCAG 2.2 AA for the
   report; R35–R39). Never convey information by colour or symbols alone; honour `NO_COLOR`,

@@ -19,7 +19,7 @@ Read first: `CLAUDE.md`, `docs/design.md`, `docs/roadmap.md`, the latest report 
    unpushed commits, unmerged or stale branches, open and draft pull requests (with their
    age), red or missing CI runs, `TODO`/`FIXME`/`todo!`/`unimplemented!`/`#[ignore]`. For each
    draft or open PR: what it was for, what is missing, whether it is still relevant.
-2. **Leftovers.** Run `sh scripts/cleanup.sh` (dry run) and report what it lists. Also look for
+2. **Leftovers.** Run `sh scripts/cleanup.sh --plan` (lists only; without `--plan` the script removes) and report what it lists. Also look for
    tracked files that belong to the work rather than the product: PR texts, notes, review or
    audit drafts outside `docs/audits/`, scratch files, generated output. Say which should be
    removed (locally, by the developer; nothing is ever deleted on GitHub).
