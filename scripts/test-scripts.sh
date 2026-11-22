@@ -358,6 +358,12 @@ PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTE
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "== GitHub"; expect "GitHub section ran (limit far away)" 0 $?
 fake_gh ""
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTERACTION LIMIT NOT ACTIVE"; expect "limit missing" 0 $?
+# A tag called "main" does not hide unmerged branches or garble branch names in the report.
+new_repo
+git switch -q -c feat && echo f > f.txt && git add f.txt && git commit -qm feat && git tag main feat
+out=$(sh scripts/audit-status.sh 2>&1)
+printf '%s\n' "$out" | grep -A1 "local branches not merged into main:" | grep -q "feat"; expect "report: tag main does not hide unmerged branches" 0 $?
+printf '%s\n' "$out" | grep -q "heads/";               expect "report: no heads/ in branch names" 1 $?
 # gh can never ask or read input in the session report: every call has no prompt, no stdin.
 printf '#!/bin/sh\necho "prompt=${GH_PROMPT_DISABLED:-} stdin=$(cat)" >> "%s/gh-ask.log"\nexit 0\n' "$work" > "$work/ghshim/gh"
 rm -f "$work/gh-ask.log"

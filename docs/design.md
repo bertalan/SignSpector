@@ -102,7 +102,7 @@ beside the originals, ready to open.
   - `extract --plan` builds the write plan of R29, which opens every envelope, so it asks the
     R28 question first (console or dialog), and from a script runs on an ordinary folder and
     refuses a risky one, like `check`.
-  - For the other commands it lists the items, with no question.
+  - For the other commands it lists the items, with no question, also from a script.
 
   `check` changes nothing but the report.
   Options: `--open`, `--report`, `--no-report`, `--report-lang <code>`, `--json <file>`,
@@ -148,9 +148,9 @@ report), a risky one is refused, and nothing is written (R30).
   folder, number of envelopes, total size, number of subfolders, unreadable folders that will
   be skipped. Zero envelopes: say so and stop. **Risky folder**: root of a drive or volume,
   the user's home, Desktop, Documents, system folders (`C:\Windows`, `Program Files`,
-  `/System`, `/usr`, `/etc`...), network share roots (judged on the path after resolving
-  symbolic links), or **more than 10,000 envelopes**: a stronger warning and the user must
-  type the number of envelopes.
+  `/System`, `/usr`, `/etc`...), network share roots, or **more than 10,000 envelopes**: a
+  stronger warning and the user must type the number of envelopes. Every kind of risky
+  folder is judged on the path after resolving symbolic links.
 - R29. **Confirm before writing.** Extraction first builds the complete write plan and shows
   it: new documents, documents already present with identical content (not rewritten),
   documents saved under an alternative name `x (1).pdf`, and "existing files modified: 0"
@@ -169,9 +169,10 @@ report), a risky one is refused, and nothing is written (R30).
   - Script (no terminal, no `--interactive`): `extract`, `undo`, `install-menu`,
     `uninstall-menu`, `uninstall` and `check` on a risky folder (R28) stop with exit code 2
     and say that a person must confirm. A `y` or a number arriving on a pipe is not a
-    confirmation. Only `check` on an ordinary folder, `check --plan` and `extract --plan` on an
-    ordinary folder run. "Terminal" means both input and output are a terminal: with output
-    redirected (`| tee log`, `> file`) the run counts as a script.
+    confirmation. Only `check` on an ordinary folder, `check --plan`, `extract --plan` on an
+    ordinary folder and `--plan` of `undo`, the menus and `uninstall` (a list) run.
+    "Terminal" means both input and output are a terminal: with output redirected
+    (`| tee log`, `> file`) the run counts as a script.
 - R31. **Never overwrite, never write outside.**
   - In code, writing requires a `ConfirmedPlan` that only the confirmation step can build
     (typestate): a path that writes without confirmation does not compile. Originals are held
@@ -213,8 +214,9 @@ report), a risky one is refused, and nothing is written (R30).
   collisions, over-long names; symbolic link pointing outside; disk full (simulated);
   `undo` with a modified file. Confirmation (R19, R28–R30):
   - from a script: every changing command, `check` and `extract --plan` on a risky folder,
-    and `--interactive` without a desktop refused with exit 2; `check` on an ordinary folder
-    and `check --plan` anywhere run without a question; output redirected counts as a script;
+    and `--interactive` without a desktop refused with exit 2; `check` on an ordinary folder,
+    `check --plan` anywhere and `--plan` of `undo`, the menus and `uninstall` run without a
+    question; output redirected counts as a script;
   - `--interactive` with a terminal keeps the questions in the terminal;
   - `--plan` writes nothing, not even the report;
   - time: a back-dated signing-time attribute changes no verdict; without a time stamp the
@@ -266,13 +268,12 @@ Liechtenstein, Norway, United Kingdom).
   loads a list by hand; `--offline` uses only the embedded copies and the cache. A missing list
   is reported as such ("list of Romania not available offline"), never as an invalid signature.
 - R47. **Cache.** Lists (and the CRLs of R49) are cached in the SignSpector cache folder and
-  refreshed when their own
-  `NextUpdate` date passes; `uninstall` removes the cache (R40).
+  refreshed when their own `NextUpdate` date passes; `uninstall` removes the cache (R40).
 - R48. **Verdicts.** Qualified status is checked at the reference time (R9) using the service
-  history in the list (a service withdrawn later still validates an earlier signature). A certifier on no
-  list is reported as "not on a European trusted list", distinct from "invalid signature". Any
-  country listed in the official LOTL is accepted, the United Kingdom included. The report
-  names every list used (country, sequence number, issue date).
+  history in the list (a service withdrawn later still validates an earlier signature). A
+  certifier on no list is reported as "not on a European trusted list", distinct from "invalid
+  signature". Any country listed in the official LOTL is accepted, the United Kingdom included.
+  The report names every list used (country, sequence number, issue date).
 - Cost: verifying XAdES needs XML canonicalisation (exclusive C14N) and XML signature
   verification; no mature pure-Rust library exists, so it is written here, test first, as
   carefully as the BER reader.
@@ -293,7 +294,9 @@ Liechtenstein, Norway, United Kingdom).
     only when the CA publishes no CRL.
   - **Verdicts**:
     - "not revoked";
-    - "revoked on <date>", before the reference time: invalid;
+    - "revoked on <date>", before a proved reference time (a time stamp): invalid;
+    - "revoked on <date>", after the time stamp: valid when signed, and the report shows the
+      revocation date;
     - revoked, but the signature has no time stamp: "cannot be determined: no proof the
       signature is older than the revocation" (as ETSI EN 319 102-1), never "invalid";
     - "cannot be determined" also when the certificate has expired and the CRL no longer

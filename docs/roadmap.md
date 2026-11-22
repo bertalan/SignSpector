@@ -43,8 +43,8 @@ The order follows two ideas:
     (header "Known limits");
   - `cleanup.sh`: the GitHub section duplicates `audit-status.sh`; "never asks" is checked on
     the script's text (a word list) and with input on a pipe, never at a real terminal; the
-    check "still merged into main" just before a branch is deleted has no test (it guards a
-    race);
+    check "still merged into main" (with full ref names) just before a branch is deleted has
+    no test (it guards a race);
   - `audit-status.sh`: the "AUDIT DUE" line, the unfinished-work section and the "RED CHECKS
     on open pull requests" line have no test;
   - report-mode tests pass if the script prints nothing in that section.
@@ -79,7 +79,9 @@ The order follows two ideas:
   dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the
   answer: typed count (R28 risky folder,
   R29), yes/no default No (R19). Typestate `ConfirmedPlan`. Tests: Enter, `n`, wrong number,
-  changing command, and `check` or `--plan` on a risky folder, refused from a script;
+  changing command, and `check` or `extract --plan` on a risky folder, refused from a
+  script; `check --plan` and the item lists of `--plan` run everywhere; symbolic links
+  resolved before the risky-folder check (all kinds of risky folder, not only shares);
   several folders (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
 - [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, removal of partial files,
   stays inside the folder (`..`, symbolic links), free-space check, re-check of originals.
@@ -97,6 +99,8 @@ The order follows two ideas:
 ## Phase 3: verification
 - [ ] 3.1 `crypto`: digests, RSA PKCS#1 v1.5, RSA-PSS, ECDSA P-256/P-384/P-521 (R8).
 - [ ] 3.2 `x509`: certificate fields, key usage, qualified/QSCD statements, validity (R9).
+  Report wording for a certificate expired at the time of the check when no time stamp
+  proves an earlier time.
 - [ ] 3.3 `xmldsig`: exclusive C14N and XML signature verification (R44), test first,
   fuzzed like `ber`.
 - [ ] 3.4 `tsl`: LOTL and national lists, signatures verified, embedded LOTL + Italian list,
@@ -105,12 +109,17 @@ The order follows two ideas:
   `--offline` (R45–R47).
 - [ ] 3.6 Chain building against the TSL and the system store (R10).
 - [ ] 3.7 Countersignatures (R11); `tsp`: RFC 3161, `.tsd`, `.m7m` (R5, R12); detached `.p7s` (R6).
+  A time stamp is a proved time (R9) only if it verifies per R12 (chain to a trusted-list
+  TSA); negative test: a forged or untrusted time stamp changes no verdict. Which time stamp
+  counts when there are several.
 - [ ] 3.8 Content sniffing for names without a usable extension (R18).
 - [ ] 3.9 Revocation (R49): data embedded in the signature, CRL per CA with cache, one check
   per certificate, "revocation not checked" offline. Negative tests: revoked before and after
   the time stamp, no time stamp (judged now), stale or forged embedded data, forged or
   oversized CRL, CRL older than the reference time, expired certificate no longer listed,
-  distribution point outside `http`/`https`.
+  distribution point outside `http`/`https`. Also to define with the tests: revocation reasons
+  (`removeFromCRL`, `keyCompromise`); an embedded CRL older than the reference time when the
+  CA's CRL cannot be fetched ("revocation not checked").
 
 ## Phase 4: output
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).

@@ -53,7 +53,7 @@ done
 # fast-forwarded into main and one just created at main look the same; neither holds a commit
 # that main lacks, so removing either loses nothing.
 checked_out=$(git worktree list --porcelain | sed -n 's|^branch refs/heads/||p')
-here=$(git symbolic-ref -q --short HEAD || true)
+here=$(git symbolic-ref -q HEAD | sed 's|^refs/heads/||')   # not --short: "heads/x" if a tag is x
 branches=""
 # for-each-ref on refs/heads: no "(HEAD detached at ...)" pseudo-entry.
 # Full names, stripped by hand: the short form becomes "heads/x" when a tag is also called x.
@@ -110,7 +110,7 @@ for b in $branches; do
     # checked again just before deleting.
     if git merge-base --is-ancestor "refs/heads/$b" "refs/heads/$main" && git branch -q -D "$b" >/dev/null; then
         echo "removed local branch (merged): $b"
-    else echo "keep branch (no longer merged into $main): $b" >&2; status=1; fi
+    else echo "keep branch (no longer merged into $main, or git refused): $b" >&2; status=1; fi
 done
 for f in $files; do
     if rm -f -- "$f"; then printf '%s\n' "removed junk file: $f"; else status=1; fi

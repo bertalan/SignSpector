@@ -78,14 +78,16 @@ dirty=$(git status --porcelain)
 [ -n "$dirty" ] && { echo "uncommitted changes:"; printf '%s\n' "$dirty"; } || echo "working tree clean"
 stashes=$(git stash list)
 [ -n "$stashes" ] && { echo "stashes:"; printf '%s\n' "$stashes"; }
+# Full ref names: a tag called "main" (or like the branch) must not stand in for the branch.
+current=$(git symbolic-ref -q HEAD | sed 's|^refs/heads/||'); current=${current:-HEAD (detached)}
 if git rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
-    echo "branch $(git rev-parse --abbrev-ref HEAD): $(git rev-list --count '@{u}..HEAD') unpushed, $(git rev-list --count 'HEAD..@{u}') not pulled"
+    echo "branch $current: $(git rev-list --count '@{u}..HEAD') unpushed, $(git rev-list --count 'HEAD..@{u}') not pulled"
 else
-    echo "branch $(git rev-parse --abbrev-ref HEAD): no upstream"
+    echo "branch $current: no upstream"
 fi
-unmerged=$(git branch --no-merged main 2>/dev/null)
+unmerged=$(git for-each-ref --no-merged refs/heads/main --format='  %(refname)' refs/heads 2>/dev/null | sed 's|refs/heads/||')
 [ -n "$unmerged" ] && { echo "local branches not merged into main:"; printf '%s\n' "$unmerged"; }
-remote_unmerged=$(git branch -r --no-merged origin/main 2>/dev/null | grep -v 'origin/HEAD' || true)
+remote_unmerged=$(git for-each-ref --no-merged refs/remotes/origin/main --format='  %(refname)' refs/remotes 2>/dev/null | sed 's|refs/remotes/||' | grep -v '/HEAD$' || true)
 [ -n "$remote_unmerged" ] && { echo "remote branches not merged into main:"; printf '%s\n' "$remote_unmerged"; }
 
 section "Markers in code"

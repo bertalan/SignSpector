@@ -143,6 +143,11 @@ check "tag main elsewhere: unmerged branch kept" 'printf "%s" "$out" | grep -q "
 check "tag main elsewhere: no ambiguity"      '! printf "%s" "$out" | grep -qi "ambiguous"'
 check "unmerged branch with same-named tag"   'printf "%s" "$out" | grep -q "keep local branch (not merged): wip$"'
 git tag -d main wip >/dev/null; git branch -q -D feat
+# The current branch keeps its name when a tag has the same name.
+git switch -q -c cur && git tag cur
+out=$(sh scripts/cleanup.sh --plan 2>&1)
+check "same-named tag: current branch said as checked out here" 'printf "%s" "$out" | grep -q "keep branch (checked out here): cur$"'
+git switch -q main; git branch -q -D cur; git tag -d cur >/dev/null
 
 # Names git has to quote (backslash, double quote): never removed, listed on one line.
 echo mine > 'odd\nname.txt'; echo junk > 'odd\name.orig'
@@ -228,6 +233,12 @@ echo junk > h.orig
 sh scripts/cleanup.sh >/dev/null 2>&1; r=$?
 check "no local main: exit 2, nothing removed" '[ $r -eq 2 ] && [ -f h.orig ]'
 git branch -q -m trunk main; rm -f h.orig
+# A tag called "main" is not the branch main: without the branch, stop.
+git branch -q -m main trunk; git tag main trunk
+echo junk > h.orig
+sh scripts/cleanup.sh >/dev/null 2>&1; r=$?
+check "only a tag main: exit 2, nothing removed" '[ $r -eq 2 ] && [ -f h.orig ]'
+git tag -d main >/dev/null; git branch -q -m trunk main; rm -f h.orig
 
 # Case-insensitive file systems (macOS, Windows): a protected folder spelled differently on
 # disk is still protected. Fresh repository, so the folder exists only in that spelling.
