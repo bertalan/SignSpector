@@ -5,10 +5,15 @@
 set -e
 zero=0000000000000000000000000000000000000000
 script="$(git rev-parse --show-toplevel)/scripts/check-public.sh"
-sh "$(git rev-parse --show-toplevel)/scripts/audit-status.sh" --gate-push
 while read -r local_ref local_sha remote_ref remote_sha; do
     [ "$local_sha" = "$zero" ] && continue   # branch deletion
-    if [ "$remote_sha" = "$zero" ]; then range="$local_sha"; else range="$remote_sha..$local_sha"; fi
+    sh "$(git rev-parse --show-toplevel)/scripts/audit-status.sh" --gate-push "$local_sha"
+    # New branch, or remote tip unknown here (force-push): scan the whole history.
+    if [ "$remote_sha" = "$zero" ] || ! git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+        range="$local_sha"
+    else
+        range="$remote_sha..$local_sha"
+    fi
     for c in $(git rev-list "$range"); do
         sh "$script" --tree "$c" || { echo "Push blocked: commit $c" >&2; exit 1; }
     done

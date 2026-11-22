@@ -1,0 +1,4 @@
+#!/bin/sh
+# Enabled with: git config core.hooksPath .githooks
+# Commit messages are public too: same content scan as the files.
+exec sh "$(git rev-parse --show-toplevel)/scripts/check-public.sh" --message "$1"

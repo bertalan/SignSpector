@@ -15,8 +15,11 @@ The order follows two ideas:
 ## Phase 0: groundwork
 - [x] 0.1 First commit and push to `main` (after review of the file list). From then on: one
   branch and one draft PR per step, coherence audit every 3 commits (`CLAUDE.md`).
-- [x] 0.2 GitHub Actions CI on Windows, macOS, Linux: fmt, clippy, nextest, doctests, cargo deny,
-  `scripts/check-public.sh --tree HEAD`. Windows tests run here, no USB stick needed.
+- [x] 0.2 GitHub Actions CI (`.github/workflows/ci.yml`) on Windows, macOS, Linux, on the
+  shipped targets (windows-gnu, linux-musl, macOS arm64 + x86_64 build): fmt, clippy, nextest,
+  doctests, release build, cargo deny (also weekly); public-repository scan of the files and
+  message of every new commit, also with the base branch's rules; audit cadence on the PR head;
+  tests of the rule scripts. Branch protection on `main` requires all jobs green.
 - [ ] 0.3 Fixture generator `scripts/make-fixtures.sh` (Homebrew `openssl@3`): test CA, signers,
   simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only, private keys never committed
   (generated at test time or kept in `target/`).

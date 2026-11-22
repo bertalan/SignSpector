@@ -1,38 +1,51 @@
 #!/bin/sh
 # Coherence status of the repository: what the periodic audit and every session start look at.
-#   scripts/audit-status.sh                report (always exit 0)
-#   scripts/audit-status.sh --gate-commit  exit 1 if an audit is due before this commit (pre-commit)
-#   scripts/audit-status.sh --gate-push    exit 1 if commits went past the audit cadence (pre-push)
-# An audit is a commit that adds a report under docs/audits/ (see CLAUDE.md, "Coherence audits").
+#   scripts/audit-status.sh                    report (always exit 0)
+#   scripts/audit-status.sh --gate-commit      exit 1 if an audit is due before this commit (pre-commit)
+#   scripts/audit-status.sh --gate-push [REV]  exit 1 if REV (default HEAD) is past the audit cadence
+#                                              (pre-push with the pushed commit; CI with the PR head)
+# Exit 2 when git cannot answer: never a silent pass.
+# An audit is a commit that changes only files under docs/audits/ (see CLAUDE.md, "Coherence
+# audits"); a commit mixing a report with other changes does not count as one.
 set -u
 AUDIT_EVERY=3
 
 cd "$(git rev-parse --show-toplevel)" || exit 2
 
-last_audit=$(git log -1 --first-parent --format=%H -- docs/audits 2>/dev/null)
+mode=${1:-}
+tip=HEAD
+[ "$mode" = --gate-push ] && [ -n "${2:-}" ] && tip=$2
+git rev-parse --verify --quiet "$tip^{commit}" >/dev/null || { echo "Error: not a commit: $tip" >&2; exit 2; }
+
+last_audit=""
+candidates=$(git log --first-parent --format=%H "$tip" -- docs/audits) || exit 2
+for c in $candidates; do
+    others=$(git diff-tree --no-commit-id --name-only -r "$c" | grep -v '^docs/audits/' || true)
+    if [ -z "$others" ]; then last_audit=$c; break; fi
+done
 if [ -n "$last_audit" ]; then
-    since=$(git rev-list --count --first-parent "$last_audit..HEAD" 2>/dev/null || echo 0)
+    since=$(git rev-list --count --first-parent "$last_audit..$tip") || exit 2
 else
     # No audit yet: count every commit except the repository's initial one.
-    total=$(git rev-list --count --first-parent HEAD 2>/dev/null || echo 0)
+    total=$(git rev-list --count --first-parent "$tip") || exit 2
     since=$(( total > 0 ? total - 1 : 0 ))
 fi
 
-case "${1:-}" in
+case "$mode" in
     --gate-commit)
         [ "$since" -lt "$AUDIT_EVERY" ] && exit 0
         # The audit commit itself (only docs/audits/ staged) is always allowed.
         others=$(git diff --cached --name-only | grep -v '^docs/audits/' || true)
         [ -z "$others" ] && exit 0
         echo "Error: $since commits since the last coherence audit (limit $AUDIT_EVERY)." >&2
-        echo "Run the coherence-auditor agent and commit its report in docs/audits/ first." >&2
+        echo "Run the coherence-auditor agent and commit its report alone in docs/audits/ first." >&2
         exit 1 ;;
     --gate-push)
         [ "$since" -le "$AUDIT_EVERY" ] && exit 0
-        echo "Error: $since commits since the last coherence audit (limit $AUDIT_EVERY): push blocked." >&2
+        echo "Error: $since commits since the last coherence audit (limit $AUDIT_EVERY) at $tip." >&2
         exit 1 ;;
     "") ;;
-    *) echo "usage: $0 [--gate-commit | --gate-push]" >&2; exit 2 ;;
+    *) echo "usage: $0 [--gate-commit | --gate-push [REV]]" >&2; exit 2 ;;
 esac
 
 section() { printf '\n== %s\n' "$1"; }

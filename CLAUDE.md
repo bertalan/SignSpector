@@ -36,7 +36,7 @@ functions or options that never existed, work left half-done. Rules against it:
   draft PRs, red CI): finish it, or close it with a written reason, before starting anything new.
 - **Branches and PRs** (after the first push): one branch per roadmap step
   (`step/1.1-portable-names`), pushed early as a **draft PR**; marked ready only when CI is
-  green and `fable-reviewer` approved; merged into `main`, branch deleted. **One step open at
+  green and `fable-reviewer` approved; merged into `main` with **rebase** (linear history: every commit counted by the audit cadence stays on `main`), branch deleted. **One step open at
   a time.** A session never ends with a draft PR without a comment saying its state and next
   step; abandoned work is closed with the reason, never left open.
 - **Every 3 commits: coherence audit** by the `coherence-auditor` agent (Fable, fresh context,
