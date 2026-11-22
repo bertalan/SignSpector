@@ -30,6 +30,14 @@ The order follows two ideas:
     junk files; the GitHub section duplicates `audit-status.sh`;
   - `audit-status.sh`: the "AUDIT DUE" line and the unfinished-work section have no test;
   - report-mode tests pass if the script prints nothing in that section.
+  - from the targeted review of the third-round fixes:
+    - the first push to a new remote (for example a USB stick) scans the whole history and
+      stops on the accepted exception `cd3620d` (CLAUDE.md): encode the exception in the script;
+    - nested annotated tags: only the outer message is scanned;
+    - `core.commentChar` other than `#`: `git commit -v` is refused (fails closed);
+    - `cleanup.sh` without a local `main`: git errors, exit 0;
+    - untested: `cleanup.sh` `--no-merged` with a detached HEAD at an unmerged commit, the
+      `GIT_WORK_TREE` refusal; a refused push and a crashing hook both exit 1.
 - [ ] 0.3 Fixture generator `scripts/make-fixtures.sh` (Homebrew `openssl@3`): test CA, signers,
   simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only, private keys never committed
   (generated at test time or kept in `target/`).

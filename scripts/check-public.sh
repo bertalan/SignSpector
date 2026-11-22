@@ -146,8 +146,14 @@ case "${1:-}" in
     --message)
         [ -r "${2:-}" ] || cannot "message file missing"
         # Comment lines are scanned too (`git commit -m` keeps them), but not the diff that
-        # `git commit -v` appends below the scissors line.
-        sed '/^# -\{24\} >8 -\{24\}$/,$d' "$2" > "$tmp" || cannot "cannot read $2"
+        # `git commit -v` appends: only git's own scissors block (the scissors line followed
+        # by git's warning line) is cut; a scissors line typed by hand hides nothing.
+        awk -v sc='# ------------------------ >8 ------------------------' \
+            -v warn='# Do not modify or remove the line above.' '
+            held { if ($0 == warn) exit; print sc; held = 0 }
+            $0 == sc { held = 1; next }
+            { print }' "$2" > "$tmp" \
+            || cannot "cannot read $2"
         scan_tmp "commit message" ;;
     *) echo "usage: $0 --staged | --range BASE|remote:NAME|tip TIP | --message FILE" >&2; exit 2 ;;
 esac

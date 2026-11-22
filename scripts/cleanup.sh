@@ -65,7 +65,8 @@ junk='(^|/)(\.DS_Store|[^/]*\.(orig|rej))$'
 old_ifs=$IFS
 IFS=$nl
 # Folders with real documents and build output are never touched, even if .gitignore lacks them.
-for f in $(git -c core.quotepath=off ls-files --others --exclude-standard | grep -Ev '^(tests/corpus|tests/out|target)/'); do
+# -i: on case-insensitive file systems (macOS, Windows) tests/Corpus/ is the same folder.
+for f in $(git -c core.quotepath=off ls-files --others --exclude-standard | grep -Eiv '^(tests/corpus|tests/out|target)/'); do
     if printf '%s\n' "$f" | grep -Eq "$junk"; then
         if [ "$apply" -eq 0 ]; then
             echo "would remove junk file: $f"

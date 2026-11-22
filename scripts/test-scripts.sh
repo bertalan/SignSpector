@@ -304,6 +304,7 @@ mkdir -p docs; echo a > docs/a.md; git add docs; git commit -qm a
 git clone -q --depth 1 "file://$work/r" "$work/shallow" 2>/dev/null
 (cd "$work/shallow" && sh scripts/check-public.sh --range "$(git rev-parse HEAD)" HEAD 2>/dev/null); expect "check-public: shallow clone" 2 $?
 (cd "$work/shallow" && sh scripts/audit-status.sh --gate-push 2>/dev/null); expect "audit gate: shallow clone" 2 $?
+(cd "$work/shallow" && echo x > s.txt && git add s.txt && sh scripts/audit-status.sh --gate-commit 2>/dev/null); expect "audit commit gate: shallow clone" 2 $?
 rm -rf "$work/shallow"
 # Only reports under docs/audits/ count as audits.
 new_repo

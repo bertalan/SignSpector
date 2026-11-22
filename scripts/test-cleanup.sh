@@ -81,9 +81,13 @@ check "name with a space removed whole"       '[ ! -e "my file.orig" ] && [ ! -e
 check "junk rule anchored at the end"         '[ -f plan.orig.txt ]'
 check "star name not expanded to tracked files" '[ -f kept.orig ] && [ ! -e "*.orig" ]'
 # tests/corpus/ is protected even when its ignore line is missing (old checkout, rebase).
-grep -v corpus .gitignore > .gitignore.new && mv .gitignore.new .gitignore
+mkdir -p tests/out
+echo real > tests/out/report.orig
+printf '\n' > .gitignore
 sh scripts/cleanup.sh --apply >/dev/null 2>&1
 check "corpus protected without the ignore line" '[ -f tests/corpus/verbale.orig ]'
+check "tests/out protected without the ignore line" '[ -f tests/out/report.orig ]'
+check "target protected without the ignore line" '[ -f target/old.bak ] && [ -f dist/a.orig ] || [ -f target/old.bak ]'
 git checkout -q -- .gitignore
 # Detached HEAD: no garbage branch names, no failure.
 git switch -q --detach main
@@ -107,6 +111,14 @@ check "refuses with an inherited GIT_DIR"     '[ $r -eq 2 ] && [ -f f.orig ]'
 (cd "$work" && sh "$work/r/scripts/cleanup.sh" >/dev/null 2>&1); r=$?
 check "outside a repository: exit 2"          '[ $r -eq 2 ]'
 check "unknown option refused"                '! sh scripts/cleanup.sh --force >/dev/null 2>&1'
+
+# Case-insensitive file systems (macOS, Windows): a protected folder spelled differently on
+# disk is still protected. Fresh repository, so the folder exists only in that spelling.
+mkdir -p "$work/c" && cd "$work/c" && git init -q -b main && mkdir -p scripts && cp "$src/cleanup.sh" scripts/
+git add -A && git commit -qm init
+mkdir -p tests/Corpus TARGET && echo real > tests/Corpus/x.orig && echo build > TARGET/b.orig
+sh scripts/cleanup.sh --apply >/dev/null 2>&1
+check "protection ignores letter case"        '[ -f tests/Corpus/x.orig ] && [ -f TARGET/b.orig ]'
 
 echo "cleanup tests: $passed passed, $failed failed"
 [ "$failed" -eq 0 ]

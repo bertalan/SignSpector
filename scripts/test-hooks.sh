@@ -32,7 +32,7 @@ new_repo() {
     git init -q -b main
     mkdir -p scripts .githooks docs/audits
     cp "$top/scripts/check-public.sh" "$top/scripts/audit-status.sh" scripts/
-    cp "$top/.githooks/pre-push" "$top/.githooks/commit-msg" .githooks/
+    cp "$top/.githooks/pre-push" "$top/.githooks/commit-msg" "$top/.githooks/pre-commit" .githooks/
     echo audit > docs/audits/0001.md
     git add -A && git commit -qm initial
     git remote add origin "$work/origin.git"; git remote add usb "$work/usb.git"
@@ -41,6 +41,14 @@ new_repo() {
 }
 # Commit without hooks (pre-commit would need cargo); the pushes below use the real hooks.
 raw_commit() { git -c core.hooksPath=/dev/null commit -q "$@"; }
+# Commit through the real hooks, with cargo replaced by a stub (pre-commit runs cargo).
+stub_cargo() {
+    mkdir -p "$work/cargo-stub"
+    printf '#!/bin/sh\nexit 0\n' > "$work/cargo-stub/cargo"; cp "$work/cargo-stub/cargo" "$work/cargo-stub/cargo-nextest"
+    chmod +x "$work/cargo-stub/cargo" "$work/cargo-stub/cargo-nextest"
+}
+stub_cargo
+hook_commit() { PATH="$work/cargo-stub:$PATH" git -c core.hooksPath=.githooks commit -q "$@" >/dev/null 2>&1; }
 add_doc() { printf '%s\n' "$2" > "docs/$1.md"; git add docs; raw_commit -m "$1"; }
 
 # --- pre-push ----------------------------------------------------------------------------------
@@ -76,15 +84,53 @@ new_repo
 for i in 1 2 3 4 5 6; do add_doc "c$i" "commit $i"; done
 git push -q origin main >/dev/null 2>&1;               expect "past the audit cadence refused" 1 $?
 
+# An already-published branch: a leak added then removed in the pushed commits.
+new_repo
+add_doc leak "$leak"; git rm -q docs/leak.md; raw_commit -m "remove"
+git push -q origin main >/dev/null 2>&1;               expect "existing branch: leak added then removed refused" 1 $?
+
+# Several refs in one push: each is checked.
+new_repo
+git switch -q -c good; add_doc fine "fine"; git switch -q main
+git switch -q -c bad; add_doc leak "$leak"; git switch -q main
+git push -q origin good bad >/dev/null 2>&1;           expect "multi-ref push with one leaking ref refused" 1 $?
+
+# A scissors line typed by hand does not hide what follows; pre-push still checks the message.
+new_repo
+echo z > docs/z.md; git add docs
+printf 'fix\n# ------------------------ >8 ------------------------\ncontact %s\n' "$leak" > "$work/msg"
+hook_commit -F "$work/msg"; expect "hand-made scissors line: commit refused" 1 $?
+raw_commit -F "$work/msg"
+git push -q origin main >/dev/null 2>&1;               expect "hand-made scissors line: push refused" 1 $?
+
+# --- pre-commit (cargo replaced by a stub: the rule steps are what is tested here) ---------
+new_repo
+printf '%s\n' "$leak" > docs/leak.md; git add docs
+hook_commit -m "add";                                  expect "pre-commit: staged leak refused" 1 $?
+git reset -q; rm -f docs/leak.md
+echo ok > docs/ok.md; git add docs
+hook_commit -m "clean";                                expect "pre-commit: clean commit allowed" 0 $?
+for i in 1 2 3 4; do add_doc "p$i" "commit $i"; done
+echo more > docs/more.md; git add docs
+hook_commit -m "sixth";                                expect "pre-commit: past the audit cadence refused" 1 $?
+# Changes to scripts/ run the script tests (stubbed here: they leave a marker).
+new_repo
+printf '#!/bin/sh\ntouch "%s/ran-$(basename "$0")"\n' "$work" > scripts/test-scripts.sh
+cp scripts/test-scripts.sh scripts/test-cleanup.sh; cp scripts/test-scripts.sh scripts/test-hooks.sh
+git add scripts; rm -f "$work"/ran-*
+hook_commit -m "touch scripts"
+[ -f "$work/ran-test-scripts.sh" ] && [ -f "$work/ran-test-hooks.sh" ]; expect "pre-commit: script tests run when scripts change" 0 $?
+
 # --- commit-msg --------------------------------------------------------------------------------
 new_repo
 echo x > docs/x.md; git add docs
-git -c core.hooksPath=.githooks commit -q -m "contact $leak" >/dev/null 2>&1; expect "email in message refused" 1 $?
-git -c core.hooksPath=.githooks commit -q -m "clean message" >/dev/null 2>&1; expect "clean message allowed" 0 $?
-# git commit -v: the diff below the scissors line is not part of the message.
-echo y > docs/y.md; git add docs
-printf 'Remove a path\n# ------------------------ >8 ------------------------\n-%s\n' "$leak" > "$work/msg"
-sh .githooks/commit-msg "$work/msg" >/dev/null 2>&1;  expect "diff below scissors ignored" 0 $?
+hook_commit -m "contact $leak"; expect "email in message refused" 1 $?
+hook_commit -m "clean message"; expect "clean message allowed" 0 $?
+# Real `git commit -v`: the diff git appends below its scissors line is not the message.
+printf '%s\n' "$leak" > docs/old.md; git add docs; raw_commit -m "old"
+git rm -q docs/old.md
+GIT_EDITOR=true hook_commit -v -e -m "Remove a path" >/dev/null 2>&1
+expect "git commit -v with a leak in the diff allowed" 0 $?
 
 echo "hooks tests: $passed passed, $failed failed"
 [ "$failed" -eq 0 ]
