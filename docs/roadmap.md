@@ -47,7 +47,8 @@ The order follows two ideas:
     no test (it guards a race);
   - `audit-status.sh`: the "AUDIT DUE" line, the "RED CHECKS on open pull requests" line and,
     in the unfinished-work section, uncommitted changes, stashes and the upstream line have
-    no test (unmerged local and remote branches do);
+    no test (unmerged local and remote branches, a missing `main` or `origin/main`, and the
+    `origin/HEAD` filter do);
   - report-mode tests pass if the script prints nothing in that section.
   - from the targeted review of the third-round fixes:
     - the first push to a new remote scans the whole history and stops on the accepted
@@ -83,7 +84,7 @@ The order follows two ideas:
   changing command, and `check` or `extract --plan` on a risky folder, refused from a
   script; `check --plan`, `extract --plan` on an ordinary folder and the item lists of
   `--plan` run from a script; symbolic links
-  resolved before the risky-folder check (all kinds of risky folder, not only shares);
+  resolved before the risky-folder check (all path-based kinds of risky folder, not only shares);
   several folders (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
 - [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, removal of partial files,
   stays inside the folder (`..`, symbolic links), free-space check, re-check of originals.
@@ -117,10 +118,10 @@ The order follows two ideas:
 - [ ] 3.8 Content sniffing for names without a usable extension (R18).
 - [ ] 3.9 Revocation (R49): define the case of a revocation time equal to the time stamp; data
   embedded in the signature, CRL per CA with cache, one check per certificate, "revocation not
-  checked" offline. Negative tests: revoked before and after the time stamp, no time stamp
-  (cannot be determined, never invalid), stale or forged embedded data, forged or oversized CRL,
-  CRL older than the reference time, expired certificate no longer listed, distribution point
-  outside `http`/`https`. Also to define with the tests: revocation reasons (`removeFromCRL`,
+  checked" offline. Negative tests: revoked before and after the time stamp, revoked with no
+  time stamp (cannot be determined, never invalid), stale or forged embedded data, forged or
+  oversized CRL, CRL older than the reference time, expired certificate no longer listed,
+  distribution point outside `http`/`https`. Also to define with the tests: revocation reasons (`removeFromCRL`,
   `keyCompromise`); an embedded CRL older than the reference time when the CA's CRL cannot be
   fetched ("revocation not checked").
 

@@ -41,7 +41,8 @@ damage them:
   plan, by typing the number of documents to write. Folders such as a drive root or the home
   folder, or more than 10,000 files, get a stronger warning and the number of files must be
   typed. From the context menu the same questions appear in a window. In scripts only the
-  analysis of an ordinary folder, its report and `--plan` run: extracting, undoing and
+  analysis of an ordinary folder, its report and `--plan` (for `extract`, on an ordinary
+  folder) run: extracting, undoing and
   uninstalling need a person to confirm.
 - **Originals are read-only.** They are never modified, moved or renamed.
 - **Nothing is ever overwritten.** Every file is created with an exclusive "create new"

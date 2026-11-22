@@ -362,16 +362,20 @@ PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTE
 new_repo
 git switch -q -c feat && echo f > f.txt && git add f.txt && git commit -qm feat && git tag main feat && git tag feat
 git init -q --bare "$work/origin.git"; git remote add origin "$work/origin.git"
-git push -q origin refs/heads/main refs/heads/feat 2>/dev/null; git fetch -q origin; git remote set-head origin main; git tag origin/main feat
+git push -q origin refs/heads/main refs/heads/feat 2>/dev/null; git fetch -q origin; git remote set-head origin feat; git tag origin/main feat
 out=$(sh scripts/audit-status.sh 2>&1)
 printf '%s\n' "$out" | grep -A1 "local branches not merged into main:" | grep -qx "  feat"; expect "report: tag main does not hide unmerged branches" 0 $?
 printf '%s\n' "$out" | grep -q "^branch feat:";       expect "report: current branch named without heads/" 0 $?
 printf '%s\n' "$out" | grep -A3 "remote branches not merged into main:" | grep -qx "  origin/feat"; expect "report: unmerged remote branch listed" 0 $?
 printf '%s\n' "$out" | grep -Eq "^  origin/(HEAD|main)$"; expect "report: no origin/HEAD or origin/main line" 1 $?
+printf '%s\n' "$out" | grep -q "refs/";               expect "report: only branches listed, no tags or other refs" 1 $?
+# Without origin/main the remote list says it cannot check, instead of staying silent.
+git update-ref -d refs/remotes/origin/main
+sh scripts/audit-status.sh 2>&1 | grep -q "no origin/main: unmerged remote branches not checked"; expect "report: missing origin/main is said" 0 $?
 rm -rf "$work/origin.git"
 # Without a local branch main the report says it cannot check, instead of staying silent.
 git branch -q -m main trunk
-sh scripts/audit-status.sh 2>&1 | grep -q "no local branch main: unmerged branches not checked"; expect "report: missing main is said" 0 $?
+sh scripts/audit-status.sh 2>&1 | grep -q "no local branch main: unmerged local branches not checked"; expect "report: missing main is said" 0 $?
 git branch -q -m trunk main
 # gh can never ask or read input in the session report: every call has no prompt, no stdin.
 printf '#!/bin/sh\necho "prompt=${GH_PROMPT_DISABLED:-} stdin=$(cat)" >> "%s/gh-ask.log"\nexit 0\n' "$work" > "$work/ghshim/gh"

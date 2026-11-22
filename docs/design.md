@@ -141,7 +141,8 @@ beside the originals, ready to open.
 Nothing is ever processed right after a person chooses a folder, and nothing is written
 without a second, separate confirmation. Writing never replaces an existing file. A folder
 named in a script has no person to ask: an ordinary folder is analysed (`check` writes only the
-report), a risky one is refused, and nothing is written (R30).
+report), a risky one is refused (only counted by `check --plan`), and nothing is written
+(R30).
 
 - R28. **Confirm before analysing.** After the folder is chosen the tool only counts (no
   envelope is opened) and asks, default No (Enter alone cancels):
