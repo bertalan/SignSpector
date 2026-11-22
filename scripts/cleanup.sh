@@ -33,6 +33,7 @@ top=$(git rev-parse --show-toplevel 2>/dev/null)
 [ -n "$top" ] || { echo "Error: not inside a git repository." >&2; exit 2; }
 cd "$top" || exit 2
 main=main
+main_ref=refs/heads/$main   # full name: a tag called "main" must not stand in for the branch
 git rev-parse -q --verify "refs/heads/$main" >/dev/null || { echo "Error: no local branch $main to compare with: nothing removed." >&2; exit 2; }
 status=0
 nl='
@@ -55,14 +56,15 @@ checked_out=$(git worktree list --porcelain | sed -n 's|^branch refs/heads/||p')
 here=$(git symbolic-ref -q --short HEAD || true)
 branches=""
 # for-each-ref on refs/heads: no "(HEAD detached at ...)" pseudo-entry.
-for b in $(git for-each-ref --merged "$main" --format='%(refname:short)' refs/heads); do
+# Full names, stripped by hand: the short form becomes "heads/x" when a tag is also called x.
+for b in $(git for-each-ref --merged "$main_ref" --format='%(refname)' refs/heads | sed 's|^refs/heads/||'); do
     [ "$b" = "$main" ] && continue
     [ "$b" = "$here" ] && { echo "keep branch (checked out here): $b"; continue; }
     case "$nl$checked_out$nl" in *"$nl$b$nl"*) echo "keep branch (checked out in a worktree): $b"; continue ;; esac
     plan "would remove local branch (merged): $b"
     branches="$branches$b$nl"
 done
-for b in $(git for-each-ref --no-merged "$main" --format='%(refname:short)' refs/heads); do
+for b in $(git for-each-ref --no-merged "$main_ref" --format='%(refname)' refs/heads | sed 's|^refs/heads/||'); do
     echo "keep local branch (not merged): $b"
 done
 
@@ -73,7 +75,8 @@ old_ifs=$IFS
 IFS=$nl
 # Folders with real documents and build output are never touched, even if .gitignore lacks them.
 # -i: on case-insensitive file systems (macOS, Windows) tests/Corpus/ is the same folder.
-for f in $(git -c core.quotepath=off ls-files --others --exclude-standard | grep -Eiv '^(tests/corpus|tests/out|target)/'); do
+# "?: git quotes some names ("tests/corpus/a\"b"); those are not even printed.
+for f in $(git -c core.quotepath=off ls-files --others --exclude-standard | grep -Eiv '^"?(tests/corpus|tests/out|target)/'); do
     # git quotes names with a backslash or a double quote ("a\\b.orig"): never removed.
     case "$f" in \"*) printf '%s\n' "review (special characters, not removed): $f"; continue ;; esac
     if printf '%s\n' "$f" | grep -Eq "$junk"; then
@@ -87,12 +90,13 @@ IFS=$old_ifs
 
 # 4. GitHub: reported only, never deleted from here.
 # Full ref names: the short form of refs/remotes/origin/HEAD is just "origin".
-for b in $(git branch -r --merged "$main" --format='%(refname)' | grep -v -e '/HEAD$' -e "/$main\$" | sed 's|^refs/remotes/||'); do
+for b in $(git branch -r --merged "$main_ref" --format='%(refname)' | grep -v -e '/HEAD$' -e "/$main\$" | sed 's|^refs/remotes/||'); do
     echo "on GitHub, merged (kept, nothing is deleted on GitHub): $b"
 done
-if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-    gh pr list --state open --draft --json number,title,updatedAt \
-        --jq '.[] | "on GitHub, draft PR (not closed here): #\(.number) updated \(.updatedAt[:10]): \(.title)"' 2>/dev/null || true
+# gh never asks anything: no prompts, no standard input.
+if command -v gh >/dev/null 2>&1 && GH_PROMPT_DISABLED=1 gh auth status >/dev/null 2>&1 </dev/null; then
+    GH_PROMPT_DISABLED=1 gh pr list --state open --draft --json number,title,updatedAt \
+        --jq '.[] | "on GitHub, draft PR (not closed here): #\(.number) updated \(.updatedAt[:10]): \(.title)"' 2>/dev/null </dev/null || true
 fi
 
 # 5. Removal (unless --plan).
@@ -106,7 +110,7 @@ for b in $branches; do
     # checked again just before deleting.
     if git merge-base --is-ancestor "refs/heads/$b" "refs/heads/$main" && git branch -q -D "$b" >/dev/null; then
         echo "removed local branch (merged): $b"
-    else echo "keep branch (no longer merged into $main, or git refused): $b" >&2; status=1; fi
+    else echo "keep branch (no longer merged into $main): $b" >&2; status=1; fi
 done
 for f in $files; do
     if rm -f -- "$f"; then printf '%s\n' "removed junk file: $f"; else status=1; fi

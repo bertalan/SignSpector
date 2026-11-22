@@ -96,6 +96,9 @@ section "Leftovers (scripts/cleanup.sh --plan; run scripts/cleanup.sh to remove 
 sh scripts/cleanup.sh --plan || true
 
 section "GitHub"
+# The report only reads: gh never prompts and never reads standard input.
+export GH_PROMPT_DISABLED=1
+exec </dev/null
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
     # Only collaborators may open PRs, issues and comments; GitHub limits this to 6 months.
     repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null)

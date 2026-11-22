@@ -38,10 +38,11 @@ damage them:
 - **Dry run by default.** Without an explicit `extract`, nothing is written except the report.
 - **Confirmation before anything happens.** After a folder is chosen, the tool only counts the
   files and asks before analysing. Writing needs a second confirmation on the complete write
-  plan, by typing the number of documents to write. Folders such as a drive root or the home folder, or
-  more than 10,000 files, get a stronger warning. From the context menu the same
-  questions appear in a window. In scripts only the analysis of an ordinary folder and its
-  report run: extracting, undoing and uninstalling need a person to confirm.
+  plan, by typing the number of documents to write. Folders such as a drive root or the home
+  folder, or more than 10,000 files, get a stronger warning and the number of files must be
+  typed. From the context menu the same questions appear in a window. In scripts only the
+  analysis of an ordinary folder and its report run: extracting, undoing and uninstalling
+  need a person to confirm.
 - **Originals are read-only.** They are never modified, moved or renamed.
 - **Nothing is ever overwritten.** Every file is created with an exclusive "create new"
   operation, so the operating system itself refuses to overwrite. Name clashes become
@@ -98,7 +99,8 @@ signspector uninstall            # remove everything SignSpector installed
 
 Every command that changes something shows its plan first and acts only after you confirm:
 `extract` asks you to type the number of documents it will write; `undo`, `install-menu`,
-`uninstall-menu` and `uninstall` ask a yes/no question, with No as the default. In scripts they refuse; `--plan`
+`uninstall-menu` and `uninstall` ask a yes/no question, with No as the default. In scripts they
+refuse; `--plan`
 shows the plan and stops. From the context menu the same questions appear in a window, with
 the focus on Cancel. There is no `--apply`, `--yes` or `--expect`.
 

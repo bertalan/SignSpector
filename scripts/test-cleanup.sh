@@ -11,6 +11,13 @@ export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 src=$(cd "$(dirname "$0")" && pwd)
 work=$(mktemp -d) || exit 2
 trap 'rm -rf "$work"' EXIT
+# The developer's real gh must never run here: a broken script would act on GitHub. A stub
+# comes first in PATH (not signed in), and gh's own settings are cleared.
+unset GH_REPO GH_HOST GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN
+mkdir -p "$work/ghstub"
+printf '#!/bin/sh\necho "$*" >> "%s/gh-stub.log"\nexit 1\n' "$work" > "$work/ghstub/gh"
+chmod +x "$work/ghstub/gh"
+PATH="$work/ghstub:$PATH"; export PATH
 
 passed=0
 failed=0
@@ -67,7 +74,7 @@ done
 
 # Never a question, also at a terminal: the script reads no input and does not look for one.
 # (A "| while read" loop reads a pipe, not the keyboard.)
-check "cleanup.sh reads no input"             '! grep -E "(^|[^a-z_])(read|head|cat|dd)( |$)|-t [0-2]|/dev/tty" scripts/cleanup.sh | grep -v "| while IFS= read" | grep -q .'
+check "cleanup.sh reads no input"             '! grep -E "(^|[^a-z_])(read|head|cat|dd|tty)( |$)|sed [0-9]*q|-t [0-2]|/dev/(tty|stdin)" scripts/cleanup.sh | grep -v "| while IFS= read" | grep -q .'
 # The read-only coherence auditor (and any agent) may only run the dry run, exactly.
 calls=$(grep -oh "cleanup\.sh[^\`]*" "$src"/../.claude/agents/*.md 2>/dev/null)
 check "agent prompts: cleanup.sh calls found"  '[ -n "$calls" ]'
@@ -104,12 +111,38 @@ out=$(sh scripts/cleanup.sh 2>&1)
 check "says when there is nothing to remove"  'printf "%s" "$out" | grep -q "^nothing to remove$"'
 # GitHub is only read: with gh available and signed in, only "auth status" and "pr list" run.
 mkdir -p "$work/ghshim"
-printf '#!/bin/sh\necho "$*" >> "%s/gh.log"\n[ "$1" = pr ] && echo "on GitHub, draft PR (not closed here): #1"\nexit 0\n' "$work" > "$work/ghshim/gh"
+printf '#!/bin/sh\necho "$*" >> "%s/gh.log"\necho "prompt=${GH_PROMPT_DISABLED:-} stdin=$(cat)" >> "%s/gh.log"\n[ "$1" = pr ] && echo "on GitHub, draft PR (not closed here): #1"\nexit 0\n' "$work" "$work" > "$work/ghshim/gh"
 chmod +x "$work/ghshim/gh"; rm -f "$work/gh.log"
 echo junk > q.orig
-PATH="$work/ghshim:$PATH" sh scripts/cleanup.sh >/dev/null 2>&1
+echo typed | PATH="$work/ghshim:$PATH" sh scripts/cleanup.sh >/dev/null 2>&1
 check "gh called"                             '[ -s "$work/gh.log" ]'
-check "gh only reads (auth status, pr list)"  '! grep -Ev "^(auth status|pr list )" "$work/gh.log" | grep -q .'
+check "gh only reads (auth status, pr list)"  '! grep -v "^prompt=" "$work/gh.log" | grep -Ev "^(auth status|pr list )" | grep -q .'
+check "gh can never ask: no prompt, no stdin" '! grep "^prompt=" "$work/gh.log" | grep -vx "prompt=1 stdin=" | grep -q .'
+check "the test stub stands in for the real gh" 'grep -q "^auth status" "$work/gh-stub.log"'
+
+# Names git prints as they are (non-ASCII) or that look like options are removed whole.
+echo junk > "citt$(printf '\303\240').orig"; echo junk > ./-x.orig
+sh scripts/cleanup.sh >/dev/null 2>&1
+check "non-ASCII junk name removed"           '[ ! -e "citt$(printf "\303\240").orig" ]'
+check "junk name starting with - removed"     '[ ! -e ./-x.orig ]'
+
+# A tag with the same name as a branch does not confuse the branch names.
+git switch -q -c twin && echo t > t.txt && git add t.txt && git commit -qm twin
+git switch -q main && git merge -q --ff-only twin && git tag twin && git tag main
+git switch -q -c elsewhere
+out=$(sh scripts/cleanup.sh 2>&1); r=$?
+check "same-named tag: merged branch removed" '[ $r -eq 0 ] && ! git rev-parse -q --verify refs/heads/twin >/dev/null'
+check "same-named tag: main kept"             'git rev-parse -q --verify refs/heads/main >/dev/null && ! printf "%s" "$out" | grep -q "heads/"'
+git switch -q main; git branch -q -D elsewhere; git tag -d twin main >/dev/null
+# A tag "main" on an unmerged commit must not make that commit count as merged, and an
+# unmerged branch with a same-named tag is still listed by its name.
+git switch -q -c feat && echo f > f.txt && git add f.txt && git commit -qm feat
+git tag main feat && git tag wip wip && git switch -q main
+out=$(sh scripts/cleanup.sh --plan 2>&1)
+check "tag main elsewhere: unmerged branch kept" 'printf "%s" "$out" | grep -q "keep local branch (not merged): feat"'
+check "tag main elsewhere: no ambiguity"      '! printf "%s" "$out" | grep -qi "ambiguous"'
+check "unmerged branch with same-named tag"   'printf "%s" "$out" | grep -q "keep local branch (not merged): wip$"'
+git tag -d main wip >/dev/null; git branch -q -D feat
 
 # Names git has to quote (backslash, double quote): never removed, listed on one line.
 echo mine > 'odd\nname.txt'; echo junk > 'odd\name.orig'
@@ -130,7 +163,12 @@ check "star name not expanded to tracked files" '[ -f kept.orig ] && [ ! -e "*.o
 mkdir -p tests/out
 echo real > tests/out/report.orig; echo build > target/b.orig
 printf '\n' > .gitignore
-sh scripts/cleanup.sh >/dev/null 2>&1
+# Names git has to quote, inside protected folders: not even printed (reports are public).
+for d in tests/corpus tests/out target; do echo real > "$d/Mario \"Rossi\" Test.p7m"; done
+out=$(sh scripts/cleanup.sh --plan 2>&1)
+check "quoted names in protected folders not printed" '! printf "%s" "$out" | grep -Eq "tests/corpus|tests/out|target/"'
+out=$(sh scripts/cleanup.sh 2>&1)
+check "protected folders not printed in a removal run" '! printf "%s" "$out" | grep -Eq "tests/corpus|tests/out|target/"'
 check "corpus protected without the ignore line" '[ -f tests/corpus/verbale.orig ]'
 check "tests/out protected without the ignore line" '[ -f tests/out/report.orig ]'
 check "target protected without the ignore line" '[ -f target/b.orig ]'

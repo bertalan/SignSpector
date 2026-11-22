@@ -34,7 +34,8 @@ expect_reason() {
 }
 
 # Report-mode tests never call the real gh (network, user account): default gh says "not logged in".
-mkdir -p "$work/nogh"; printf '#!/bin/sh\nexit 1\n' > "$work/nogh/gh"; chmod +x "$work/nogh/gh"
+unset GH_REPO GH_HOST GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN
+mkdir -p "$work/nogh"; printf '#!/bin/sh\necho "$*" >> "%s/gh-stub.log"\nexit 1\n' "$work" > "$work/nogh/gh"; chmod +x "$work/nogh/gh"
 PATH="$work/nogh:$PATH"
 
 new_repo() {
@@ -321,6 +322,7 @@ out=$(sh scripts/audit-status.sh 2>/dev/null)
 printf '%s\n' "$out" | grep -q "would remove junk file: a.orig"; expect "report lists leftovers" 0 $?
 [ -f a.orig ];                                        expect "report deletes nothing" 0 $?
 printf '%s\n' "$out" | grep -q "== Audit cadence";   expect "report printed" 0 $?
+grep -q "^auth status" "$work/gh-stub.log" 2>/dev/null;  expect "the test stub stands in for the real gh" 0 $?
 rm -f a.orig
 
 # A grep failure is never a silent pass.
@@ -356,6 +358,11 @@ PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTE
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "== GitHub"; expect "GitHub section ran (limit far away)" 0 $?
 fake_gh ""
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTERACTION LIMIT NOT ACTIVE"; expect "limit missing" 0 $?
+# gh can never ask or read input in the session report: every call has no prompt, no stdin.
+printf '#!/bin/sh\necho "prompt=${GH_PROMPT_DISABLED:-} stdin=$(cat)" >> "%s/gh-ask.log"\nexit 0\n' "$work" > "$work/ghshim/gh"
+rm -f "$work/gh-ask.log"
+echo typed | PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh >/dev/null 2>&1
+[ -s "$work/gh-ask.log" ] && ! grep -vx "prompt=1 stdin=" "$work/gh-ask.log" | grep -q .; expect "report: gh never prompts or reads input" 0 $?
 
 echo "scripts tests: $passed passed, $failed failed"
 [ "$failed" -eq 0 ]

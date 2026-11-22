@@ -33,8 +33,9 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    review: look for any path that processes without the first confirmation, writes without a
    `ConfirmedPlan`, opens a file for writing without `create_new`, can resolve outside the
    selected folder, treats a non-terminal input as a yes, confirms anything from a script
-   (only `check` on an ordinary folder and `--plan` run there), skips the native dialog of a
-   context-menu run, counts several selected folders wrongly (a row each, the total typed,
+   (only `check` on an ordinary folder, `check --plan`, and `extract --plan` on an ordinary
+   folder run there), judges time from the signer's claimed signing time, skips the native
+   dialog of a context-menu run, counts several selected folders wrongly (a row each, the total typed,
    overlaps counted once), or produces a file name that is invalid
    on another OS (Windows reserved names and characters, trailing dot/space, NFC/NFD or case
    collisions, over-long names).

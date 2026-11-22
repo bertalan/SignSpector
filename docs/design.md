@@ -36,8 +36,12 @@ beside the originals, ready to open.
 ### Verifying
 - R8. Each signature: digest of the content, signed attributes, signature (RSA PKCS#1 v1.5,
   RSA-PSS, ECDSA P-256/P-384/P-521; SHA-1/256/384/512).
-- R9. Signer certificate: validity at the reference time (time stamp if present, otherwise
-  signing time, otherwise now), key usage (non-repudiation), qualified / QSCD flags.
+- R9. Signer certificate: validity at the reference time, key usage (non-repudiation),
+  qualified / QSCD flags. The **reference time** is a proved time only: the signature's time
+  stamp, or the time stamp of a `.tsd`/`.m7m` that contains the file (R5, R12). The
+  signing-time attribute is written by the signer and proves nothing: without a time stamp
+  the reference time is the time of the check, and the report shows the claimed time marked
+  "claimed, not proved". The same reference time is used by R48 and R49.
 - R10. Chain to a CA of a **European trusted list** (R44–R48): the national list of the
   certifier's country, reached through the EU List of Trusted Lists; optionally to the system
   trust store, labelled "recognised by the system" (translated per R27).
@@ -81,8 +85,9 @@ beside the originals, ready to open.
   of files to process) and the total, one question for all. The number typed is the total. A
   single risky folder makes the whole run risky, and the 10,000-envelope limit applies to the
   total (R28). A folder with no envelopes is shown with 0; if all are empty the run stops.
-  The same folder given twice, or a folder inside another selected one, is counted once,
-  under the outer folder, and the summary says so.
+  The same folder given twice (also spelt differently: letter case, a symbolic link, a
+  trailing slash), or a folder inside another selected one, is counted once, under the outer
+  folder; the summary says so, and its envelopes go in the outer folder's report.
 
   `--interactive` says that a person is there even without a terminal: questions come in
   native dialogs (R30) and the run ends with the interactive end of run (R20). The
@@ -90,10 +95,16 @@ beside the originals, ready to open.
   questions stay in the terminal and R20 still applies. If no dialog can be shown (no
   desktop session), `--interactive` refuses with exit code 2, like a script.
 
-  `--plan` shows what the command would do and stops before doing it: for `check` the count
-  of R28 (nothing opened), for `extract` the write plan of R29 (after the R28 question, since
-  building it opens every envelope), for the others the list of items. It never writes
-  anything. `check` changes nothing but the report.
+  `--plan` shows what the command would do and stops before doing it. It never writes
+  anything, not even the report.
+  - `check --plan` only counts (R28; no envelope is opened) and prints the summary: no
+    question, allowed everywhere, also from a script on a risky folder.
+  - `extract --plan` builds the write plan of R29, which opens every envelope, so it asks the
+    R28 question first (console or dialog), and from a script runs on an ordinary folder and
+    refuses a risky one, like `check`.
+  - For the other commands it lists the items, with no question.
+
+  `check` changes nothing but the report.
   Options: `--open`, `--report`, `--no-report`, `--report-lang <code>`, `--json <file>`,
   `--threads`, `--offline`, `--trust-lists <auto|all|codes>`, `--trust-list <file>`,
   `--lang <code>`, `--interactive`, `--plain`, `--no-color`, `--plan`. Help translated (R27).
@@ -137,8 +148,9 @@ report), a risky one is refused, and nothing is written (R30).
   folder, number of envelopes, total size, number of subfolders, unreadable folders that will
   be skipped. Zero envelopes: say so and stop. **Risky folder**: root of a drive or volume,
   the user's home, Desktop, Documents, system folders (`C:\Windows`, `Program Files`,
-  `/System`, `/usr`, `/etc`...), network share roots, or **more than 10,000 envelopes**: a
-  stronger warning and the user must type the number of envelopes.
+  `/System`, `/usr`, `/etc`...), network share roots (judged on the path after resolving
+  symbolic links), or **more than 10,000 envelopes**: a stronger warning and the user must
+  type the number of envelopes.
 - R29. **Confirm before writing.** Extraction first builds the complete write plan and shows
   it: new documents, documents already present with identical content (not rewritten),
   documents saved under an alternative name `x (1).pdf`, and "existing files modified: 0"
@@ -150,14 +162,16 @@ report), a risky one is refused, and nothing is written (R30).
   - Context menu: no terminal, started with `--interactive`: the same questions in a native
     dialog (R38). The dialog lists every selected folder with its number of files to process
     (envelopes to analyse, R28; documents to write, R29), the total and the operation
-    proposed, then asks the question. The number is typed in a text field and Confirm accepts
-    only the right number. In every dialog the focus starts on Cancel; Enter alone and closing
+    proposed, then asks the question. When a number is required (R28 risky folder, R29) it is
+    typed in a text field and Confirm accepts only the right number; otherwise the dialog is
+    a yes/no question. In every dialog the focus starts on Cancel; Enter alone and closing
     the window cancel; no time limit.
   - Script (no terminal, no `--interactive`): `extract`, `undo`, `install-menu`,
     `uninstall-menu`, `uninstall` and `check` on a risky folder (R28) stop with exit code 2
     and say that a person must confirm. A `y` or a number arriving on a pipe is not a
-    confirmation. Only `check` on an ordinary folder and `--plan` run (`--plan` on a risky
-    folder is refused too).
+    confirmation. Only `check` on an ordinary folder, `check --plan` and `extract --plan` on an
+    ordinary folder run. "Terminal" means both input and output are a terminal: with output
+    redirected (`| tee log`, `> file`) the run counts as a script.
 - R31. **Never overwrite, never write outside.**
   - In code, writing requires a `ConfirmedPlan` that only the confirmation step can build
     (typestate): a path that writes without confirmation does not compile. Originals are held
@@ -197,14 +211,36 @@ report), a risky one is refused, and nothing is written (R30).
   confirmed plan. Dedicated tests: empty answer, `n`, wrong number; file appearing between
   plan and write; names with `..`, reserved names, forbidden characters, NFC/NFD and case
   collisions, over-long names; symbolic link pointing outside; disk full (simulated);
-  every changing command and `check` on a risky folder refused from a script; `undo` with a modified file; for the
-  yes/no question (R19): Enter alone cancels, `y` on a pipe is refused, a number is not a yes;
-  for the dialogs (R30): only the right number confirms, the focus starts on Cancel, Enter
-  alone and closing the window cancel, every selected folder with its count, the total and the
-  operation are shown. How confirmed runs are tested: the confirmation step reads its answers
-  from a source the library tests fill in (unit and integration tests of extraction and
-  undo), and the executable is tested end to end under a pseudo-terminal and for its
-  refusals. There is no environment variable, hidden option or build flag that confirms.
+  `undo` with a modified file. Confirmation (R19, R28–R30):
+  - from a script: every changing command, `check` and `extract --plan` on a risky folder,
+    and `--interactive` without a desktop refused with exit 2; `check` on an ordinary folder
+    and `check --plan` anywhere run without a question; output redirected counts as a script;
+  - `--interactive` with a terminal keeps the questions in the terminal;
+  - `--plan` writes nothing, not even the report;
+  - time: a back-dated signing-time attribute changes no verdict; without a time stamp the
+    report says "claimed, not proved" (R9);
+  - yes/no question: Enter alone cancels, `y` on a pipe is refused, a number is not a yes;
+  - several folders: the total is typed, one risky folder makes the run risky, the 10,000
+    limit applies to the total, all folders empty stop the run, overlaps (also by letter
+    case, symbolic link, trailing slash) are counted once, one report per selected folder
+    that is not inside another, a symbolic link to a risky folder is risky;
+  - dialogs: when a number is required only the right one confirms, yes/no dialogs default
+    to Cancel, the focus starts on Cancel, Enter alone and closing the window cancel, a wrong
+    number does not confirm, every selected folder with its count, the total and the
+    operation are shown; a fake dialog helper placed first in `PATH` is not used, and a
+    folder name with quotes or script code is shown as text, never run.
+
+  How confirmed runs are tested without a bypass: the public confirmation has two
+  constructors only, terminal and dialog, which take no input source: they open the terminal
+  or the dialog themselves and check `IsTerminal` inside. The core that turns answers into a
+  `ConfirmedPlan` is `pub(crate)`; the test answer source is a `#[cfg(test)]` item that calls
+  it, so it exists only in the library's own unit tests (`tests/*.rs` cannot see it) and the
+  compiler enforces R31. Cases that need confirmed writes (file appearing between plan and
+  write, disk full) are library unit tests or pseudo-terminal tests; the folder-snapshot
+  helper serves both. The executable is tested end to end under a pseudo-terminal (Unix pty,
+  Windows ConPTY) and for its refusals; the dialogs through the OS accessibility interface
+  where it can be driven, by hand otherwise (R39). There is no environment variable, hidden
+  option or build flag that confirms.
 
 ### European trusted lists
 Signatures may come from any EU/EEA country (Italy, Romania, France...). Trust is anchored in
@@ -229,28 +265,44 @@ Liechtenstein, Norway, United Kingdom).
 - R46. **Settable.** `--trust-lists auto` (default) / `all` / `it,ro,fr`; `--trust-list <file>`
   loads a list by hand; `--offline` uses only the embedded copies and the cache. A missing list
   is reported as such ("list of Romania not available offline"), never as an invalid signature.
-- R47. **Cache.** Lists (and the CRLs of R49) are cached in the SignSpector cache folder and refreshed when their own
+- R47. **Cache.** Lists (and the CRLs of R49) are cached in the SignSpector cache folder and
+  refreshed when their own
   `NextUpdate` date passes; `uninstall` removes the cache (R40).
-- R48. **Verdicts.** Qualified status is checked at signing time using the service history in
-  the list (a service withdrawn later still validates an earlier signature). A certifier on no
+- R48. **Verdicts.** Qualified status is checked at the reference time (R9) using the service
+  history in the list (a service withdrawn later still validates an earlier signature). A certifier on no
   list is reported as "not on a European trusted list", distinct from "invalid signature". Any
   country listed in the official LOTL is accepted, the United Kingdom included. The report
   names every list used (country, sequence number, issue date).
 - Cost: verifying XAdES needs XML canonicalisation (exclusive C14N) and XML signature
   verification; no mature pure-Rust library exists, so it is written here, test first, as
   carefully as the BER reader.
-- R49. **Revocation without a query per signature.** Whether a certificate was revoked at
-  signing time is checked in this order, and network traffic grows with the number of
-  certificates, never with the number of files:
-  - first the revocation data already inside the signature (CAdES -LT/-LTA levels): no
-    network;
-  - otherwise the CRL of the issuing CA, downloaded once per run and cached until its own
-    `nextUpdate` in the SignSpector cache folder (removed by `uninstall`, R40); OCSP only when
-    the CA publishes no CRL;
-  - one result per certificate: the same certificate found in a thousand files is checked
-    once;
-  - with `--offline`, or when the data cannot be fetched, the report says "revocation not
-    checked", never "invalid signature".
+- R49. **Revocation without a query per signature.** Network traffic grows with the number of
+  certificates, never with the number of files: one result per certificate, the same
+  certificate in a thousand files is checked once; a CRL is fetched at most once per CA per
+  run.
+  - **Reference time**: the proved time of R9 (a time stamp), otherwise the time of the check.
+  - **Revocation data inside the signature** (CAdES -LT/-LTA) is used only if its own
+    signature verifies against the issuing CA or an authorised OCSP responder and it was
+    issued after the reference time; otherwise it is ignored and the CA's CRL is used.
+  - **The CA's CRL**: fetched only once the chain reaches a CA of a trusted list, from its
+    distribution point, `http` or `https` only (redirects too), with limits on size and time;
+    its signature and issuer are verified before it is used or cached. It answers when it was
+    issued after the reference time; when the reference time is the time of the check, a CRL
+    inside its validity (`thisUpdate` <= now < `nextUpdate`) answers. Cached in the
+    SignSpector cache folder until its `nextUpdate` (R47; removed by `uninstall`, R40). OCSP
+    only when the CA publishes no CRL.
+  - **Verdicts**:
+    - "not revoked";
+    - "revoked on <date>", before the reference time: invalid;
+    - revoked, but the signature has no time stamp: "cannot be determined: no proof the
+      signature is older than the revocation" (as ETSI EN 319 102-1), never "invalid";
+    - "cannot be determined" also when the certificate has expired and the CRL no longer
+      lists expired certificates (a CRL answers for an expired certificate only if issued
+      before its `notAfter` or marked ExpiredCertsOnCRL), and for a suspension
+      (`certificateHold`) that a later CRL no longer shows;
+    - "revocation not checked": no network, or no CRL fresh enough could be fetched.
+    None of the last three is "invalid signature". `--offline` uses a cached CRL that still
+    answers, otherwise "revocation not checked".
 
 ### Accessibility
 Legal frame (Italy/EU): Legge 4/2004 ("Legge Stanca", as amended by D.Lgs. 106/2018) and the
@@ -392,3 +444,17 @@ confirm antivirus, SmartScreen and AppLocker accept a mingw-built executable.
   trusted lists (`ec.europa.eu` for the LOTL, `eidas.agid.gov.it` and the other national
   addresses)? If yes, Windows needs WinHTTP for the refresh.
 - Brainpool curves, AIA download of missing intermediates: needed by the real files?
+- Native dialogs (R30, R38) before roadmap 5.2: a folder list, a text field for the number and
+  the focus on Cancel. Windows has no stock dialog with a text field (MessageBox and
+  TaskDialog have none): an own Win32 dialog in Rust, no PowerShell. macOS: AppleScript
+  `display dialog` (text field, default button Cancel). Linux: `zenity` or `kdialog`, which
+  may be missing; then a context-menu run refuses (R19). Which crate or code per OS?
+  Whatever is chosen: helper programs are run from fixed system paths (`/usr/bin/osascript`,
+  `/usr/bin/zenity`...), never found through `PATH`; folder names reach them as arguments,
+  never spliced into AppleScript source or markup. Enter in the number field confirms only if
+  the number is right; otherwise it does nothing. Several folders selected in Windows
+  Explorer start one process each with plain registry verbs: one summary needs a
+  multi-selection entry (`IExecuteCommand`, a drop target, or one instance collecting the
+  others).
+- Pseudo-terminal tests (R34) need a pty crate as a dev-dependency, accepted by `deny.toml`:
+  which one, for Unix and Windows ConPTY?

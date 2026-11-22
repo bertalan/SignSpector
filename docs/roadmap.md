@@ -42,8 +42,9 @@ The order follows two ideas:
     names of people, phone numbers, IPs, base64 content and branch names are not detected
     (header "Known limits");
   - `cleanup.sh`: the GitHub section duplicates `audit-status.sh`; "never asks" is checked on
-    the script's text and with input from `/dev/null`, never at a real terminal; the check "still merged
-    into main" just before a branch is deleted has no test (it guards a race);
+    the script's text (a word list) and with input on a pipe, never at a real terminal; the
+    check "still merged into main" just before a branch is deleted has no test (it guards a
+    race);
   - `audit-status.sh`: the "AUDIT DUE" line, the unfinished-work section and the "RED CHECKS
     on open pull requests" line have no test;
   - report-mode tests pass if the script prints nothing in that section.
@@ -75,7 +76,8 @@ The order follows two ideas:
   unreadable folders listed; count, total size, subfolders. Risky-folder detection (drive
   roots, home, Desktop, Documents, system folders, > 10,000 envelopes).
 - [ ] 1.6 **Confirmation logic** (R28–R30): pure functions turning (counts, folder, terminal,
-  dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the answer: typed count (R28 risky folder,
+  dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the
+  answer: typed count (R28 risky folder,
   R29), yes/no default No (R19). Typestate `ConfirmedPlan`. Tests: Enter, `n`, wrong number,
   changing command, and `check` or `--plan` on a risky folder, refused from a script;
   several folders (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
@@ -105,7 +107,10 @@ The order follows two ideas:
 - [ ] 3.7 Countersignatures (R11); `tsp`: RFC 3161, `.tsd`, `.m7m` (R5, R12); detached `.p7s` (R6).
 - [ ] 3.8 Content sniffing for names without a usable extension (R18).
 - [ ] 3.9 Revocation (R49): data embedded in the signature, CRL per CA with cache, one check
-  per certificate, "revocation not checked" offline.
+  per certificate, "revocation not checked" offline. Negative tests: revoked before and after
+  the time stamp, no time stamp (judged now), stale or forged embedded data, forged or
+  oversized CRL, CRL older than the reference time, expired certificate no longer listed,
+  distribution point outside `http`/`https`.
 
 ## Phase 4: output
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).
