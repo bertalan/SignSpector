@@ -3,16 +3,19 @@
 #   scripts/check-public.sh --staged          files in the index (pre-commit hook)
 #   scripts/check-public.sh --range BASE TIP  every commit of a push (pre-push hook, CI):
 #       BASE = a commit     commits in BASE..TIP
-#       BASE = remotes      commits of TIP not on any remote branch (new branch)
+#       BASE = remote:NAME  commits of TIP not on any branch of that remote (new branch);
+#                           other remotes never hide commits
 #       BASE = tip          TIP only (scheduled runs)
 #     For each commit: the files it adds or changes, its message, author and committer;
-#     then the whole tree of TIP.
+#     then the whole tree of TIP, and the tag message and tagger when TIP is an annotated tag.
+#     Shallow clones are refused (exit 2): they cannot see the history.
 #   scripts/check-public.sh --message FILE    a commit message being written (commit-msg hook)
 # Exit 0 clean, 1 content blocked, 2 cannot check (bad revision, git error): never a silent pass.
 # A false positive is solved by changing this script in a reviewed commit, never with --no-verify.
 #
 # Known limits (not detected): names of people, phone numbers, host names, IP addresses,
-# lower-case codici fiscali, text stored as UTF-16 (BMPString). Review remains necessary.
+# lower-case codici fiscali, text stored as UTF-16 (BMPString) or base64 (base64 envelopes:
+# fixtures must be DER), branch names. Review remains necessary.
 set -uf
 # Byte-wise matching: binary files (real .p7m) carry names and codici fiscali in clear text.
 export LC_ALL=C
@@ -32,7 +35,8 @@ allowed="$allowed"'|assets/tsl-it\.xml)$'
 denied='\.(p12|pfx|key|pem)$'
 
 # 2. Content that must never appear. [x] brackets keep this file from matching itself.
-#    assets/tsl-it.xml is the official public AgID list: exempt.
+#    assets/tsl-it.xml is the official public AgID list: exempt. Only that file is allowed in
+#    assets/ on purpose: the EU LOTL is added here deliberately at roadmap 3.4.
 email='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
 # Whole addresses that may appear: fake test domains and no-reply addresses.
 email_ok='^([^@]+@(example\.(com|org|net)|[a-z0-9.-]+\.(test|invalid|example))|noreply@[a-z0-9.-]+|[0-9]+\+[A-Za-z0-9-]+@users\.noreply\.github\.com)$'
@@ -51,10 +55,16 @@ scan_tmp() {
     rc=$?
     [ "$rc" -eq 1 ] && return 0          # no match
     [ "$rc" -eq 0 ] || cannot "grep failed on $1"
-    printf '%s\n' "$content" | grep -aEq "$secret" && problem "$1" "private key or token"
-    printf '%s\n' "$content" | grep -aEq "$local_path" && problem "$1" "local path with a user name"
-    printf '%s\n' "$content" | grep -aEq "$codice_fiscale" && problem "$1" "possible codice fiscale"
-    printf '%s\n' "$content" | grep -aEo "$email" | grep -aEvq "$email_ok" && problem "$1" "email address"
+    known=0                              # did the match fall in a known category?
+    if printf '%s\n' "$content" | grep -aEq "$secret"; then problem "$1" "private key or token"; known=1; fi
+    if printf '%s\n' "$content" | grep -aEq "$local_path"; then problem "$1" "local path with a user name"; known=1; fi
+    if printf '%s\n' "$content" | grep -aEq "$codice_fiscale"; then problem "$1" "possible codice fiscale"; known=1; fi
+    if printf '%s\n' "$content" | grep -aEq "$email"; then
+        known=1                          # allowed addresses (example.com, noreply) are fine
+        printf '%s\n' "$content" | grep -aEo "$email" | grep -aEvq "$email_ok" && problem "$1" "email address"
+    fi
+    # The combined pattern matched but no category did (e.g. a NUL inside the match): block.
+    [ "$known" -eq 1 ] || problem "$1" "unrecognised match, check by hand"
     return 0
 }
 
@@ -111,9 +121,10 @@ case "${1:-}" in
         base=${2:-}; tip=${3:-}
         [ -n "$base" ] && [ -n "$tip" ] || cannot "usage: --range BASE TIP"
         verify_commit "$tip"
+        [ "$(git rev-parse --is-shallow-repository)" = false ] || cannot "shallow clone: fetch the full history"
         case "$base" in
-            tip)     commits="" ;;
-            remotes) commits=$(git rev-list "$tip" --not --remotes) || cannot "git rev-list failed" ;;
+            tip)      commits="" ;;
+            remote:*) commits=$(git rev-list "$tip" --not --remotes="${base#remote:}") || cannot "git rev-list failed" ;;
             *)       verify_commit "$base"
                      commits=$(git rev-list "$base..$tip") || cannot "git rev-list failed" ;;
         esac
@@ -127,13 +138,18 @@ case "${1:-}" in
         files=$(tree_files "$tip") || exit 2
         check_files "$tip:" "$files"
         check_meta "$tip"
+        if [ "$(git cat-file -t "$tip")" = tag ]; then
+            git cat-file -p "$tip" > "$tmp" || cannot "cannot read tag $tip"
+            scan_tmp "tag $tip"
+        fi
         echo "public check: $n commits and the tree of $(git rev-parse --short "$tip") scanned" ;;
     --message)
         [ -r "${2:-}" ] || cannot "message file missing"
-        # Comment lines are scanned too: `git commit -m` keeps them in the commit.
-        cp "$2" "$tmp" || cannot "cannot read $2"
+        # Comment lines are scanned too (`git commit -m` keeps them), but not the diff that
+        # `git commit -v` appends below the scissors line.
+        sed '/^# -\{24\} >8 -\{24\}$/,$d' "$2" > "$tmp" || cannot "cannot read $2"
         scan_tmp "commit message" ;;
-    *) echo "usage: $0 --staged | --range BASE TIP | --message FILE" >&2; exit 2 ;;
+    *) echo "usage: $0 --staged | --range BASE|remote:NAME|tip TIP | --message FILE" >&2; exit 2 ;;
 esac
 
 if [ "$fail" -ne 0 ]; then

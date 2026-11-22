@@ -31,7 +31,9 @@ No exception for "infrastructure".
    not.
 6. Commit only when the user asks. Hooks (`.githooks/`): pre-commit runs the public-repository
    check, the audit cadence gate, the script tests when scripts or hooks change, fmt, clippy
-   and tests; commit-msg scans the message; pre-push scans every pushed commit.
+   and tests; commit-msg scans the message; pre-push scans every commit not yet on the remote it pushes
+   to (other remotes never hide commits). Script and hook tests: `scripts/test-scripts.sh`,
+   `scripts/test-cleanup.sh`, `scripts/test-hooks.sh`.
 
 Logic lives in the library (`src/lib.rs` and modules); `src/main.rs` is only the command line.
 Unit tests sit beside the code (`#[cfg(test)]`); end-to-end tests of the executable go in
@@ -66,7 +68,8 @@ functions or options that never existed, work left half-done. Rules against it:
 - **After every audit, remove leftovers**: `sh scripts/cleanup.sh` lists them, `--apply` removes
   the local ones (`.DS_Store`, `*.orig`, `*.rej` outside ignored folders; merged local
   branches). Worktrees, backups (`*.bak`), editor files and other untracked files are only
-  listed; ignored folders (`tests/corpus/`, `target/`) are never touched. Deletion happens **only
+  listed; ignored folders are never touched, and `tests/corpus/`, `tests/out/`, `target/`
+  are protected even if `.gitignore` lacks them. Deletion happens **only
   locally, from the development environment, never on GitHub**: merged remote branches,
   stale or draft PRs found on GitHub are reported to the user, who decides there. Untracked
   files that are not recognisable junk are listed for the user, never deleted silently.
@@ -99,7 +102,11 @@ in the history even if deleted later. Before every commit and push:
   days before it expires); fork PR workflows always need approval; only GitHub-owned actions
   plus `Swatinem/rust-cache`, `taiki-e/install-action`, `EmbarkStudios/cargo-deny-action`,
   pinned by SHA; wiki and projects off; vulnerability alerts on, no Dependabot PRs; secret
-  scanning with push protection on.
+  scanning with push protection on. The GitGuardian app installed on the owner's account adds
+  its own secret check to every PR (not a required check).
+- **Accepted exception**: the repository's first commit (`cd3620d`, "Initial commit", made on
+  the GitHub website) has the owner's personal address as author. The owner accepted it
+  (2026-11-22); history is not rewritten. Every later commit uses the GitHub no-reply address.
 - **The hooks are the barrier, CI is only an alarm**: when CI runs, the push is already public.
   A pull request also runs its own version of the workflow, so changes to `.github/`,
   `scripts/` and `.githooks/` get a careful review.

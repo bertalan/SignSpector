@@ -9,7 +9,7 @@
 # already merged into main and not checked out anywhere.
 # Never removed, only listed: worktrees (any state), backups and editor files (*.bak, *.swp,
 # *~), other untracked files, unmerged branches. Never touched: tracked files, anything in an
-# ignored folder (tests/corpus/ holds real documents, target/ the build), main.
+# ignored folder, and always tests/corpus/ (real documents), tests/out/, target/; main.
 set -uf
 export LC_ALL=C
 
@@ -26,9 +26,10 @@ if [ -n "${GIT_INDEX_FILE:-}" ] || [ -n "${GIT_DIR:-}" ] || [ -n "${GIT_WORK_TRE
     exit 2
 fi
 
-cd "$(git rev-parse --show-toplevel)" || exit 2
+top=$(git rev-parse --show-toplevel 2>/dev/null)
+[ -n "$top" ] || { echo "Error: not inside a git repository." >&2; exit 2; }
+cd "$top" || exit 2
 main=main
-verb="would remove"; [ "$apply" -eq 1 ] && verb="removed"
 status=0
 nl='
 '
@@ -43,13 +44,19 @@ done
 
 # 2. Local branches merged into main, not main, not checked out anywhere.
 checked_out=$(git worktree list --porcelain | sed -n 's|^branch refs/heads/||p')
-for b in $(git branch --merged "$main" --format='%(refname:short)'); do
+# for-each-ref on refs/heads: no "(HEAD detached at ...)" pseudo-entry.
+for b in $(git for-each-ref --merged "$main" --format='%(refname:short)' refs/heads); do
     [ "$b" = "$main" ] && continue
     case "$nl$checked_out$nl" in *"$nl$b$nl"*) echo "keep branch (checked out in a worktree): $b"; continue ;; esac
-    echo "$verb local branch (merged): $b"
-    [ "$apply" -eq 1 ] && { git branch -q -d "$b" || status=1; }
+    if [ "$apply" -eq 0 ]; then
+        echo "would remove local branch (merged): $b"
+    elif git branch -q -d "$b"; then
+        echo "removed local branch (merged): $b"
+    else
+        status=1
+    fi
 done
-for b in $(git branch --no-merged "$main" --format='%(refname:short)'); do
+for b in $(git for-each-ref --no-merged "$main" --format='%(refname:short)' refs/heads); do
     echo "keep local branch (not merged): $b"
 done
 
@@ -57,10 +64,16 @@ done
 junk='(^|/)(\.DS_Store|[^/]*\.(orig|rej))$'
 old_ifs=$IFS
 IFS=$nl
-for f in $(git -c core.quotepath=off ls-files --others --exclude-standard); do
+# Folders with real documents and build output are never touched, even if .gitignore lacks them.
+for f in $(git -c core.quotepath=off ls-files --others --exclude-standard | grep -Ev '^(tests/corpus|tests/out|target)/'); do
     if printf '%s\n' "$f" | grep -Eq "$junk"; then
-        echo "$verb junk file: $f"
-        [ "$apply" -eq 1 ] && { rm -f -- "$f" || status=1; }
+        if [ "$apply" -eq 0 ]; then
+            echo "would remove junk file: $f"
+        elif rm -f -- "$f"; then
+            echo "removed junk file: $f"
+        else
+            status=1
+        fi
     else
         echo "review (untracked, not removed): $f"
     fi

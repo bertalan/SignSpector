@@ -55,8 +55,6 @@ beside the originals, ready to open.
 - R16. `check` (the default) writes nothing but the report. `extract` writes the signed
   documents beside the originals (`Relazione.pdf.p7m` -> `Relazione.pdf`) after the two
   confirmations of R28 and R29: no `--apply` is needed, the typed confirmation is the safeguard.
-  `signspector <dir> --apply` is kept as an alias of `extract` and goes through the same
-  confirmations.
 - R17. Never overwrite: same content already there -> nothing to do; different content ->
   `Relazione (1).pdf`. Originals are never modified, moved or renamed.
 - R18. Name without a usable extension: guess it from the content (PDF, ZIP-based office
@@ -317,7 +315,7 @@ confirm antivirus, SmartScreen and AppLocker accept a mingw-built executable.
 - `ring` as the crypto provider of rustls (for the TSL refresh over HTTPS): it contains C and
   assembly, cross-compiles fine, and is the only provider not banned in `deny.toml`
   (`aws-lc-rs` is). Accept it as an exception to "pure Rust", or look for a pure-Rust provider
-  (e.g. `rustls-rustcrypto`)? To decide before roadmap 3.3.
+  (e.g. `rustls-rustcrypto`)? To decide before roadmap 3.5 (download of the lists).
 - Until the translation layer exists (roadmap 1.4), the placeholder message in `src/main.rs` is
   the only hard-coded user-facing text; it goes away with 1.4.
 

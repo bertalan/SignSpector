@@ -72,7 +72,25 @@ check "worktrees never removed"               '[ -f "$work/wt-clean/tests/corpus
 check "worktrees listed"                      'printf "%s" "$out" | grep -q "worktree.*wt-detached"'
 check "remote branch never deleted"           'git --git-dir="$work/remote.git" rev-parse -q --verify refs/heads/old >/dev/null'
 check "remote merged branch reported"         'printf "%s" "$out" | grep -q "origin/old"'
-check "origin/HEAD is not a branch"           '! printf "%s" "$out" | grep -Eq "merged.*: origin\$"'
+check "origin/HEAD is not a branch"           '! printf "%s" "$out" | grep -Eq "merged.*: origin(/HEAD)?\$"'
+
+# Names that must not be expanded, split or matched loosely.
+echo junk > 'my file.orig'; echo mine > plan.orig.txt; echo junk > '*.orig'
+sh scripts/cleanup.sh --apply >/dev/null 2>&1
+check "name with a space removed whole"       '[ ! -e "my file.orig" ] && [ ! -e my ]'
+check "junk rule anchored at the end"         '[ -f plan.orig.txt ]'
+check "star name not expanded to tracked files" '[ -f kept.orig ] && [ ! -e "*.orig" ]'
+# tests/corpus/ is protected even when its ignore line is missing (old checkout, rebase).
+grep -v corpus .gitignore > .gitignore.new && mv .gitignore.new .gitignore
+sh scripts/cleanup.sh --apply >/dev/null 2>&1
+check "corpus protected without the ignore line" '[ -f tests/corpus/verbale.orig ]'
+git checkout -q -- .gitignore
+# Detached HEAD: no garbage branch names, no failure.
+git switch -q --detach main
+out=$(sh scripts/cleanup.sh 2>&1); r=$?
+check "detached HEAD: exit 0"                 '[ $r -eq 0 ]'
+check "detached HEAD: no fake branch"         '! printf "%s" "$out" | grep -q "(HEAD"'
+git switch -q main
 
 # Run from another branch: main is never deleted.
 git switch -q wip
@@ -84,6 +102,10 @@ git switch -q main
 echo junk > f.orig
 GIT_INDEX_FILE="$work/other-index" sh scripts/cleanup.sh --apply >/dev/null 2>&1; r=$?
 check "refuses with an inherited GIT_INDEX_FILE" '[ $r -eq 2 ] && [ -f f.orig ]'
+GIT_DIR="$work/r/.git" sh scripts/cleanup.sh --apply >/dev/null 2>&1; r=$?
+check "refuses with an inherited GIT_DIR"     '[ $r -eq 2 ] && [ -f f.orig ]'
+(cd "$work" && sh "$work/r/scripts/cleanup.sh" >/dev/null 2>&1); r=$?
+check "outside a repository: exit 2"          '[ $r -eq 2 ]'
 check "unknown option refused"                '! sh scripts/cleanup.sh --force >/dev/null 2>&1'
 
 echo "cleanup tests: $passed passed, $failed failed"

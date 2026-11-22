@@ -32,10 +32,14 @@ expect_reason() {
         failed=$((failed + 1)); echo "FAIL: $desc (exit $r, expected 1 with \"$reason\"; got: $err)" >&2; fi
 }
 
+# Report-mode tests never call the real gh (network, user account): default gh says "not logged in".
+mkdir -p "$work/nogh"; printf '#!/bin/sh\nexit 1\n' > "$work/nogh/gh"; chmod +x "$work/nogh/gh"
+PATH="$work/nogh:$PATH"
+
 new_repo() {
     rm -rf "$work/r" && mkdir -p "$work/r/scripts" && cd "$work/r" || exit 2
     git init -q -b main
-    cp "$src/check-public.sh" "$src/audit-status.sh" scripts/
+    cp "$src/check-public.sh" "$src/audit-status.sh" "$src/cleanup.sh" scripts/
     git add scripts && git commit -qm initial
 }
 
@@ -64,6 +68,10 @@ staged "pdf not allowed"              1 docs/Relazione.pdf '%%PDF-1.7\n'
 staged "p7m outside fixtures"         1 'docs/Relazione citt\303\240.pdf.p7m' 'x'
 staged "real corpus path"             1 tests/corpus/x.rs 'fn x() {}\n'
 staged "glob character in name"       1 'docs/a*.md' 'x\n'
+mkdir -p docs; echo clean > docs/a.md; git add docs; git commit -qm a
+printf 'mario.rossi@gmail.\143om\n' > 'docs/[ab].md'; git add -f -- 'docs/[ab].md'
+expect_reason "bracket name is not expanded to another file" "docs/\[ab\].md: path not allowed" sh scripts/check-public.sh --staged
+git rm -q --cached -- 'docs/[ab].md'; rm -f -- 'docs/[ab].md'
 
 sh scripts/check-public.sh --range tip nosuchrev 2>/dev/null; expect "bad revision" 2 $?
 sh scripts/check-public.sh --range tip HEAD 2>/dev/null;      expect "clean commit" 0 $?
@@ -203,8 +211,8 @@ git switch -q -c topic
 mkdir -p docs; printf 'mario.rossi@gmail.\143om\n' > docs/leak.md; git add docs; git commit -qm "add"
 git rm -q docs/leak.md; git commit -qm "remove"
 expect_reason "range: leak added then removed" "docs/leak.md: email address" sh scripts/check-public.sh --range "$(git rev-parse main)" HEAD
-expect_reason "range: new branch, not on remote" "docs/leak.md: email address" sh scripts/check-public.sh --range remotes HEAD
-sh scripts/check-public.sh --range remotes main 2>/dev/null;  expect "range: nothing new" 0 $?
+expect_reason "range: new branch, not on remote" "docs/leak.md: email address" sh scripts/check-public.sh --range remote:origin HEAD
+sh scripts/check-public.sh --range remote:origin main 2>/dev/null;  expect "range: nothing new" 0 $?
 sh scripts/check-public.sh --range nosuchrev HEAD 2>/dev/null; expect "range: bad base" 2 $?
 sh scripts/check-public.sh --range tip HEAD 2>/dev/null;      expect "range: tip only (leak removed)" 0 $?
 
@@ -255,7 +263,7 @@ expect_reason "leak inside a merge commit" "docs/leak.md: email address" sh scri
 rm -rf "$work/r" && mkdir -p "$work/r/scripts" && cd "$work/r" && git init -q -b main
 cp "$src/check-public.sh" scripts/; mkdir -p docs; printf 'mario.rossi@gmail.\143om\n' > docs/leak.md
 git add -A && git commit -qm root && git rm -q docs/leak.md && git commit -qm clean
-expect_reason "leak in the root commit" "docs/leak.md: email address" sh scripts/check-public.sh --range remotes HEAD
+expect_reason "leak in the root commit" "docs/leak.md: email address" sh scripts/check-public.sh --range remote:origin HEAD
 
 # A leak added by modifying an existing file in a middle commit.
 new_repo
@@ -269,6 +277,47 @@ new_repo
 staged "script with another extension" 1 scripts/x.py 'x\n'
 staged "source with another extension" 1 src/notes.txt 'x\n'
 sh scripts/audit-status.sh --bogus >/dev/null 2>&1;  expect "audit-status: unknown mode" 2 $?
+
+# --- third review: boundaries and silent passes ---------------------------------------------
+new_repo
+staged "italian email (two-letter TLD)" 1 docs/note.md 'mario.rossi\100pec.comune.\151t\n'
+staged "codice fiscale with omocodia"   1 docs/note.md 'RSSMRA80A01H50M\125\n'
+staged "lower-case drive letter"        1 docs/note.md 'c:\\\125sers\\mrossi\n'
+staged "slack user token"               1 src/x.rs '// xo\170p-123\n'
+staged "docs name with a dot"           1 docs/a.b.md 'x\n'
+staged "docs name in upper case"        1 docs/Note.md 'x\n'
+staged "docs subfolder"                 1 docs/x/y.md 'x\n'
+staged "github folder, not a workflow"  1 .github/notes.txt 'x\n'
+staged "fixture name with a space"      1 'tests/fixtures/a b.p7m' 'x'
+staged "other file in .cargo"           1 .cargo/credentials.toml 'x\n'
+staged "other toml at the root"         1 secrets.toml 'x\n'
+staged "other Cargo file"               1 Cargo.bak 'x\n'
+staged "other .git file"                1 .gitmodules 'x\n'
+staged "audit report allowed"           0 docs/audits/0009-2026-01-01.md 'x\n'
+# A NUL inside a match: no category recognises it, the file is still blocked.
+staged "NUL inside a match"             1 tests/fixtures/a.der 'x/\125sers/\000\n'
+sh scripts/check-public.sh --message "$work/no-such-file" 2>/dev/null; expect "missing message file" 2 $?
+sh scripts/check-public.sh --range remotes HEAD 2>/dev/null;            expect "old 'remotes' mode refused" 2 $?
+# Shallow clones cannot see the history: never a pass.
+new_repo
+mkdir -p docs; echo a > docs/a.md; git add docs; git commit -qm a
+git clone -q --depth 1 "file://$work/r" "$work/shallow" 2>/dev/null
+(cd "$work/shallow" && sh scripts/check-public.sh --range "$(git rev-parse HEAD)" HEAD 2>/dev/null); expect "check-public: shallow clone" 2 $?
+(cd "$work/shallow" && sh scripts/audit-status.sh --gate-push 2>/dev/null); expect "audit gate: shallow clone" 2 $?
+rm -rf "$work/shallow"
+# Only reports under docs/audits/ count as audits.
+new_repo
+commit a; commit b; commit c; commit d; commit e; commit f
+mkdir -p docs; echo x > docs/other.md; git add docs; git commit -qm "not an audit"
+sh scripts/audit-status.sh --gate-push 2>/dev/null;   expect "doc outside audits is not an audit" 1 $?
+# The session report runs the cleanup as a dry run: it lists, it never deletes.
+new_repo
+echo junk > a.orig
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+printf '%s\n' "$out" | grep -q "would remove junk file: a.orig"; expect "report lists leftovers" 0 $?
+[ -f a.orig ];                                        expect "report deletes nothing" 0 $?
+printf '%s\n' "$out" | grep -q "== Audit cadence";   expect "report printed" 0 $?
+rm -f a.orig
 
 # A grep failure is never a silent pass.
 new_repo
@@ -284,6 +333,7 @@ new_repo
 sh scripts/audit-status.sh 2>/dev/null | grep -q "HOOKS NOT ENABLED"; expect "warning without hooks" 0 $?
 git config core.hooksPath .githooks
 sh scripts/audit-status.sh 2>/dev/null | grep -q "HOOKS NOT ENABLED"; expect "no warning with hooks" 1 $?
+sh scripts/audit-status.sh 2>/dev/null | grep -q "== Audit cadence"; expect "report ran (hooks enabled)" 0 $?
 
 # The session report warns before the limit on who can open PRs and issues expires.
 new_repo
@@ -299,6 +349,7 @@ fake_gh "${soon}T00:00:00Z"
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTERACTION LIMIT EXPIRES"; expect "limit expiring within 30 days" 0 $?
 fake_gh "${far}T00:00:00Z"
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTERACTION LIMIT"; expect "limit far away: no warning" 1 $?
+PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "== GitHub"; expect "GitHub section ran (limit far away)" 0 $?
 fake_gh ""
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTERACTION LIMIT NOT ACTIVE"; expect "limit missing" 0 $?
 

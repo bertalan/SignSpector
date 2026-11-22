@@ -17,6 +17,9 @@ mode=${1:-}
 tip=HEAD
 [ "$mode" = --gate-push ] && [ -n "${2:-}" ] && tip=$2
 git rev-parse --verify --quiet "$tip^{commit}" >/dev/null || { echo "Error: not a commit: $tip" >&2; exit 2; }
+if [ "$mode" != "" ] && [ "$(git rev-parse --is-shallow-repository)" != false ]; then
+    echo "Error: shallow clone, the commits since the last audit cannot be counted." >&2; exit 2
+fi
 
 last_audit=""
 candidates=$(git log --format=%H "$tip" -- docs/audits) || exit 2

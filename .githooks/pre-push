@@ -6,12 +6,13 @@
 set -e
 zero=0000000000000000000000000000000000000000
 top=$(git rev-parse --show-toplevel)
+remote=$1   # the remote being pushed to: other remotes must not hide commits from the scan
 while read -r local_ref local_sha remote_ref remote_sha; do
     [ "$local_sha" = "$zero" ] && continue   # branch deletion
     sh "$top/scripts/audit-status.sh" --gate-push "$local_sha"
-    # New branch, or remote tip unknown here (force-push): commits not on any remote branch.
+    # New branch, or remote tip unknown here (force-push): commits not on that remote.
     if [ "$remote_sha" = "$zero" ] || ! git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
-        base=remotes
+        base="remote:$remote"
     else
         base=$remote_sha
     fi

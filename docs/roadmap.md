@@ -21,6 +21,15 @@ The order follows two ideas:
   systems; public-repository scan of every new commit (`check-public.sh --range`); audit
   cadence on the PR head. Branch protection on `main`: all jobs green, linear history, no
   force-push. CI is an alarm; the local hooks are the barrier.
+- [ ] 0.5 Remaining gaps in the rule-script tests, found by the third review of PR #1 and
+  accepted as known limits for now (each needs a test before the code changes):
+  - `check-public.sh`: failures of `git show`, `ls-tree`, `diff-tree` are not each tested;
+    names of people, phone numbers, IPs, base64 content and branch names are not detected
+    (header "Known limits");
+  - `cleanup.sh`: exit status after a failed `rm`; names with spaces or a literal `*` in
+    junk files; the GitHub section duplicates `audit-status.sh`;
+  - `audit-status.sh`: the "AUDIT DUE" line and the unfinished-work section have no test;
+  - report-mode tests pass if the script prints nothing in that section.
 - [ ] 0.3 Fixture generator `scripts/make-fixtures.sh` (Homebrew `openssl@3`): test CA, signers,
   simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only, private keys never committed
   (generated at test time or kept in `target/`).
