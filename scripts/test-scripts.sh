@@ -451,6 +451,13 @@ PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned
 # The value ends at its closing quote, even when a comment after it holds the other quote.
 printf "[toolchain]\nchannel = '1.100.0' # don't move\n" > rust-toolchain.toml
 PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: apostrophe in a trailing comment" 0 $?
+printf '[toolchain]\nchannel = "1.100.0" # was "1.99.0"\n' > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: double quotes in a trailing comment" 0 $?
+printf '[toolchain]\n\tchannel = "1.100.0"\n' > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: tab-indented channel read" 0 $?
+# A pin with an empty part is not x.y.z.
+printf '[toolchain]\nchannel = "1.100."\n' > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100. is not x.y.z; see rust-toolchain.toml"; expect "report: pin with an empty part said" 0 $?
 # A pin with a fourth number is not x.y.z.
 printf '[toolchain]\nchannel = "1.100.0.1"\n' > rust-toolchain.toml
 PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0.1 is not x.y.z; see rust-toolchain.toml"; expect "report: four-part pin said" 0 $?
@@ -458,6 +465,15 @@ printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
 # With two stable hosts at different versions, the first line is read.
 rustup_says "printf '%s\\n' 'stable-aarch64-apple-darwin - up to date: 1.100.0 (a 2026-11-09)' 'stable-x86_64-apple-darwin - update available: 1.100.0 (a 2026-11-09) -> 1.101.0 (b 2026-12-21)'"
 PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: first of two stable hosts read" 0 $?
+rustup_says "printf '%s\\n' 'stable-aarch64-apple-darwin - update available: 1.100.0 (a 2026-11-09) -> 1.101.0 (b 2026-12-21)' 'stable-x86_64-apple-darwin - up to date: 1.100.0 (a 2026-11-09)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "NEWER RUST STABLE: 1.101.0 (pinned: 1.100.0); see rust-toolchain.toml"; expect "report: first stable host read, not the lowest" 0 $?
+# A pin problem is said before a rustup failure: the pin is the thing to fix first.
+rustup_says "exit 1"
+printf '[toolchain]\nchannel = "stable"\n' > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust stable is not x.y.z; see rust-toolchain.toml"; expect "report: bad pin said before rustup failure" 0 $?
+rm -f rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust version not found in rust-toolchain.toml"; expect "report: missing pin said before rustup failure" 0 $?
+printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
 # A toolchain whose name only contains "stable-" (a custom one) is not the stable channel.
 rustup_says "printf '%s\\n' 'my-stable-x86_64-unknown-linux-gnu - up to date: 1.50.0 (a 2025-01-01)' 'my-stable-x86_64-unknown-linux-gnu - update available: 1.50.0 (a 2025-01-01) -> 1.51.0 (b 2025-02-01)' 'stable-x86_64-unknown-linux-gnu - up to date: 1.100.0 (a 2026-11-09)'"
 PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: custom toolchain named *stable- skipped" 0 $?
