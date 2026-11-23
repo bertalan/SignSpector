@@ -17,7 +17,7 @@ SignSpector takes a folder and finds every such file. It opens all the layers an
 signatures, certificates and time stamps. Then it writes a report anyone can read. On request it
 saves the signed documents beside the originals, ready to open.
 
-## Requirements
+## What must it do?
 
 ### Which files does it look at?
 - R1a. A name is an envelope when its extension is `.p7m`, `.p7s`, `.tsd` or `.m7m`, in any
@@ -63,8 +63,8 @@ saves the signed documents beside the originals, ready to open.
 - R13. A console summary per file, in the user's language (R27), with colours (R35). Exit codes:
   0 all fine, 1 problems found, 2 cannot run.
 - R14. An HTML report (one self-contained file) in each analysed folder, covering that folder
-  only. With `--report <file>`, one file for the whole run instead. `--no-report` skips the
-  report of an analysis (not of an extraction: R16).
+  only. With `--report <file>`, one file for the whole run instead. `--no-report` skips it;
+  R16 says when it does not apply.
 - R15. With `--json <file>`, a JSON file with the same information, for scripts.
 - R16. **What each command writes.**
   - `check` (the default) writes no document. It writes only the HTML report (R14), the JSON
@@ -91,24 +91,18 @@ saves the signed documents beside the originals, ready to open.
   `undo <report>`, `install-menu`, `uninstall-menu`, `uninstall`. **There is no `--apply`,
   `--yes` or `--expect`.**
   - Every command that changes files or the system shows the exact plan first and acts only
-    after a person confirms. The one exception: `check` on an ordinary folder from a script
-    writes its report and the cache with no question (R16, R30).
-  - Where the person is decides how they confirm (R30):
-    - at a terminal: before analysing, a yes/no question (R28). For files found in a folder the
-      user types the number (files to process in a risky run, R28; documents to write, R29).
-      `undo`, `install-menu`, `uninstall-menu` and `uninstall` change only what the tool itself
-      made, and ask a yes/no question. Yes/no questions default to No, Enter alone cancels, and
-      the answers and the default are written out in words in the user's language (R35, R27);
-    - from the context menu (`--interactive`): the same confirmations, with the same number to
-      type and the same default, in a native dialog (R30, R38), focus on Cancel;
-    - from a script (no terminal, no `--interactive`): nobody can answer, so they refuse.
+    after a person confirms. How a person confirms, at a terminal, in a dialog or not at all
+    from a script, is R30. The one exception: `check` on an ordinary folder from a script writes
+    its report (HTML and JSON) and the cache with no question (R16, R30).
+  - A number is typed only for files found in a folder: the files to process in a risky run
+    (R28) and the documents to write (R29). `undo`, `install-menu`, `uninstall-menu` and
+    `uninstall` change only what the tool itself made, and ask a yes/no question (R30).
   - **Several folders.** `check` and `extract` take one or more folders (several can be
     selected in the file manager). They are counted and confirmed together:
     - one summary with a row per folder (path, number of files to process, number of files of
       any kind) and the totals, and one question for all. The number typed is the total;
-    - when the run is risky, the summary says why: the kind of folder, or the 10,000-file limit
-      (R28). A single risky folder makes the whole run risky, and the limit applies to the
-      total;
+    - when the run is risky (R28), the summary says why: the kind of folder, or the
+      10,000-file limit;
     - a folder with no envelopes is shown with 0; if all are empty, the run stops;
     - the same folder given twice (also spelt differently: letter case, a symbolic link, a
       trailing slash), or a folder inside another selected one, is counted once, under the
@@ -124,12 +118,11 @@ saves the signed documents beside the originals, ready to open.
     not even the report or the cache, and downloads nothing: it uses the embedded lists and
     those already in the cache.
     - `check --plan` only counts (R28; no envelope is opened) and prints the summary. It asks
-      no question and runs everywhere, also from a script on a risky folder.
+      no question and runs everywhere (R30).
     - `extract --plan` builds the write plan of R29, which opens every envelope. So it asks the
-      R28 question first (console or dialog), and from a script it runs on an ordinary folder
-      and refuses a risky one, like `check`. It also says which trusted lists a real run would
-      download (R45).
-    - For the other commands it lists the items, with no question, also from a script.
+      R28 question first, and from a script it behaves like `check` (R30). It also says which
+      trusted lists a real run would download (R45).
+    - For the other commands it lists the items, with no question (R30).
   - Options: `--open`, `--report`, `--no-report`, `--report-lang <code>`, `--json <file>`,
     `--threads`, `--offline`, `--trust-lists <auto|all|codes>`, `--trust-list <file>`,
     `--lang <code>`, `--interactive`, `--plain`, `--no-color`, `--plan`. Help is translated
@@ -172,18 +165,18 @@ saves the signed documents beside the originals, ready to open.
 ### How does it protect the user's files?
 No folder is processed right after a person chooses it: the tool counts first and asks (R28).
 No document is written without a second, separate confirmation on the full write plan (R29).
-There is never an implicit yes (R30). R31 says how every file is created and which files may
-ever be replaced. From a script, an ordinary folder is analysed, a risky one is refused (only
-counted by `check --plan`), and no document is written (R30).
+There is never an implicit yes: R30 says how each kind of run confirms, and what runs from a
+script. R31 says how every file is created and which files may ever be replaced.
 
 - R28. **Confirm before analysing.** After the folders are chosen, the tool only counts (no
-  envelope is opened) and asks, default No (Enter alone cancels).
+  envelope is opened) and asks a yes/no question (R30).
   - The question shows: folder, number of files to process (the envelopes, R1a), number of
     files of any kind, total size, number of subfolders, unreadable folders that will be
     skipped. The interface calls the envelopes "files to process". Zero envelopes: it says so and
     stops.
   - **A risky run** gets a stronger warning, and the user must type the number of files to
-    process. A run is risky when a chosen folder is the root of a drive or volume, the user's
+    process. A single risky folder makes the whole run risky. A run is risky when a chosen
+    folder is the root of a drive or volume, the user's
     home, Desktop, Documents, a system folder (`C:\Windows`, `Program Files`, `/System`,
     `/usr`, `/etc`...) or a network share root. It is also risky when the folders hold **more
     than 10,000 files of any kind** in all, subfolders included (owner's decision, 2026-11-23).
@@ -199,9 +192,12 @@ counted by `check --plan`), and no document is written (R30).
 - R30. **Three ways to confirm, never an implicit yes.**
   - Terminal (`std::io::IsTerminal` on input and output): questions in the console (R19, R28,
     R29). "Terminal" means both input and output are a terminal. With output redirected
-    (`| tee log`, `> file`) the run counts as a script.
-  - Context menu (no terminal, started with `--interactive`): the same confirmations in a
-    native dialog (R38), with a shorter summary than the console.
+    (`| tee log`, `> file`) the run counts as a script. Yes/no questions default to No, and
+    Enter alone cancels. The answers and the default are written out in words in the user's
+    language (R35, R27).
+  - Context menu (no terminal, started with `--interactive`): the same confirmations, with the
+    same number to type and the same default, in a native dialog (R38), with a shorter summary
+    than the console.
     - The dialog lists every selected folder with its number of files to process (envelopes to
       analyse, R28; documents to write, R29), the total, the reason when the run is risky
       (R19) and the operation proposed. Then it asks the question.
@@ -210,8 +206,8 @@ counted by `check --plan`), and no document is written (R30).
     - In every dialog the focus starts on Cancel. Enter alone and closing the window cancel.
       There is no time limit.
   - Script (no terminal, no `--interactive`): `extract`, `undo`, `install-menu`,
-    `uninstall-menu`, `uninstall`, and `check` on a risky folder (R28) stop with exit code 2
-    and say that a person must confirm. A `y` or a number arriving on a pipe is not a
+    `uninstall-menu`, `uninstall`, and `check` on a risky folder (R28) stop with exit code 2,
+    write nothing, and say that a person must confirm. A `y` or a number arriving on a pipe is not a
     confirmation. Only these run: `check` on an ordinary folder, `check --plan`,
     `extract --plan` on an ordinary folder, and `--plan` of `undo`, the menus and `uninstall`
     (a list).
@@ -223,12 +219,14 @@ counted by `check --plan`), and no document is written (R30).
     reports, JSON files, menu items, cache files, the manifest, and temporary files. The OS
     refuses if the name exists, even if the file appeared after the plan.
   - When the name is taken: a document, report or JSON file takes the next free name (`(1)`,
-    `(2)`...); a menu item is reported and left (R41).
+    `(2)`...); a menu item is reported and left (R41). How this applies to registry keys and
+    `.workflow` folders is still open (question "Before 5.1").
   - **Only two kinds of file are ever replaced**: the tool's own cache files (R47) and its
     install manifest (R41). They are replaced in two steps. The new content is written with
     `create_new` under a temporary name in the same folder; then that file is renamed over the
-    old one. The tool never follows a symbolic link there, and it refuses a name that exists
-    and is not a regular file. Nothing is ever written in place.
+    old one. A cache file or manifest that does not exist yet follows the same two steps. The
+    tool never follows a symbolic link there, and it refuses a name that exists and is not a
+    regular file. Nothing is ever written in place.
   - A partly written file (error, disk full) is removed, only if the tool created it.
   - Before writing, each original is re-checked against the analysis (size, mtime, SHA-256). If
     the folder changed, the plan is rebuilt and confirmed again.
@@ -261,10 +259,10 @@ counted by `check --plan`), and no document is written (R30).
 - R34. **Proof by tests.** A shared test helper snapshots the whole folder (paths and SHA-256)
   before and after every end-to-end test: originals identical, nothing changed but the
   confirmed plan.
-  - Writing (R29, R31, R32): empty answer, `n`, wrong number; a file appearing between plan and
-    write; names with `..`, reserved names, forbidden characters, NFC/NFD and case collisions,
-    over-long names; a symbolic link pointing outside; disk full (simulated); `undo` with a
-    modified file; `undo` on a report that records no document.
+  - Writing and undo (R29, R31, R32, R33): empty answer, `n`, wrong number; a file appearing
+    between plan and write; names with `..`, reserved names, forbidden characters, NFC/NFD and
+    case collisions, over-long names; a symbolic link pointing outside; disk full (simulated);
+    `undo` with a modified file; `undo` on a report that records no document.
   - Scripts (R30): every changing command, `check` and `extract --plan` on a risky folder, and
     `--interactive` without a desktop are refused with exit 2. `check` on an ordinary folder,
     `check --plan` anywhere, `extract --plan` on an ordinary folder and `--plan` of `undo`, the
@@ -275,10 +273,13 @@ counted by `check --plan`), and no document is written (R30).
   - What `check` writes (R16): only its report is added to the folder, and nothing with
     `--no-report`. An existing report or JSON file, also one named with `--report` or `--json`,
     is not replaced: the new one gets the next free name.
-  - Extraction reports (R16, R20, R33): an extraction at the interactive end of run writes a
-    second report, and with `--json` a second JSON file, without touching the first. Declining
-    writes no document. `undo` on the second report removes the documents. `extract
-    --no-report` follows the open question on it (see "What is still open?").
+  - Extraction reports (R16, R20, R33): at the interactive end of run, documents are written
+    only through R29: a wrong number or Enter alone writes none, and declining writes none. An
+    extraction there writes a second report, and with `--json` a second JSON file, without
+    touching the first. `undo` on the second report removes the documents.
+    `extract --no-report`, with and without `--json f`, follows the open question on it
+    ("Before 4.4"): either it writes the extraction report (and `f`), or it is refused with
+    exit 2 and writes nothing.
   - Cache and manifest (R31, R47): end-to-end tests point the cache to a temporary folder,
     never the user's real one. A file in the cache folder under a name the tool does not derive
     is never replaced. A symbolic link, a folder or another non-regular file at one of the
@@ -290,10 +291,10 @@ counted by `check --plan`), and no document is written (R30).
     is reported, left, never enters the manifest, and `uninstall` does not remove it. After a
     lost manifest, our marked items are recognised.
   - Counting (R19, R28): the summary shows both counts in each row and in the totals, and the
-    reason for a risky run; the dialog shows the reason. More than 10,000 files of any kind is
-    risky even with few envelopes, and the number typed is the files to process: exactly
-    10,000 is not risky, 10,001 is, also as a total over several folders. Files in hidden
-    folders, behind symbolic links met during the walk or in unreadable folders are not
+    reason for a risky run; the dialog shows the reason. More than 10,000 files of any kind
+    (subfolders included) is risky even with few envelopes, and the number typed is the files to
+    process: exactly 10,000 is not risky, 10,001 is, also as a total over several folders. Files
+    in hidden folders, behind symbolic links met during the walk or in unreadable folders are not
     counted; a selected folder that is a symbolic link is resolved and counted; overlaps count
     once.
   - Several folders (R19): the total is typed; one risky folder makes the run risky; all
@@ -335,8 +336,9 @@ Liechtenstein, Norway, United Kingdom).
   - A national list is used only if its XAdES signature verifies against the certificates the
     LOTL names for that country. Italy is one country among the others.
   - The repository stores no trusted list. The release build downloads the current LOTL and the
-    Italian list and embeds them, so the tool works offline out of the box. At the first run
-    with network the tool refreshes them into its cache, which then takes precedence (R47).
+    Italian list and embeds them, so the tool works offline out of the box. At the first run with
+    network the tool refreshes them into its cache, which then takes precedence over the embedded
+    copy (R47).
   - XAdES needs XML canonicalisation (exclusive C14N) and XML signature verification. No mature
     pure-Rust library exists, so we write it here, test first, as carefully as the BER reader.
 - R45. **Automatic choice.** The analysis collects the country of every certifier found in the
@@ -349,7 +351,8 @@ Liechtenstein, Norway, United Kingdom).
   is reported as such ("list of Romania not available offline"), never as an invalid signature.
 - R47. **Cache.** This is the one place for the cache rules.
   - Lists, and the CRLs of R49, are cached in the SignSpector cache folder and refreshed when
-    their own `NextUpdate` date passes. `uninstall` removes the cache (R40).
+    their own `NextUpdate` date passes. A cached list that verifies (R44) takes precedence over
+    the embedded copy. Removing the cache is R40.
   - The cache folder is the operating system's standard one (R42); no option moves it. Tests
     move it only through the system's own variables (`HOME`, `XDG_CACHE_HOME`; Windows is still
     open).
@@ -367,17 +370,18 @@ Liechtenstein, Norway, United Kingdom).
   certificates, never with the number of files. There is one result per certificate: the same
   certificate in a thousand files is checked once. A CRL is fetched at most once per CA per
   run (partitioned CRLs are still open).
-  - **Reference time**: the proved time of R9 (a time stamp), otherwise the time of the check.
-  - **Revocation data inside the signature** (CAdES -LT/-LTA) is used only if its own signature
+  - The reference time is the proved time of R9 (a time stamp), otherwise the time of the
+    check.
+  - Revocation data inside the signature (CAdES -LT/-LTA) is used only if its own signature
     verifies against the issuing CA or an authorised OCSP responder, and it was issued after
     the reference time. Otherwise it is ignored and the CA's CRL is used.
-  - **The CA's CRL** is fetched only once the chain reaches a CA of a trusted list. It comes
+  - The CA's CRL is fetched only once the chain reaches a CA of a trusted list. It comes
     from its distribution point, `http` or `https` only (redirects too), with limits on size and
     time. Its signature and issuer are verified before it is used or cached. It answers when it
     was issued after the reference time. When the reference time is the time of the check, a
     CRL inside its validity (`thisUpdate` <= now < `nextUpdate`) answers. It is cached until its
     `nextUpdate` (R47). OCSP is used only when the CA publishes no CRL.
-  - **Verdicts**:
+  - The verdicts are:
     - "not revoked";
     - "revoked on <date>", before a proved reference time (a time stamp): invalid;
     - "revoked on <date>", after the time stamp: valid when signed, and the report shows the
@@ -454,18 +458,21 @@ statement).
     items that still match; it reports changed or foreign items and leaves them.
   - If the manifest is lost, our items are recognised by an explicit SignSpector marker, never
     by guessing.
-  - Each item is created as R31 says. An item is **foreign** when it is not in the manifest and
+  - Each item is created as R31 says (registry keys and `.workflow` folders: still open,
+    question "Before 5.1"). An item is **foreign** when it is not in the manifest and
     has no SignSpector marker. When a foreign item has the same name, `install-menu` reports it
     and leaves it, and it never enters the manifest, so `uninstall` never removes it (owner's
     decision, 2026-11-23).
-  - An item of ours that already exists is left as it is if unchanged, and reported if changed.
+  - An item of ours that already exists (in the manifest, or marked after a lost manifest) is
+    left as it is if unchanged, and reported if changed.
     Running `install-menu` twice is harmless.
-  - `install-menu` and `uninstall-menu` replace the manifest (R31); `uninstall` removes it (R40).
+  - `install-menu` and `uninstall-menu` are the only commands that replace the manifest (R31);
+    `uninstall` removes it (R40).
 - R42. **Per platform.**
   - Windows: per-user, no admin. Registry keys under `HKCU`, plus an uninstall entry in
     `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SignSpector`, so the user finds
-    it in Settings -> Apps. Its `UninstallString` runs `signspector.exe uninstall
-    --interactive`, which shows the list in a native dialog with the focus on Cancel (R30). A
+    it in Settings -> Apps. Its `UninstallString` runs
+    `signspector.exe uninstall --interactive`, which shows the list in a native dialog (R30). A
     running `.exe` cannot delete itself: the tool says where it is so the user can delete it
     (no PowerShell, no scheduled tricks). The cache and manifest folders are still open.
   - macOS: Quick Actions in `~/Library/Services`, the cache in `~/Library/Caches/SignSpector`,
@@ -512,7 +519,7 @@ The order of work is in `roadmap.md`: safety-critical, pure parts first.
 - Real documents stay on the Windows PC (`tests/corpus/`, git-ignored, personal data). They are
   used to check results by hand and, if useful, against the old tool's output.
 
-## Building on the Mac
+## How do I build it on the Mac?
 
 ```sh
 cargo build --release                                       # macOS, this machine
@@ -554,6 +561,17 @@ answered before the roadmap step named in its heading; that step points back her
 ### Before 1.7 (safe writer) and the first pseudo-terminal test
 - Pseudo-terminal tests (R34) need a pty crate as a dev-dependency, accepted by `deny.toml`:
   which one, for Unix and Windows ConPTY?
+- R31 checks that a cache or manifest name is a regular file, then renames over it: what if the
+  name changes between the check and the rename?
+- R31 keeps documents inside the selected folder. Does a rule cover a report written into a
+  selected folder that is a symbolic link?
+
+### Before 3.1 (crypto)
+- Brainpool curves: are they needed by the real files?
+
+### Before 3.2 (certificates)
+- How does the report word a certificate expired at the time of the check, when no time stamp
+  proves an earlier time?
 
 ### Before 3.5 (lists, download, cache)
 - `ring` as the crypto provider of rustls (for the list refresh over HTTPS) contains C and
@@ -565,26 +583,30 @@ answered before the roadmap step named in its heading; that step points back her
   addresses)? If yes, Windows needs WinHTTP for the refresh.
 - Which folders hold the cache and the manifest on Windows, and how do tests move them? The
   candidate crate `directories` asks the system (`SHGetKnownFolderPath`) and ignores
-  `LOCALAPPDATA` and `APPDATA`, so the test rule of R47 cannot work with it as is (audit 0007,
-  F2). Tests of `install-menu` must also move the manifest folder (`XDG_CONFIG_HOME` on Linux,
-  `HOME` on macOS).
+  `LOCALAPPDATA` (audit 0007, F2), so the test rule of R47 cannot work with it as is. Tests of
+  `install-menu` must also move the manifest folder; which variable does that on each OS is to
+  be checked.
 - When the tool refuses a cache name (R31), does the run go on with the list held in memory, or
   report "list not available"?
 - What if the cache folder, or a folder above it, is a symbolic link (redirected profiles on
   company PCs)?
 - Which non-regular files count as "not a regular file" at a cache or manifest name: a FIFO, a
   socket, a device, a Windows junction or reparse point?
-- What is the fixed name of a national list? The territory code comes from the downloaded LOTL:
-  is it accepted only as two letters, or hashed? Is a list given with `--trust-list <file>`
-  cached at all?
+- What is the fixed name of a national list? The territory code comes from the downloaded LOTL.
+  The earlier draft accepted it only as two letters; the alternative is a hash. Which one? Is a
+  list given with `--trust-list <file>` cached at all?
 - How are temporary files named (R31), so that a leftover from an interrupted refresh does not
   block every later refresh? Is a temporary name one the tool derives (R47)?
 
 ### Before 3.6 (chains)
-- Brainpool curves, and the download of missing intermediates (AIA): are they needed by the
-  real files?
+- The download of missing intermediates (AIA): is it needed by the real files?
+
+### Before 3.7 (countersignatures and time stamps)
+- Which time stamp counts when there are several?
 
 ### Before 3.9 (revocation)
+- What is the verdict when the revocation time equals the time stamp? How are the revocation
+  reasons `removeFromCRL` and `keyCompromise` treated? Settled together with the tests.
 - A CA that publishes partitioned CRLs has several CRLs. Is each file named by the hash of the CA
   and of the distribution point, or is one kept? R47 and R49 change with the answer.
 
@@ -607,11 +629,14 @@ answered before the roadmap step named in its heading; that step points back her
   manifest?
 - A symbolic link or a folder at the manifest path: `install-menu` should refuse before it
   creates any item; what do `uninstall-menu` and `uninstall` do there?
-- How do tests move the Windows `HKCU` menu keys, which no variable moves? (On macOS
-  `~/Library/Services` moves with `HOME`; Nautilus and Dolphin follow `HOME` or
-  `XDG_DATA_HOME`.)
+- How do tests move the Windows `HKCU` keys (the menu keys and the `Uninstall\SignSpector`
+  key), which no variable moves, and how do the R34 snapshots cover them? Which variable moves
+  the menu folders on macOS and Linux is to be checked.
 
 ### Before 5.2 (context menu and dialogs)
+- What must the shorter dialog summary still show: unreadable folders, alternative names,
+  "existing files modified: 0", a way to see the full list, and the list for `undo`, the menus
+  and `uninstall`?
 - Does the dialog of R30 also show the count of files of any kind, as the console summary does
   (R19)?
 - Native dialogs (R30, R38) need a folder list, a text field for the number and the focus on

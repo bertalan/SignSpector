@@ -145,7 +145,7 @@ cargo build --release
 cargo nextest run          # tests (cargo install cargo-nextest)
 ```
 
-[docs/design.md](docs/design.md#building-on-the-mac) describes the cross builds for all
+[docs/design.md](docs/design.md#how-do-i-build-it-on-the-mac) describes the cross builds for all
 targets from macOS (mingw-w64, zig, cargo-zigbuild).
 
 ## How is it developed?

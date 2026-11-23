@@ -41,15 +41,16 @@ The order follows two ideas:
   `docs/design.md`:
   - what `check` writes (R16);
   - risky folders counted on files of any kind (R28);
-  - reports never replaced, and the second report (R16, R20, R33);
+  - reports never replaced, and the second report (R16, R20, R31, R33);
   - `--plan` writes and downloads nothing (R19);
   - the cache (R47);
   - no saved preference (R27);
-  - `--no-report` (R19);
+  - `--no-report` (R14, R16);
   - foreign menu items (R41).
 
-  The questions they opened are listed in "What is still open?" in `docs/design.md`, each with the
-  roadmap step that needs the answer (1.4, 1.5, 1.7, 3.5, 3.6, 3.9, 4.2, 4.4, 5.1, 5.2, 5.3).
+  The questions they opened are listed in "What is still open?" in `docs/design.md`, each with
+  the roadmap step that needs the answer (1.4, 1.5, 1.7, 3.1, 3.2, 3.5, 3.6, 3.7, 3.9, 4.2, 4.4,
+  5.1, 5.2, 5.3).
 - [ ] 0.5 Remaining gaps in the rule-script tests, found by the reviews of PR #1, PR #2 and
   PR #3 and accepted as known limits for now (each needs a test before the code changes):
   - `check-public.sh`: failures of `git show`, `ls-tree`, `diff-tree` are not each tested;
@@ -138,10 +139,10 @@ The order follows two ideas:
   documents recorded in the report with SHA-256, and `undo` (R33).
 
 ## Phase 3: verification
-- [ ] 3.1 `crypto`: digests, RSA PKCS#1 v1.5, RSA-PSS, ECDSA P-256/P-384/P-521 (R8).
+- [ ] 3.1 `crypto`: digests, RSA PKCS#1 v1.5, RSA-PSS, ECDSA P-256/P-384/P-521 (R8). First decide
+  the question "Before 3.1" in `docs/design.md`.
 - [ ] 3.2 `x509`: certificate fields, key usage, qualified/QSCD statements, validity (R9).
-  Report wording for a certificate expired at the time of the check when no time stamp
-  proves an earlier time.
+  First decide the question "Before 3.2" in `docs/design.md`.
 - [ ] 3.3 `xmldsig`: exclusive C14N and XML signature verification (R44), test first,
   fuzzed like `ber`.
 - [ ] 3.4 `tsl`: LOTL and national lists, signatures verified, embedded LOTL + Italian list,
@@ -152,17 +153,16 @@ The order follows two ideas:
   "Before 3.6" in `docs/design.md`.
 - [ ] 3.7 Countersignatures (R11); `tsp`: RFC 3161, `.tsd`, `.m7m` (R5, R12); detached `.p7s` (R6).
   A time stamp is a proved time (R9) only if it verifies per R12 (chain to a trusted-list
-  TSA); negative test: a forged or untrusted time stamp changes no verdict. Which time stamp
-  counts when there are several.
+  TSA); negative test: a forged or untrusted time stamp changes no verdict. First decide the
+  question "Before 3.7" in `docs/design.md`.
 - [ ] 3.8 Content sniffing for names without a usable extension (R18).
-- [ ] 3.9 Revocation (R49): decide the question "Before 3.9" in `docs/design.md`; define the case
-  of a revocation time equal to the time stamp; data embedded in the signature, CRL per CA with
-  cache, one check per certificate, "revocation not checked" offline. Negative tests: revoked
-  before and after the time stamp, revoked with no time stamp (cannot be determined, never
-  invalid), stale or forged embedded data, forged or oversized CRL, CRL older than the reference
-  time, expired certificate no longer listed, distribution point outside `http`/`https`. Also to
-  define with the tests: revocation reasons (`removeFromCRL`, `keyCompromise`); an embedded CRL
-  older than the reference time when the CA's CRL cannot be fetched ("revocation not checked").
+- [ ] 3.9 Revocation (R49): decide the questions "Before 3.9" in `docs/design.md`; data embedded
+  in the signature, CRL per CA with cache, one check per certificate, "revocation not checked"
+  offline. Negative tests: revoked before and after the time stamp, revoked with no time stamp
+  (cannot be determined, never invalid), stale or forged embedded data, forged or oversized CRL,
+  CRL older than the reference time, expired certificate no longer listed, distribution point
+  outside `http`/`https`. Also: an embedded CRL older than the reference time when the CA's CRL
+  cannot be fetched ("revocation not checked").
 
 ## Phase 4: output
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).
@@ -175,10 +175,8 @@ The order follows two ideas:
 ## Phase 5: system integration
 - [ ] 5.1 Install manifest (R41). First decide how `create_new` applies to registry keys and
   `.workflow` folders and the other questions "Before 5.1" in `docs/design.md`.
-- [ ] 5.2 Context menu per OS (R21, R38) with the confirmation dialogs (R30): decide what the
-  shorter dialog summary must still show (unreadable folders, alternative names, "existing files
-  modified: 0", a way to see the full list; the list for `undo`, menus and `uninstall`; the
-  count of files of any kind, question "Before 5.2" in `docs/design.md`), with
+- [ ] 5.2 Context menu per OS (R21, R38) with the confirmation dialogs (R30): first decide the
+  questions "Before 5.2" in `docs/design.md` (what the shorter dialog summary must show), with
   R34 tests; Windows "Installed apps" entry (R42).
 - [ ] 5.3 `uninstall` (R40–R43). First decide what happens to a file in the cache folder that
   the tool did not write (questions "Before 5.3" in `docs/design.md`).
