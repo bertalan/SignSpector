@@ -195,9 +195,10 @@ script. R31 says how every file is created and which files may ever be replaced.
   - Terminal (`std::io::IsTerminal` on input and output): questions in the console (R19, R28,
     R29). "Terminal" means both input and output are a terminal. With output redirected
     (`| tee log`, `> file`) the run counts as a script. Yes/no questions default to No, and
-    Enter alone cancels. A typed number confirms only if it is the right one: a wrong number or
-    Enter alone never confirms, for the files to process of a risky run (R28) and for the
-    documents to write (R29) (owner's decision, 2026-11-23). The answers and the default are
+    Enter alone cancels. A typed number confirms only if it is the right one. Any other answer
+    (a wrong number, `y`, `n`, Enter alone) never confirms. This holds for the files to process
+    of a risky run (R28) and for the documents to write (R29). Owner's decision, 2026-11-23. The
+    answers and the default are
     written out in words in the user's language (R35, R27).
   - Context menu (no terminal, started with `--interactive`): the same confirmations, with the
     same number to type and the same default, in a native dialog (R38), with a shorter summary
@@ -264,12 +265,12 @@ script. R31 says how every file is created and which files may ever be replaced.
 - R34. **Proof by tests.** A shared test helper snapshots the whole folder (paths and SHA-256)
   before and after every end-to-end test: originals identical, nothing changed but the
   confirmed plan.
-  - Writing and undo (R29, R31, R32, R33): empty answer, `n`, wrong number; a file appearing
+  - Writing and undo (R29, R31, R32, R33): empty answer, `y`, `n`, wrong number; a file appearing
     between plan and write; names with `..`, reserved names, forbidden characters, NFC/NFD and
     case collisions, over-long names; a symbolic link pointing outside; disk full (simulated);
     `undo` with a modified file; `undo` on a report that records no document.
-  - Risky run at the terminal (R28, R30): an empty answer, `n` or a wrong number starts no
-    analysis.
+  - Risky run at the terminal (R28, R30): an empty answer, `y`, `n` or a wrong number starts
+    no analysis.
   - Scripts (R30): every changing command, `check` and `extract --plan` in a risky run, and
     `--interactive` without a desktop are refused with exit 2. `check` in an ordinary run,
     `check --plan` in any run, `extract --plan` in an ordinary run and `--plan` of `undo`, the
@@ -307,7 +308,7 @@ script. R31 says how every file is created and which files may ever be replaced.
   - Several folders (R19): the total is typed; one sensitive folder makes the whole run risky; all
     folders empty stop the run; overlaps (also by letter case, symbolic link, trailing slash)
     are counted once; one report per selected folder that is not inside another; a symbolic
-    link to a sensitive folder makes the run risky.
+    link to each kind of sensitive folder makes the run risky (R28).
   - Time (R9): a back-dated signing-time attribute changes no verdict; without a time stamp the
     report says "claimed, not proved".
   - Yes/no questions (R30): Enter alone and `n` cancel, `y` on a pipe is refused, a number is
@@ -570,6 +571,8 @@ answered before the roadmap step named in its heading; that step points back her
 - R30 says a wrong or empty number never confirms. At the terminal, after one, is the question
   asked again or does the run stop? Which exit code does a run declined at the terminal give
   (`n`, Enter, a wrong number)? R13 has 0, 1 and 2, and R30 gives 2 only for scripts.
+- When is a typed number the right one? With the separators of the user's language (`12.345`,
+  `12,345`), with leading zeros, with spaces around it (R27, questions "Before 1.4")?
 
 ### Before 1.7 (safe writer) and the first pseudo-terminal test
 - Pseudo-terminal tests (R34) need a pty crate as a dev-dependency, accepted by `deny.toml`:

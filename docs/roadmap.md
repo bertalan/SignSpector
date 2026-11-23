@@ -110,20 +110,24 @@ The order follows two ideas:
 - [ ] 1.4 **i18n skeleton** (R27): pick the mechanism (Fluent vs `rust-i18n`, decided with the
   user), English + Italian, `--lang`, OS language detection. Needed before any message below.
   First decide the questions "Before 1.4" in `docs/design.md`.
-- [ ] 1.5 **Walk and count** (first decide the questions "Before 1.5" in `docs/design.md`)
-  (R1b, R2, R19, R28): one or more folders, a row per folder and the total; regular files only,
-  symbolic links met during the walk not followed (a selected one is resolved) and hidden folders
-  skipped (both listed in the report), unreadable folders listed; two counts (files to process,
-  files of any kind), total size, subfolders. Detection of sensitive folders (drive roots, home,
-  Desktop, Documents, system folders, network share roots) and of a risky run (a sensitive
-  folder, or more than 10,000 files of any kind over all the folders, subfolders included).
-- [ ] 1.6 **Confirmation logic** (R28–R30; first decide the question "Before 1.6" in
+- [ ] 1.5 **Walk and count** (first decide the questions "Before 1.5" in `docs/design.md`) (R1b, R2,
+  R19, R28): one or more folders, a row per folder and the total; regular files only, symbolic links
+  met during the walk not followed (a selected one is resolved) and hidden folders skipped (both
+  listed in the report), unreadable folders listed; two counts (files to process, files of any
+  kind), total size, subfolders. Detection of sensitive folders (drive roots, home, Desktop,
+  Documents, system folders, network share roots) and of a risky run (a sensitive folder, or more
+  than 10,000 files of any kind over all the folders, subfolders included). Tests: the walk cases of
+  R34 "Counting" (10,000 against 10,001, files not counted, a selected folder that is a symbolic
+  link, overlaps) and of "Several folders" (overlaps, a symbolic link to each kind of sensitive
+  folder).
+- [ ] 1.6 **Confirmation logic** (R28–R30; first decide the questions "Before 1.6" in
   `docs/design.md`): pure functions turning (counts, folder, terminal, dialog via `--interactive`,
   or script; `--plan`) into the question to ask and parsing the answer: typed count (R28 risky run,
-  R29), yes/no default No (R30). Typestate `ConfirmedPlan`. Tests: the cases of R34 "Risky run at
-  the terminal", "Yes/no questions", "Scripts", "Counting" and "Several folders", and the answers of
-  "Writing and undo" (empty answer, `n`, wrong number) at the count of documents. The dialogs
-  themselves come with the menus (5.2).
+  R29), yes/no default No (R30). Typestate `ConfirmedPlan`. Tests: the R34 items "Risky run at the
+  terminal", "Yes/no questions" and "Scripts". The answers of "Writing and undo" (empty answer, `y`,
+  `n`, wrong number) at the count of documents. From "Several folders": the total is typed, one
+  sensitive folder makes the whole run risky, all folders empty stop the run. The reason for a risky
+  run in the terminal question. The dialogs themselves come with the menus (5.2).
 - [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, the two-step replace of cache
   files and the manifest (temporary file, then rename), removal of partial files, stays inside the
   folder (`..`, symbolic links), free-space check, re-check of originals. First decide the questions
