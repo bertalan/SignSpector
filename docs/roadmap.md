@@ -57,6 +57,11 @@ The order follows two ideas:
     commit statuses: decide and test; the negative RED CHECKS case does not assert that the
     GitHub section ran, and its stub has a dead first line;
   - report-mode tests pass if the script prints nothing in that section.
+  - `audit-status.sh`, "Rust" section: five review rounds (PR #3) added a test for each
+    breakage they found, and none found a bug. The owner decided (2026-11-23) to stop the rounds
+    there: a later breakage of this section that shows no bug is listed on the PR and here, not
+    closed with another round. Known limit: `rustup check` has no time limit; it runs only in
+    report mode, after the hook gates, so no commit or push waits on it.
   - from the targeted review of the third-round fixes:
     - the first push to a new remote scans the whole history and stops on the accepted
       exception `cd3620d` (CLAUDE.md): encode the exception if a second remote is ever added;

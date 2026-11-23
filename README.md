@@ -1,82 +1,84 @@
 # SignSpector
 
-**Cross-platform batch verifier for CAdES signatures and time stamps** (`.p7m`, `.p7s`, `.tsd`,
-`.m7m`) against the European trusted lists (Italy, Romania, France and every other EU/EEA
-country), with an accessible HTML report and safe extraction of the signed documents.
+SignSpector checks signed and time-stamped files (`.p7m`, `.p7s`, `.tsd`, `.m7m`) in bulk. It
+verifies CAdES signatures and time stamps against the European trusted lists (Italy, Romania,
+France and every other EU/EEA country). It writes an accessible HTML report and, on request,
+extracts the signed documents safely. It runs on Windows, macOS and Linux.
 
-> **Status: early development.** Nothing is usable yet: the project is being built step by
-> step, test first. See the [roadmap](docs/roadmap.md) for what is done and what comes next.
+> Status: early development. Nothing is usable yet. We build the project step by step, test
+> first. The [roadmap](docs/roadmap.md) shows what is done and what comes next.
 
-## What it does
+## What does it do?
 
-Offices receive and archive documents that are digitally signed (CAdES `.p7m`, detached
-`.p7s`) and time-stamped (`.tsd`, `.m7m`), often nested several layers deep. Opening them one by
+Point SignSpector at a folder. It finds every signed or time-stamped file there, verifies it,
+and writes a report. Offices receive and archive such files every day: CAdES `.p7m`, detached
+`.p7s`, time-stamped `.tsd` and `.m7m`, often nested several layers deep. Opening them one by
 one is slow and tells little about the signatures.
 
-Point SignSpector at a folder and it will:
+For each folder, SignSpector:
 
-- **find** every signed or time-stamped file in it and its subfolders;
-- **open** every layer: BER/DER envelopes (including indefinite lengths), base64 envelopes,
+- finds every signed or time-stamped file in it and its subfolders;
+- opens every layer: BER/DER envelopes (including indefinite lengths), base64 envelopes,
   nested signatures, RFC 5544 time-stamped data;
-- **verify** each signature (RSA, RSA-PSS, ECDSA; SHA-1/2), the signer's certificate
-  (validity, key usage, qualified status), the chain up to a CA of the
-  national trusted list of the certifier's country, reached through the
-  [EU List of Trusted Lists](https://ec.europa.eu/tools/lotl/eu-lotl.xml) and chosen
-  automatically from the signatures found, whether the certificate was revoked (from data in the
-  signature or the CA's revocation list, not one query per signature), countersignatures
-  and RFC 3161 time stamps;
-- **report** the results on the console and in a self-contained HTML report (and JSON for
+- verifies each signature (RSA, RSA-PSS, ECDSA; SHA-1/2) and the signer's certificate
+  (validity, key usage, qualified status);
+- follows the chain up to a CA of the national trusted list of the certifier's country. It
+  reaches that list through the [EU List of Trusted Lists](https://ec.europa.eu/tools/lotl/eu-lotl.xml)
+  and chooses it from the signatures found;
+- checks whether the certificate was revoked, from data in the signature or the CA's
+  revocation list: not one query per signature;
+- verifies countersignatures and RFC 3161 time stamps;
+- reports the results on the console and in a self-contained HTML report (and JSON for
   scripts);
-- **extract**, only on request, the signed documents beside the originals:
+- extracts the signed documents beside the originals, only on request:
   `Relazione.pdf.p7m` → `Relazione.pdf`.
 
-## Safety by design
+## Can it damage my documents?
 
-Signed documents are often the only official copy. SignSpector is built so that it cannot
-damage them:
+No. Signed documents are often the only official copy, so SignSpector is built so that it
+cannot damage them:
 
-- **Dry run by default.** Without an explicit `extract`, nothing is written except the report.
-- **Confirmation before anything happens.** After a folder is chosen, the tool only counts the
-  files and asks before analysing. Writing needs a second confirmation on the complete write
-  plan, by typing the number of documents to write. Folders such as a drive root or the home
-  folder, or more than 10,000 files, get a stronger warning and the number of files must be
-  typed. From the context menu the same confirmations appear in a window. In scripts only the
-  analysis of an ordinary folder, its report and `--plan` (for `extract`, on an ordinary
-  folder) run: extracting, undoing and
-  uninstalling need a person to confirm.
-- **Originals are read-only.** They are never modified, moved or renamed.
-- **Nothing is ever overwritten.** Every file is created with an exclusive "create new"
-  operation, so the operating system itself refuses to overwrite. Name clashes become
-  `x (1).pdf`.
-- **Nothing is written outside the chosen folder.** File names taken from envelopes are made
-  valid on Windows, macOS and Linux at once: no forbidden characters, no reserved names, no
-  clashes that differ only in letter case or Unicode form.
-- **Undo.** Every written file is logged with its SHA-256. `signspector undo` removes only
-  files that are still identical to what SignSpector wrote.
-- **Clean uninstall.** `signspector uninstall` removes only what SignSpector installed, and
-  never user data.
+- Without an explicit `extract`, it writes nothing except the report.
+- After you choose a folder, it only counts the files and asks before analysing them.
+- Writing needs a second confirmation on the complete write plan: you type the number of
+  documents to write.
+- A risky folder (a drive root, the home folder, more than 10,000 files) gets a stronger
+  warning, and you type the number of files.
+- From the context menu, the same confirmations appear in a window.
+- In scripts, only these run: the analysis of an ordinary folder and its report, and `--plan`
+  (for `extract`, on an ordinary folder). Extracting, undoing and uninstalling need a person to
+  confirm.
+- Originals are read-only. They are never modified, moved or renamed.
+- Nothing is ever overwritten. Every file is created with an exclusive "create new" operation,
+  so the operating system itself refuses to overwrite. A name clash becomes `x (1).pdf`.
+- Nothing is written outside the chosen folder. File names taken from envelopes are made valid
+  on Windows, macOS and Linux at once: no forbidden characters, no reserved names, no clashes
+  that differ only in letter case or Unicode form.
+- Every written file is logged with its SHA-256. `signspector undo` removes only the files that
+  are still identical to what SignSpector wrote.
+- `signspector uninstall` removes only what SignSpector installed, and never user data.
 
-## Accessibility
+## Is it accessible?
 
-Accessibility is a requirement, not an afterthought. The targets are **EN 301 549**, the
-standard referenced by the Italian accessibility law (Legge 4/2004) and the AgID guidelines,
-and **WCAG 2.2 level AA** for the HTML report:
+Yes, by requirement. The targets are EN 301 549, the standard referenced by the Italian
+accessibility law (Legge 4/2004) and the AgID guidelines, and WCAG 2.2 level AA for the HTML
+report:
 
 - no information conveyed by colour or symbols alone;
 - `NO_COLOR`, `--no-color` and a `--plain` mode for screen readers;
 - no time limits on prompts;
 - a semantic, keyboard-operable report that works without JavaScript.
 
-## Languages
+## Which languages does it speak?
 
-The interface speaks the operating system's language, or the one chosen with `--lang`. The
-report is written in the same language, or in another one with `--report-lang`. English and Italian come first; more languages can be
-added without code changes.
+The operating system's language, or the one chosen with `--lang`. The report uses the same
+language, or another one chosen with `--report-lang`. English and Italian come first. More
+languages can be added without code changes.
 
-## Platforms
+## Which platforms does it run on?
 
-One self-contained executable per platform, written in pure Rust (no OpenSSL, no runtime to
-install):
+Windows, macOS and Linux, with one self-contained executable per platform. It is written in
+pure Rust: no OpenSSL, no runtime to install.
 
 | Platform | Package |
 |---|---|
@@ -84,10 +86,10 @@ install):
 | macOS (Apple Silicon and Intel) | universal binary |
 | Linux x86_64 | `.deb`, `.rpm`, static `.tar.gz` |
 
-Context-menu integration is planned for Explorer, Finder (Quick Actions), Nautilus and Dolphin,
-and needs no administrator rights.
+We plan context-menu entries for Explorer, Finder (Quick Actions), Nautilus and Dolphin. They
+need no administrator rights.
 
-## Planned usage
+## How will it be used?
 
 ```sh
 signspector check   <folder>...   # analyse and write a report in each folder (default)
@@ -99,38 +101,41 @@ signspector uninstall            # remove everything SignSpector installed
 ```
 
 Every command that changes something shows its plan first and acts only after you confirm:
-`extract` asks you to type the number of documents it will write; `undo`, `install-menu`,
-`uninstall-menu` and `uninstall` ask a yes/no question, with No as the default. In scripts they
-refuse; `--plan`
-shows the plan and stops. From the context menu the same confirmations appear in a window, with
-the focus on Cancel. There is no `--apply`, `--yes` or `--expect`.
 
-## Building from source
+- `extract` asks you to type the number of documents it will write.
+- `undo`, `install-menu`, `uninstall-menu` and `uninstall` ask a yes/no question. The default
+  is No.
+- In scripts they refuse. `--plan` shows the plan and stops.
+- From the context menu, the same confirmations appear in a window, with the focus on Cancel.
 
-Requires [rustup](https://rustup.rs). The toolchain version is pinned in `rust-toolchain.toml`.
+There is no `--apply`, `--yes` or `--expect`.
+
+## How do I build it?
+
+Install [rustup](https://rustup.rs). The toolchain version is pinned in `rust-toolchain.toml`.
 
 ```sh
 cargo build --release
 cargo nextest run          # tests (cargo install cargo-nextest)
 ```
 
-Cross builds for all targets from macOS (mingw-w64, zig, cargo-zigbuild) are described in
-[docs/design.md](docs/design.md#building-on-the-mac).
+[docs/design.md](docs/design.md#building-on-the-mac) describes the cross builds for all
+targets from macOS (mingw-w64, zig, cargo-zigbuild).
 
-## Development
+## How is it developed?
 
-- **Test-driven:** every behaviour starts as a failing test.
-- **Independent review:** each step is reviewed by a second AI model, different from the one
-  that wrote the code, so that the review is not anchored on the author's reasoning.
-- **Coherence audits** every five commits: requirements, tests, code and documentation are
-  checked against each other. Every reference is verified to exist, and unfinished work is
-  surfaced.
-- **Privacy:** this repository is public, so test data is synthetic only. Real signed documents
-  contain personal data and never enter the repository; local git hooks (pre-commit,
-  commit-msg, pre-push) refuse it. After cloning: `git config core.hooksPath .githooks`.
+- Test first: every behaviour starts as a failing test.
+- Every step is reviewed by a second AI model, different from the one that wrote the code, so
+  that the review is not anchored on the author's reasoning.
+- Every five commits, a coherence audit checks requirements, tests, code and documentation
+  against each other. It verifies that every reference exists, and it surfaces unfinished work.
+- This repository is public, so test data is synthetic only. Real signed documents contain
+  personal data and never enter the repository: local git hooks (pre-commit, commit-msg,
+  pre-push) refuse it. After cloning, run `git config core.hooksPath .githooks`.
 
 Requirements and design are in [docs/design.md](docs/design.md), the order of work in
-[docs/roadmap.md](docs/roadmap.md), contributor rules in [CLAUDE.md](CLAUDE.md).
+[docs/roadmap.md](docs/roadmap.md), contributor rules in [CLAUDE.md](CLAUDE.md). Every text
+follows the writing guide, [docs/writing.md](docs/writing.md).
 
 ## License
 
