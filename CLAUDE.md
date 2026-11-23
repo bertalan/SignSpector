@@ -158,8 +158,9 @@ in the history even if deleted later. Before every commit and push:
   (R29); no implicit yes, ever (R30: terminal, dialog from the context menu, refusal in
   scripts). Documents are written only through a `ConfirmedPlan` and never outside the chosen
   folder; every file the tool writes is created with `create_new`, the report too, except
-  its cache files and its install manifest, which are refreshed through a temporary file and a
-  rename, never through a symbolic link (R31, R47).
+  its cache files (under the names it derives itself) and its install manifest, which are
+  replaced through a temporary file and a rename, never through a symbolic link and never when
+  the name is not a regular file (R31, R47).
   File names valid on Windows, macOS and Linux at once (R32). Any change here needs the tests
   of R34.
 - **Accessibility is a requirement, not a polish step** (EN 301 549; WCAG 2.2 AA for the

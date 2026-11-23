@@ -35,7 +35,8 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    document without a `ConfirmedPlan`, opens any file for writing without `create_new` (the
    report and menu items too; only the cache files, under names the tool derives, and the install
    manifest are exempt, R31), replaces a file in the cache under a name it does not derive,
-   follows a symbolic link in the cache or at the manifest, can write a document outside the
+   follows a symbolic link in the cache or at the manifest, replaces a name there that is not a
+   regular file, can write a document outside the
    selected folder, lets `--plan` write or download anything, treats a non-terminal input as a
    yes, confirms anything from a script (only `check` on an ordinary folder, `check --plan`,
    `extract --plan` on an ordinary folder, and the `--plan` lists of `undo`, the menus and

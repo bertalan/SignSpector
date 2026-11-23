@@ -22,9 +22,10 @@ beside the originals, ready to open.
 - *To decide*: a file named exactly `.p7m` (no stem) is not an envelope today: list it in the
   report as skipped? Are stand-alone time-stamp responses `.tsr` an input format?
 - R2. Unreadable folders are reported and skipped; the walk goes on. Symbolic links met during
-  the walk (not a selected folder, R19, R28) are not
-  followed and hidden folders (name starting with `.`) are skipped; both are listed in the
-  report, so nothing is left out silently.
+  the walk (not a selected folder, R19, R28) are not followed, and hidden folders (name starting
+  with `.`) are skipped; both are listed in the report, so nothing is left out silently.
+- *To decide* (before roadmap 1.5): a selected folder whose own name starts with `.`: analysed
+  or skipped?
 
 ### Opening envelopes
 - R3. Read CMS SignedData in BER, including indefinite lengths (common in real files), and in
@@ -165,7 +166,7 @@ beside the originals, ready to open.
 ### Confirmation and write safety
 Nothing is ever processed right after a person chooses a folder, and no document is written
 without a second, separate confirmation. `check` and `extract` never replace an existing file;
-only the tool's own cache is refreshed in place (R16; the general rule is R31). A folder named in
+only the tool's own cache files are replaced (R16), as R31 says. A folder named in
 a script has no person to ask: an ordinary folder is analysed (`check` writes only the report,
 HTML and JSON, and the tool's cache, R16); a risky one is refused, only counted by `check
 --plan`, and nothing is written (R30).
@@ -213,13 +214,15 @@ HTML and JSON, and the tool's cache, R16); a risky one is refused, only counted 
     held in a read-only `Original` type that write functions do not accept.
   - Every file the tool writes is created with `OpenOptions::create_new(true)`, except two kinds
     of its own files: the files of its cache, under the names it derives itself (R47), and its
-    install manifest (R41). These are refreshed safely: a new file is written with `create_new`
-    under a temporary name in the same folder, then renamed over the old one; the tool never
-    follows a symbolic link there and refuses a name that is not a regular file. Documents,
-    reports, JSON files and menu items are all created this way: the OS refuses if the name
-    exists, even if the file appeared after the plan. A document, report or JSON file then takes
-    the next free name (`(1)`, `(2)`...); a menu item is reported and left (R41). A partly
-    written file (error, disk full) is removed, only if we created it.
+    install manifest (R41). Documents, reports, JSON files and menu items are all created with
+    `create_new`: the OS refuses if the name exists, even if the file appeared after the plan.
+    A document, report or JSON file then takes the next free name (`(1)`, `(2)`...); a menu item
+    is reported and left (R41; registry keys and `.workflow` folders: *To decide* after R42). A
+    partly written file (error, disk full) is removed, only if we created it.
+  - A cache file or the manifest is replaced in two steps. The tool writes the new content with
+    `create_new` under a temporary name in the same folder. Then it renames that file over the
+    old one. It never follows a symbolic link there, and it refuses a name that is not a
+    regular file.
   - Before writing, each original is re-checked against the analysis (size, mtime, SHA-256);
     if the folder changed, the plan is rebuilt and confirmed again.
   - Every target must stay inside the selected folder its envelope was found in, after
@@ -273,11 +276,13 @@ HTML and JSON, and the tool's cache, R16); a risky one is refused, only counted 
   - `install-menu` run twice changes nothing; after a lost manifest, our marked items are
     recognised and a foreign item never enters the manifest;
   - with `--json`, an extraction at the interactive end of run writes a second JSON file and
-    leaves the first; `extract --no-report --json f` still writes `f`;
+    leaves the first; `extract --no-report --json f` writes `f`, or is refused with exit 2
+    and writes nothing, as the *To decide* after R19 settles;
   - interactive end of run (R20): documents are written only through R29, declining writes
     none, and an extraction writes a second report without touching the first; `undo` on the
     second report removes the documents, on the first it removes nothing and says so;
-  - `extract --no-report` still writes the extraction report;
+  - `extract --no-report` writes the extraction report, or is refused with exit 2 and writes
+    nothing, as the *To decide* after R19 settles;
   - `install-menu` meeting a foreign item with the same name reports it, leaves it, and
     `uninstall` does not remove it;
   - the console summary shows both counts in each row and in the totals, and the reason for a
@@ -440,7 +445,7 @@ public administration checks the applicable obligations (e.g. accessibility stat
   `uninstall` removes only manifest items that still match, reports changed or foreign items
   and leaves them. If the manifest is lost, entries are recognised by an explicit SignSpector
   marker, never by guessing. Running it twice is harmless. Each item is created with
-  `create_new` (on Windows: a registry key created only if it did not exist; Q1 below). An
+  `create_new` (registry keys and `.workflow` folders: see *To decide* after R42). An
   item is foreign when it is not in the manifest and has no SignSpector marker. When a foreign
   item has the same name, `install-menu` reports it and leaves it, and it never enters the
   manifest. So `uninstall` never removes it (owner's decision, 2026-11-23). An item of ours
@@ -464,12 +469,30 @@ public administration checks the applicable obligations (e.g. accessibility stat
   finds them so that tests can move them. The candidate crate `directories` asks the system
   (`SHGetKnownFolderPath`) and ignores `LOCALAPPDATA`, so the test rule of R47 cannot work with
   it as is (audit 0007, F2). Tests of `install-menu` must also move the manifest folder
-  (`XDG_CONFIG_HOME`, `APPDATA`).
-- *To decide* (before roadmap 5.1): Q1, how `create_new` applies to a registry key (for
+  (`XDG_CONFIG_HOME` on Linux, `HOME` on macOS; Windows open, as for the cache).
+- *To decide* (before roadmap 5.1): how `create_new` applies to a registry key (for
   example `RegCreateKeyEx`, accepted only when the key was created new, also for the
   `Uninstall\SignSpector` key) and to a macOS Quick Action, which is a `.workflow` folder.
 - *To decide* (before roadmap 5.3): whether `uninstall` removes a file in the cache folder that
-  the tool did not write, or leaves and lists it (R40, R43).
+  the tool did not write, or leaves and lists it (R40, R43); and how leftover temporary files
+  of an interrupted refresh (R31) are named, skipped and removed.
+- *To decide* (before roadmap 5.1), menu items (R41):
+  - an item of ours that matches the manifest but not what the current version would write
+    (after an update or a moved executable): updated, or reported;
+  - after a lost manifest, what a marked item is compared with, and whether it enters the new
+    manifest;
+  - a symbolic link or a folder at the manifest path: `install-menu` refuses before it creates
+    any item;
+  - Windows `HKCU` and the menu folders (`~/Library/Services`, Nautilus, Dolphin) in tests,
+    and in the R34 snapshots.
+- *To decide* (before roadmap 3.5), cache (R47):
+  - a refusal at a cache name: the run goes on with the list in memory, or reports "list not
+    available";
+  - the cache folder, or a folder above it, being a symbolic link (redirected profiles);
+  - the territory code of a national list is checked (two letters) before it becomes a file
+    name; whether a list given with `--trust-list <file>` is cached.
+- *To decide* (before roadmap 3.9): a CA that publishes partitioned CRLs has several CRLs:
+  name each file by the hash of the CA and of the distribution point, or keep one (R49).
 - R43. **User data is never removed**: originals, extracted documents and reports stay; at
   the end the tool lists what it left in place on purpose and where the executable is.
 

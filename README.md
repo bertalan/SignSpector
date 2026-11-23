@@ -19,7 +19,7 @@ signatures.
 For each folder, SignSpector:
 
 - finds every signed or time-stamped file in it and its subfolders (hidden folders and
-  symbolic links are skipped and listed in the report);
+  symbolic links met inside are skipped and listed in the report);
 - opens every layer: BER/DER encoding (including indefinite lengths), base64 encoding, nested
   signatures, RFC 5544 time-stamped data;
 - verifies each signature (RSA, RSA-PSS, ECDSA; SHA-1/2) and the signer's certificate
@@ -70,9 +70,9 @@ cannot damage them:
 - Originals are read-only. They are never modified, moved or renamed.
 - Nothing is ever overwritten, not even an earlier report. Every file is created with an
   exclusive "create new" operation, so the operating system itself refuses to overwrite. A
-  document or report whose name is taken becomes `x (1).pdf`. A menu entry that is not
+  document, report or JSON file whose name is taken becomes `x (1).pdf`. A menu entry that is not
   SignSpector's is reported and left alone. Only the tool's own cache and its manifest (the
-  list of what it installed) are refreshed, and never through a symbolic link.
+  list of what it installed) are replaced, through a new file, never through a symbolic link.
 - Extracted documents are never written outside the chosen folder. File names taken from the
   signed files are made valid on Windows, macOS and Linux at once: no forbidden characters, no
   reserved names, no clashes that differ only in letter case or Unicode form.

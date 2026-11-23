@@ -105,11 +105,13 @@ The order follows two ideas:
   `Relazione.pdf.p7m` -> `Relazione.pdf`, nested `.pdf.p7m.tsd`, uppercase extensions.
 - [ ] 1.4 **i18n skeleton** (R27): pick the mechanism (Fluent vs `rust-i18n`, decided with the
   user), English + Italian, `--lang`, OS language detection. Needed before any message below.
-- [ ] 1.5 **Walk and count** (R1b, R2, R19, R28): one or more folders, a row per folder and the
-  total; regular files only, symbolic links not followed and hidden folders skipped (both listed in
-  the report), unreadable folders listed; two counts (files to process, files of any kind), total
-  size, subfolders. Risky-folder detection (drive roots, home, Desktop, Documents, system folders,
-  network share roots, > 10,000 files of any kind, subfolders included).
+- [ ] 1.5 **Walk and count** (first decide the selected hidden folder, *To decide* after R2)
+  (R1b, R2, R19, R28): one or more folders, a row per folder and the total; regular files only,
+  symbolic links met during the walk not followed (a selected one is resolved) and hidden folders
+  skipped (both listed in the report), unreadable folders listed; two counts (files to process,
+  files of any kind), total size, subfolders. Risky-folder detection (drive roots, home, Desktop,
+  Documents, system folders, network share roots, > 10,000 files of any kind, subfolders
+  included).
 - [ ] 1.6 **Confirmation logic** (R28–R30): pure functions turning (counts, folder, terminal,
   dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the
   answer: typed count (R28 risky folder,
@@ -150,21 +152,21 @@ The order follows two ideas:
   TSA); negative test: a forged or untrusted time stamp changes no verdict. Which time stamp
   counts when there are several.
 - [ ] 3.8 Content sniffing for names without a usable extension (R18).
-- [ ] 3.9 Revocation (R49): define the case of a revocation time equal to the time stamp; data
-  embedded in the signature, CRL per CA with cache, one check per certificate, "revocation not
-  checked" offline. Negative tests: revoked before and after the time stamp, revoked with no
-  time stamp (cannot be determined, never invalid), stale or forged embedded data, forged or
-  oversized CRL, CRL older than the reference time, expired certificate no longer listed,
-  distribution point outside `http`/`https`. Also to define with the tests: revocation reasons
-  (`removeFromCRL`, `keyCompromise`); an embedded CRL older than the reference time when the
-  CA's CRL cannot be fetched ("revocation not checked").
+- [ ] 3.9 Revocation (R49): decide partitioned CRLs (*To decide* after R42); define the case of a
+  revocation time equal to the time stamp; data embedded in the signature, CRL per CA with cache,
+  one check per certificate, "revocation not checked" offline. Negative tests: revoked before and
+  after the time stamp, revoked with no time stamp (cannot be determined, never invalid), stale
+  or forged embedded data, forged or oversized CRL, CRL older than the reference time, expired
+  certificate no longer listed, distribution point outside `http`/`https`. Also to define with
+  the tests: revocation reasons (`removeFromCRL`, `keyCompromise`); an embedded CRL older than
+  the reference time when the CA's CRL cannot be fetched ("revocation not checked").
 
 ## Phase 4: output
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).
 - [ ] 4.2 Accessible HTML report, WCAG 2.2 AA (R14, R36), checker in CI (R39).
 - [ ] 4.3 Full `--json` (R15); parallel processing with stable output order (R23).
 - [ ] 4.4 Command line and translated help, interactive end of run (R19, R20, R37). First
-  decide `--open`, `--threads` and `extract --no-report` (*To decide* in R19).
+  decide `--open`, `--threads` and `extract --no-report` (*To decide* after R19).
 
 ## Phase 5: system integration
 - [ ] 5.1 Install manifest (R41). First decide how `create_new` applies to registry keys and
