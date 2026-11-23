@@ -33,7 +33,8 @@ Read first: `CLAUDE.md`, `docs/design.md`, `docs/roadmap.md`, the latest report 
    and laws cited. Verify each one; list those that do not exist or say something different.
 5. **Docs agree with each other.** `CLAUDE.md`, `design.md`, `roadmap.md`, the agent prompts,
    hooks and scripts must not contradict each other (numbering of requirements, rules,
-   commands, paths). Note anything outdated.
+   commands, paths). Note anything outdated. Texts follow `docs/writing.md`; every pull request
+   carries the reviewer's verdict as a comment (`gh pr view <n> --comments`).
 6. **Project rules.** Safety rules (R28–R34), accessibility (R35–R39), uninstall (R40–R43),
    language rules (English in the repository, translated user interface), public-repository
    rules (`sh scripts/check-public.sh --range tip HEAD`).

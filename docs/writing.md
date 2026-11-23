@@ -1,7 +1,8 @@
 # How we write
 
-Rules for every text in this repository: README, design, roadmap, CLAUDE.md, agent prompts,
-comments, commit messages, PR texts, the user guide and the strings the tool shows.
+These rules apply to every text in this repository. That means docs, agent prompts, comments,
+commit messages, PR texts, the user guide and the strings the tool shows. Everything is in
+English; only the tool's own strings are translated (see "Language" in `CLAUDE.md`).
 
 ## Who reads our texts?
 
@@ -27,8 +28,8 @@ an "envelope" in one place, it is not a "container" two lines later.
 ## What is never shortened or reworded?
 
 Code, commands, paths, file names, option names, error messages, numbers, versions and
-dates. They are copied exactly, in backticks. Negations (not, never, only, except) are never
-dropped to save words.
+dates. We copy them exactly, and put code, commands, paths, file names and options in
+backticks. We never drop a negation or a restriction (not, never, only, except) to save words.
 
 ## What do we cut?
 
@@ -41,17 +42,19 @@ Anything that does not answer the question:
 
 ## Which patterns make a text sound machine-made?
 
-We avoid them. The list comes from Wikipedia's "Signs of AI writing" (via the humanizer
-guide):
+These ones, from Wikipedia's page "Signs of AI writing"
+(https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing). We do not use them:
 
 - inflated significance: "plays a pivotal role", "is a testament to", "marks a shift";
-- the usual vocabulary: crucial, delve, enhance, foster, intricate, landscape, leverage,
-  seamless, showcase, tapestry, underscore, vibrant;
+- the usual filler vocabulary: crucial, delve, enhance, foster, intricate, landscape,
+  leverage, seamless, showcase, tapestry, underscore, vibrant (a literal use is fine);
 - "serves as", "stands as", "boasts" instead of "is" or "has";
 - "not just X, but Y" and "it's not about X, it's about Y";
 - lists of three by reflex, and synonyms rotated to avoid repeating a word;
 - false ranges: "from small offices to large institutions";
-- em dashes as decoration, emojis, curly quotes;
+- em dashes (use a comma, a colon or a new sentence), emojis, curly quotes;
+- trailing "-ing" commentary ("..., ensuring a smooth experience"), promotional adjectives,
+  flattering openers;
 - bold words scattered in running text, and lists where every item starts with a bold
   label and a colon;
 - Title Case In Headings (we write headings in sentence case);
@@ -59,22 +62,33 @@ guide):
 
 ## Do our texts have a voice?
 
-Yes, a plain one. We state decisions and say why: "The release embeds the EU list of lists
-and the Italian list only: embedding all of them would add megabytes, and the first run with
-a network refreshes them." We say what we do not know: "Not tested on Windows on ARM." We use "we" for the project. A text with no opinion and no reason is
-not neutral, it is useless.
+Yes, a plain one. We state decisions and say why: "The release embeds the LOTL and the Italian
+list. The tool then works offline from the start." We say what we do not know: "We do not
+know yet whether the company proxy needs NTLM." We use "we" for the project. A text with no
+opinion and no reason is not neutral, it is useless.
 
 ## Are there exceptions?
 
-- Safety warnings and irreversible actions: full sentences, even if longer. Clarity beats
-  brevity.
+Yes, six:
+
+- Safety warnings and irreversible actions: full sentences, even if longer. Clarity beats brevity.
 - Steps that must happen in order: a numbered list, one action per step.
 - Tables: only when the reader compares values across rows.
 - Strings shown by the tool follow the same rules in every language (R27), and must work
   with screen readers (R35): words, not symbols.
+- Texts without headings (commit messages, comments, the tool's strings) keep the rest: answer
+  first, short sentences, nothing to cut.
+- Numbered lists (requirements `R44.`, roadmap steps `3.4`) and fixed formats (the reviewer's
+  `VERDICT:` line, the audit report skeleton, the front matter of agent prompts) keep their
+  labels and layout; the text inside follows the guide. Audit reports in `docs/audits/` are
+  records: they are never rewritten.
 
 ## Who checks?
 
-The author, before committing: read the text once as the reader with the question. The
-`fable-reviewer` and `coherence-auditor` agents check the patterns above in every review.
-No text is sent to tools or models outside this subscription to be rewritten.
+The author, before committing, reads the text once as the reader with the question. The
+`fable-reviewer` and `coherence-auditor` agents report the patterns above in their reviews.
+
+## May a tool rewrite our texts?
+
+Only the Claude models of the project's own subscription, the same ones that write the code.
+We send no text to other services or models to be rewritten.

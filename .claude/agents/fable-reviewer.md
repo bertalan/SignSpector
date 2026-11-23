@@ -41,7 +41,9 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    over-long names).
 4. **Language**: code, comments, docs and developer messages in English. User-facing texts of
    the tool go through the translation layer (R27 in `docs/design.md`), never hard-coded, and
-   every new text has its Italian translation.
+   every new text has its Italian translation. Every changed text (docs, comments, commit
+   messages, PR text, prompts, tool strings) follows `docs/writing.md`: report the patterns it
+   lists, with `file:line`.
 5. **Accessibility and uninstall** (R35–R43): no information by colour or symbols alone,
    `NO_COLOR`/`--plain` honoured, no prompt time limits, semantic and keyboard-operable HTML
    with sufficient contrast; anything installed is recorded for `uninstall`, which removes

@@ -30,7 +30,10 @@ No exception for "infrastructure".
    never given my conclusions or earlier findings. Fix its findings or explain to the user why
    not. Every verdict (APPROVED or CHANGES NEEDED, the findings in short, how each was closed)
    is posted as a comment on the pull request, so the approval leaves a trace an audit can
-   check (the PR description alone is not enough).
+   check (the PR description alone is not enough). The comment is a summary written for the
+   public, with repository-relative paths, never the pasted report (reports carry local
+   paths); `check-public.sh` does not scan PR comments, so its file is checked with
+   `sh scripts/check-public.sh --message <file>` before posting.
 6. Commit only when the user asks. Hooks (`.githooks/`): pre-commit runs the public-repository
    check, the audit cadence gate, the script tests when scripts or hooks change, fmt, clippy
    and tests; commit-msg scans the message; pre-push scans every commit not yet on the remote it pushes
