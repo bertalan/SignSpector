@@ -135,7 +135,7 @@ saves the signed documents beside the originals, ready to open.
     free name, R31) with the analysis and the documents written, and `undo` uses that one (R33).
   - With `--json`, it also writes a second JSON file beside the first.
   - After `check --no-report` there is no first report: the extraction report is the only one.
-- R21. `install-menu` and `uninstall-menu` (plan and yes/no question, R19) add and remove the
+- R21. `install-menu` and `uninstall-menu` (plan and yes/no question, R30) add and remove the
   file manager's context menu: Windows per-user registry keys (no admin, no PowerShell), macOS
   Quick Actions, a Linux Nautilus script and Dolphin service menu. Full removal: `uninstall`
   (R40–R43).
@@ -175,17 +175,17 @@ script. R31 says how every file is created and which files may ever be replaced.
     files of any kind, total size, number of subfolders, unreadable folders that will be
     skipped. The interface calls the envelopes "files to process". Zero envelopes: it says so and
     stops.
-  - A risky run gets a stronger warning, and the user must type the number of files to
-    process. A run is risky when one chosen folder is the root of a drive or volume, the user's
-    home, Desktop, Documents, a system folder (`C:\Windows`, `Program Files`, `/System`,
-    `/usr`, `/etc`...) or a network share root. It is also risky when the folders hold **more
-    than 10,000 files of any kind** in all, subfolders included (owner's decision, 2026-11-23).
-    A run that is not risky is an ordinary run. "Risky" and "ordinary" always describe the
-    whole run, never one folder.
+  - A risky run gets a stronger warning, and the user must type the number of files to process. A
+    run is risky when one chosen folder is a sensitive folder: the root of a drive or volume, the
+    user's home, Desktop, Documents, a system folder (`C:\Windows`, `Program Files`, `/System`,
+    `/usr`, `/etc`...) or a network share root. It is also risky when the folders hold **more than
+    10,000 files of any kind** in all, subfolders included (owner's decision, 2026-11-23). A run
+    that is not risky is an ordinary run. "Risky" and "ordinary" always describe the whole run,
+    never one folder.
   - The 10,000 count covers the regular files of the folders the walk visits (R2). Files in
     hidden folders, behind symbolic links met during the walk, or in unreadable folders are not
     counted. A file in overlapping folders counts once.
-  - Each kind of folder above is judged on the path after resolving symbolic links.
+  - Each kind of sensitive folder is judged on the path after resolving symbolic links.
 - R29. **Confirm before writing.** An extraction first builds the complete write plan and shows
   it: new documents, documents already present with identical content (not rewritten),
   documents saved under an alternative name `x (1).pdf`, and "existing files modified: 0"
@@ -217,19 +217,19 @@ script. R31 says how every file is created and which files may ever be replaced.
   - In code, writing a document requires a `ConfirmedPlan` that only the confirmation step can
     build (typestate): a path that writes without confirmation does not compile. Originals are
     held in a read-only `Original` type that write functions do not accept.
-  - Documents, reports, JSON files, menu items and temporary files are created with
-    `OpenOptions::create_new(true)`. The OS refuses if the name exists, even if the file
-    appeared after the plan. A cache file and the manifest reach their name only by the rename
-    described below, also the first time.
+  - Every file the tool writes is created with `OpenOptions::create_new(true)`: documents,
+    reports, JSON files, menu items and temporary files. The OS refuses if the name exists, even
+    if the file appeared after the plan. A cache file and the manifest are created that way under
+    a temporary name, and reach their own name only by the rename described below, also the
+    first time.
   - When the name is taken: a document, report or JSON file takes the next free name (`(1)`,
     `(2)`...); a menu item is reported and left (R41). How this applies to registry keys and
     `.workflow` folders is still open (question "Before 5.1").
   - Only two kinds of file are ever replaced: the tool's own cache files (R47) and its
     install manifest (R41). They are replaced in two steps. The new content is written with
     `create_new` under a temporary name in the same folder; then that file is renamed over the
-    old one. The
-    tool never follows a symbolic link there, and it refuses a name that exists and is not a
-    regular file. Nothing is ever written in place.
+    old one. The tool never follows a symbolic link there, and it refuses a name that exists and
+    is not a regular file. Nothing is ever written in place.
   - A partly written file (error, disk full) is removed, only if the tool created it.
   - Before writing, each original is re-checked against the analysis (size, mtime, SHA-256). If
     the folder changed, the plan is rebuilt and confirmed again.
@@ -300,19 +300,19 @@ script. R31 says how every file is created and which files may ever be replaced.
     in hidden folders, behind symbolic links met during the walk or in unreadable folders are not
     counted; a selected folder that is a symbolic link is resolved and counted; overlaps count
     once.
-  - Several folders (R19): the total is typed; one risky folder makes the whole run risky; all
+  - Several folders (R19): the total is typed; one sensitive folder makes the whole run risky; all
     folders empty stop the run; overlaps (also by letter case, symbolic link, trailing slash)
     are counted once; one report per selected folder that is not inside another; a symbolic
-    link to a risky folder is risky.
+    link to a sensitive folder makes the run risky.
   - Time (R9): a back-dated signing-time attribute changes no verdict; without a time stamp the
     report says "claimed, not proved".
   - Yes/no questions (R30): Enter alone cancels, `y` on a pipe is refused, a number is not a
     yes.
-  - Dialogs (R30): when a number is required only the right one confirms; yes/no dialogs default
-    to Cancel; the focus starts on Cancel; Enter alone and closing the window cancel; a wrong
-    number does not confirm; every selected folder with its count, the total and the operation
-    are shown; a fake dialog helper placed first in `PATH` is not used; a folder name with
-    quotes or script code is shown as text, never run.
+  - Dialogs (R30, R38): when a number is required only the right one confirms; yes/no dialogs
+    default to Cancel; the focus starts on Cancel; Enter alone and closing the window cancel; a
+    wrong number does not confirm; every selected folder with its count, the total and the operation
+    are shown; a fake dialog helper placed first in `PATH` is not used; a folder name with quotes or
+    script code is shown as text, never run.
 
   How are confirmed runs tested without a bypass? The public confirmation has two constructors
   only, terminal and dialog, which take no input source: they open the terminal or the dialog
@@ -442,8 +442,7 @@ statement).
   dialogs ask the confirmations of R30 for runs started from the context menu. No custom-drawn
   GUI, no PowerShell. Helper programs that show a dialog are run from fixed system paths
   (`/usr/bin/osascript`, `/usr/bin/zenity`...), never found through `PATH`. Folder names reach
-  them as arguments, never spliced into script source or markup. In a number field, Enter
-  confirms only if the number is right; otherwise it does nothing.
+  them as arguments, never spliced into script source or markup.
 - R39. **Verification.** Automated: unit tests on the HTML structure (lang, headings, table
   headers, no colour-only status), an accessibility checker on sample reports in CI (for
   example `axe-core` or `pa11y`), and console tests with `NO_COLOR` and `--plain`. Manual
@@ -563,18 +562,18 @@ answered before the roadmap step named in its heading; that step points back her
   one, and a selected symbolic link whose name is hidden but whose target is not, or the
   reverse?
 
+### Before 1.6 (confirmation logic)
+- What does a wrong or empty number do at the terminal (R29, R30)? The dialog case is in R30;
+  the terminal case is only in the R34 tests.
+
 ### Before 1.7 (safe writer) and the first pseudo-terminal test
 - Pseudo-terminal tests (R34) need a pty crate as a dev-dependency, accepted by `deny.toml`:
   which one, for Unix and Windows ConPTY?
-- R31 checks that a cache or manifest name is a regular file, then renames over it: what if the
-  name changes between the check and the rename?
+- R31 checks that a cache or manifest name is a regular file, then renames over it. What if the
+  name changes between the check and the rename, or a foreign file appears at a name that did
+  not exist yet (the first creation is also a rename)? How is that prevented?
 - R31 keeps documents inside the selected folder. Does a rule cover a report written into a
   selected folder that is a symbolic link?
-- The first creation of a cache file or the manifest is also a rename (R31). A foreign file that
-  appears at that name between the check and the rename would be replaced: how is that
-  prevented?
-- What does a wrong or empty number do at the terminal (R29, R30)? The dialog case is in R30;
-  the terminal case is only in the R34 tests.
 
 ### Before 3.1 (crypto)
 - Brainpool curves: are they needed by the real files?

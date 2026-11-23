@@ -41,7 +41,7 @@ The order follows two ideas:
   step also led to owner's decisions on requirements (2026-11-23), recorded in
   `docs/design.md`:
   - what `check` writes (R16);
-  - risky folders counted on files of any kind (R28);
+  - risky runs counted on files of any kind (R28);
   - reports never replaced, and the second report (R16, R20, R31, R33);
   - `--plan` writes and downloads nothing (R19);
   - the cache (R47);
@@ -50,8 +50,8 @@ The order follows two ideas:
   - foreign menu items (R41).
 
   The questions they opened are listed in "What is still open?" in `docs/design.md`, each with
-  the roadmap step that needs the answer (1.4, 1.5, 1.7, 3.1, 3.2, 3.5, 3.6, 3.7, 3.9, 4.2, 4.4,
-  5.1, 5.2, 5.3).
+  the roadmap step that needs the answer (1.4, 1.5, 1.6, 1.7, 3.1, 3.2, 3.5, 3.6, 3.7, 3.9, 4.2,
+  4.4, 5.1, 5.2, 5.3).
 - [ ] 0.5 Remaining gaps in the rule-script tests, found by the reviews of PR #1, PR #2 and
   PR #3 and accepted as known limits for now (each needs a test before the code changes):
   - `check-public.sh`: failures of `git show`, `ls-tree`, `diff-tree` are not each tested;
@@ -113,17 +113,18 @@ The order follows two ideas:
   (R1b, R2, R19, R28): one or more folders, a row per folder and the total; regular files only,
   symbolic links met during the walk not followed (a selected one is resolved) and hidden folders
   skipped (both listed in the report), unreadable folders listed; two counts (files to process,
-  files of any kind), total size, subfolders. Risky-folder detection (drive roots, home, Desktop,
-  Documents, system folders, network share roots, > 10,000 files of any kind, subfolders
-  included).
-- [ ] 1.6 **Confirmation logic** (R28–R30): pure functions turning (counts, folder, terminal,
+  files of any kind), total size, subfolders. Detection of sensitive folders (drive roots, home,
+  Desktop, Documents, system folders, network share roots) and of a risky run (a sensitive
+  folder, or more than 10,000 files of any kind over all the folders, subfolders included).
+- [ ] 1.6 **Confirmation logic** (R28–R30; first decide the question "Before 1.6" in
+  `docs/design.md`): pure functions turning (counts, folder, terminal,
   dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the
   answer: typed count (R28 risky run, R29), yes/no default No (R30). Typestate
-  `ConfirmedPlan`. Tests: Enter, `n`, wrong number, changing command, and `check` or
-  `extract --plan` in a risky run, refused from a script; `check --plan`, `extract --plan` in an
-  ordinary run and the item lists of `--plan` run from a script; symbolic links resolved before
-  each folder is judged (all path-based kinds of risky folder, not only shares); several folders
-  (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
+  `ConfirmedPlan`. Tests at the terminal: Enter, `n`, wrong number, changing command. Tests
+  from a script: `check` and `extract --plan` in a risky run are refused; `check --plan`,
+  `extract --plan` in an ordinary run and the item lists of `--plan` run. Also: symbolic links
+  resolved before each folder is judged (all kinds of sensitive folder, not only shares);
+  several folders (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
 - [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, removal of partial files,
   stays inside the folder (`..`, symbolic links), free-space check, re-check of originals. First
   decide the questions "Before 1.7" in `docs/design.md`. Folder snapshot test helper (R34)
@@ -149,7 +150,7 @@ The order follows two ideas:
   service history (R44, R48).
 - [ ] 3.5 Choice of lists from the certifiers' countries, download, cache, `--trust-lists`,
   `--offline` (R45–R47). First decide the questions "Before 3.5" in `docs/design.md`.
-- [ ] 3.6 Chain building against the TSL and the system store (R10). First decide the question
+- [ ] 3.6 Chain building against the TSL and the system store (R10). First decide the questions
   "Before 3.6" in `docs/design.md`.
 - [ ] 3.7 Countersignatures (R11); `tsp`: RFC 3161, `.tsd`, `.m7m` (R5, R12); detached `.p7s` (R6).
   A time stamp is a proved time (R9) only if it verifies per R12 (chain to a trusted-list
@@ -167,10 +168,11 @@ The order follows two ideas:
 ## Phase 4: output
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).
 - [ ] 4.2 Accessible HTML report, WCAG 2.2 AA (R14, R36), checker in CI (R39). First decide the
-  question "Before 4.2" in `docs/design.md`.
+  questions "Before 4.2" in `docs/design.md`.
 - [ ] 4.3 Full `--json` (R15); parallel processing with stable output order (R23).
 - [ ] 4.4 Command line and translated help, interactive end of run (R19, R20, R37). First decide
-  `--open`, `--threads` and `extract --no-report` (questions "Before 4.4" in `docs/design.md`).
+  `--open`, `--threads`, `extract --no-report` and double-click detection (questions
+  "Before 4.4" in `docs/design.md`).
 
 ## Phase 5: system integration
 - [ ] 5.1 Install manifest (R41). First decide how `create_new` applies to registry keys and

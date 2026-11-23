@@ -53,10 +53,10 @@ cannot damage them:
   - the root of a drive or volume;
   - the home folder, Desktop or Documents;
   - a system folder;
-  - a network share root;
-  - a folder that holds more than 10,000 files of any kind, subfolders included.
+  - a network share root.
 
-  A run is also risky when the folders chosen hold more than 10,000 files in all. Files the
+  A run is also risky when the folders chosen hold more than 10,000 files of any kind in all,
+  subfolders included. A run that is not risky is an ordinary run. Files the
   analysis skips are not counted (hidden folders, symbolic links inside the folders, unreadable
   folders), and a
   file in overlapping folders counts once.

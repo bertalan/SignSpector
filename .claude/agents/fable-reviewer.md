@@ -30,7 +30,8 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    confirmed by the typed number (`extract`, or the interactive end of run, R20, R29); existing
    files are never overwritten, not even a report; no panic on malformed input (no
    `unwrap`/`expect`/indexing on untrusted data outside tests); no PowerShell; no OpenSSL or C
-   dependencies. Confirmation and write safety (R28–R34 in `docs/design.md`) is a fixed point of
+   dependencies. Confirmation and write safety (R28–R34 and the dialog helper rules of R38 in
+   `docs/design.md`) is a fixed point of
    every review: look for any path that processes without the first confirmation, writes a
    document without a `ConfirmedPlan`, breaks any part of R31 (a file opened without
    `create_new`, a file replaced in place, a file replaced other than a cache file or the manifest,
