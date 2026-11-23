@@ -54,7 +54,8 @@ The order follows two ideas:
     the `origin/HEAD` filter and "no tags or other refs" do); the "RED CHECKS" test covers the
     printed line and its absence, not which checks are selected as red (the `gh` stub returns
     the formatted line); only `FAILURE` counts as red today, not cancelled or timed-out jobs nor
-    commit statuses: decide and test;
+    commit statuses: decide and test; the negative RED CHECKS case does not assert that the
+    GitHub section ran, and its stub has a dead first line;
   - report-mode tests pass if the script prints nothing in that section.
   - from the targeted review of the third-round fixes:
     - the first push to a new remote scans the whole history and stops on the accepted

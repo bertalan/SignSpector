@@ -28,7 +28,9 @@ No exception for "infrastructure".
 5. **Independent review**: a **newly started** `fable-reviewer` agent (different model) for
    every review, briefed only with the scope and where the requirements are: never resumed,
    never given my conclusions or earlier findings. Fix its findings or explain to the user why
-   not.
+   not. Every verdict (APPROVED or CHANGES NEEDED, the findings in short, how each was closed)
+   is posted as a comment on the pull request, so the approval leaves a trace an audit can
+   check (the PR description alone is not enough).
 6. Commit only when the user asks. Hooks (`.githooks/`): pre-commit runs the public-repository
    check, the audit cadence gate, the script tests when scripts or hooks change, fmt, clippy
    and tests; commit-msg scans the message; pre-push scans every commit not yet on the remote it pushes
@@ -50,10 +52,13 @@ functions or options that never existed, work left half-done. Rules against it:
   draft PRs, red CI): finish it, or close it with a written reason, before starting anything new.
 - **Branches and PRs** (after the first push): one branch per roadmap step
   (`step/1.1-portable-names`), pushed early as a **draft PR**; marked ready only when CI is
-  green and `fable-reviewer` approved; merged into `main` **locally by fast-forward**
-  (`git switch main && git merge --ff-only step/x && git push`): the same commits CI checked,
-  linear history, pre-push hook run. The GitHub merge button is not used (it rewrites commits). **One step open at a time.** A session never ends with a draft PR without a comment saying its state and next
-  step; abandoned work is closed with the reason, never left open.
+  green on all four jobs (read in the job list, never assumed from a pending run) and
+  `fable-reviewer` approved (its verdict posted on the PR); merged into `main` **locally by
+  fast-forward** (`git switch main && git merge --ff-only step/x && git push`): the same commits
+  CI checked, linear history, pre-push hook run. The GitHub merge button is not used (it
+  rewrites commits). **One step open at a time.** A session never ends with a draft PR without a
+  comment saying its state and next step; abandoned work is closed with the reason, never left
+  open.
 - **Every 5 commits: coherence audit** by the `coherence-auditor` agent (Fable, fresh context,
   read-only): requirements vs tests vs code, every concrete reference checked for existence,
   docs agreeing with each other, unfinished work, project rules, health. Its report is saved as
