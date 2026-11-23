@@ -70,7 +70,7 @@ opinion and no reason is not neutral, it is useless.
 
 ## Are there exceptions?
 
-Yes, six:
+Yes, seven:
 
 - Safety warnings and irreversible actions: full sentences, even if longer. Clarity beats brevity.
 - Steps that must happen in order: a numbered list, one action per step.
@@ -79,10 +79,10 @@ Yes, six:
   with screen readers (R35): words, not symbols.
 - Texts without headings (commit messages, comments, the tool's strings) keep the rest: answer
   first, short sentences, nothing to cut.
-- Numbered lists (requirements `R44.`, roadmap steps `3.4`) and fixed formats (the reviewer's
-  `VERDICT:` line, the audit report skeleton, the front matter of agent prompts) keep their
-  labels and layout; the text inside follows the guide. Audit reports in `docs/audits/` are
-  records: they are never rewritten.
+- Numbered lists and fixed formats keep their labels and layout. Examples: requirements
+  `R44.`, roadmap steps `3.4`, the reviewer's `VERDICT:` line, the audit report skeleton, the
+  front matter of agent prompts. The text inside them follows the guide.
+- Audit reports in `docs/audits/` are records: they are never rewritten.
 
 ## Who checks?
 

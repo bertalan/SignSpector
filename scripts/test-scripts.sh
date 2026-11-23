@@ -364,6 +364,7 @@ PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTE
 new_repo
 printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
 mkdir -p "$work/rustupshim"
+# The stub lines copy the format of rustup 1.29.3 (rustup check), apart from the older-format test.
 rustup_says() { printf '#!/bin/sh\n[ "$1" = check ] || exit 1\n%s\n' "$1" > "$work/rustupshim/rustup"; chmod +x "$work/rustupshim/rustup"; }
 rustup_says "echo 'stable-x86_64-unknown-linux-gnu - update available: 1.100.0 (a 2026-11-09) -> 1.101.0 (b 2026-12-21)'"
 PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "NEWER RUST STABLE: 1.101.0 (pinned: 1.100.0); see rust-toolchain.toml"; expect "report: newer Rust stable shown" 0 $?
@@ -379,7 +380,42 @@ PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned
 grep -q "^check" "$work/rustup-stub.log";               expect "the test stub stands in for the real rustup" 0 $?
 printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
 rustup_says "exit 1"
-PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "Rust release not checked (rustup check failed or no stable toolchain)"; expect "report: rustup check failing is said" 0 $?
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "Rust release not checked (rustup check failed, or no stable toolchain: rustup toolchain install stable)"; expect "report: rustup check failing is said" 0 $?
+# Versions are compared number by number: patch 10 is after patch 9, major 10 after major 9.
+printf '[toolchain]\nchannel = "1.100.9"\n' > rust-toolchain.toml
+rustup_says "echo 'stable-x86_64-unknown-linux-gnu - update available: 1.100.9 (a 2026-11-09) -> 1.100.10 (b 2026-11-20)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "NEWER RUST STABLE: 1.100.10 (pinned: 1.100.9); see rust-toolchain.toml"; expect "report: newer patch release shown" 0 $?
+printf '[toolchain]\nchannel = "1.100.10"\n' > rust-toolchain.toml
+rustup_says "echo 'stable-x86_64-unknown-linux-gnu - up to date: 1.100.9 (a 2026-11-09)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -q "NEWER RUST";     expect "report: older patch release is not newer" 1 $?
+printf '[toolchain]\nchannel = "9.0.0"\n' > rust-toolchain.toml
+rustup_says "echo 'stable-x86_64-unknown-linux-gnu - up to date: 10.0.0 (a 2026-11-09)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "NEWER RUST STABLE: 10.0.0 (pinned: 9.0.0); see rust-toolchain.toml"; expect "report: newer major release shown" 0 $?
+printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
+# Two hosts installed (e.g. arm64 and x86_64 on a Mac): rustup prints two stable lines, one is read.
+rustup_says "printf '%s\\n' 'stable-aarch64-apple-darwin - update available: 1.100.0 (a 2026-11-09) -> 1.101.0 (b 2026-12-21)' 'stable-x86_64-apple-darwin - update available: 1.100.0 (a 2026-11-09) -> 1.101.0 (b 2026-12-21)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "NEWER RUST STABLE: 1.101.0 (pinned: 1.100.0); see rust-toolchain.toml"; expect "report: two stable lines read as one" 0 $?
+# The line format of older rustup (up to 1.28): "Up to date : X".
+rustup_says "echo 'stable-x86_64-unknown-linux-gnu - Up to date : 1.100.0 (a 2026-11-09)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: older rustup format read" 0 $?
+# rustup gets no standard input, and its error text stays out of the report.
+rustup_says "echo \"stdin=\$(cat)\" >> '$work/rustup-ask.log'; echo rustup-noise >&2; echo 'stable-x86_64-unknown-linux-gnu - up to date: 1.100.0 (a 2026-11-09)'"
+rm -f "$work/rustup-ask.log"
+out=$(echo typed | PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1)
+[ "$(cat "$work/rustup-ask.log" 2>/dev/null)" = "stdin=" ];  expect "report: rustup reads no input" 0 $?
+printf '%s\n' "$out" | grep -q "rustup-noise";             expect "report: rustup errors not shown" 1 $?
+# Only the real channel line counts: not a commented one; tabs and single quotes are valid TOML.
+rustup_says "echo 'stable-x86_64-unknown-linux-gnu - up to date: 1.100.0 (a 2026-11-09)'"
+printf '[toolchain]\n# channel = "1.0.0"\nchannel = "1.100.0"\n' > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: commented channel line ignored" 0 $?
+printf "[toolchain]\nchannel\t= '1.100.0'\n" > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: tab and single quotes read" 0 $?
+# A pin that is not x.y.z (e.g. "1.100" or "stable") is said, never compared.
+printf '[toolchain]\nchannel = "1.100"\n' > rust-toolchain.toml
+out=$(PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1)
+printf '%s\n' "$out" | grep -qx "pinned Rust 1.100 is not x.y.z; see rust-toolchain.toml"; expect "report: pin without patch said" 0 $?
+printf '%s\n' "$out" | grep -q "NEWER RUST";               expect "report: pin without patch not compared" 1 $?
+printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
 # The report says when an audit is due (5 commits since the last one), and not before.
 new_repo
 commit a; commit b; commit c; commit d

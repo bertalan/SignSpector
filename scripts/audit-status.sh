@@ -75,14 +75,18 @@ fi
 
 section "Rust"
 # The pinned version (rust-toolchain.toml) is moved by hand; say when a newer stable exists.
-pinned=$(sed -n 's/^channel *= *"\([0-9.]*\)".*/\1/p' rust-toolchain.toml 2>/dev/null)
+# rustup check needs a "stable" toolchain installed; its lines (rustup 1.29: "up to date: X",
+# "update available: X -> Y"; up to 1.28: "Up to date : X") are read for the first stable host.
+pinned=$(sed -n "s/^channel[[:space:]]*=[[:space:]]*[\"']\([^\"']*\)[\"'].*/\1/p" rust-toolchain.toml 2>/dev/null)
 latest=$(rustup check 2>/dev/null </dev/null | sed -n \
     -e 's/^stable-.* -> \([0-9][0-9.]*\).*/\1/p' \
-    -e 's/^stable-.* up to date: \([0-9][0-9.]*\).*/\1/p' | head -n 1)
+    -e 's/^stable-.* [Uu]p to date *: *\([0-9][0-9.]*\).*/\1/p' | head -n 1)
 if [ -z "$pinned" ]; then
     echo "pinned Rust version not found in rust-toolchain.toml"
+elif ! printf '%s\n' "$pinned" | grep -qx '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*'; then
+    echo "pinned Rust $pinned is not x.y.z; see rust-toolchain.toml"
 elif [ -z "$latest" ]; then
-    echo "Rust release not checked (rustup check failed or no stable toolchain)"
+    echo "Rust release not checked (rustup check failed, or no stable toolchain: rustup toolchain install stable)"
 elif [ "$latest" = "$pinned" ]; then
     echo "pinned Rust $pinned is the latest stable"
 elif [ "$(printf '%s\n%s\n' "$pinned" "$latest" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)" = "$latest" ]; then

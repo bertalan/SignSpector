@@ -412,7 +412,8 @@ The order of work is in `roadmap.md` (safety-critical, pure parts first).
   `openssl cms -sign`, `openssl ts`) and by Rust test helpers for what OpenSSL cannot produce:
   BER indefinite lengths, nested envelopes, `.tsd`, base64, RSA-PSS, ECDSA, countersignatures,
   tampered content, expired and untrusted certificates, a fake TSL listing the test CA.
-- Fuzzing of the `ber` and `cms` readers (`cargo fuzz`, needs nightly) once they exist: no input may panic or hang.
+- Fuzzing of the `ber` and `cms` readers (`cargo fuzz`, needs nightly) once they exist: no input
+  may panic or hang.
 - Real documents stay on the Windows PC (`tests/corpus/`, git-ignored, personal data): used to
   check results by hand and, if useful, against the old tool's output.
 

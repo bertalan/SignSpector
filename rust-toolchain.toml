@@ -4,8 +4,9 @@
 # must not break on its own. We move to a new version on purpose, in its own commit.
 #
 # How to update:
-#   1. rustup check                      (shows the latest stable)
-#   2. change `channel` below, then: rustup show
+#   1. rustup check                      (shows the latest stable; needs a "stable" toolchain:
+#                                         rustup toolchain install stable)
+#   2. change `channel` below, then: rustup toolchain install   (as CI does)
 #   3. cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo nextest run
 #   4. commit alone ("Rust 1.x.y"); CI runs the four jobs on the new version.
 #
