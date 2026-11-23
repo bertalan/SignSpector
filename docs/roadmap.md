@@ -36,8 +36,8 @@ The order follows two ideas:
   sentences, code and commands verbatim. Rewrite README, design, roadmap, CLAUDE.md and the
   agent prompts with it; comment in `rust-toolchain.toml` (targets and R25, how to update the
   pinned version); session report line when a newer stable Rust exists.
-- [ ] 0.5 Remaining gaps in the rule-script tests, found by the reviews of PR #1 and PR #2 and
-  accepted as known limits for now (each needs a test before the code changes):
+- [ ] 0.5 Remaining gaps in the rule-script tests, found by the reviews of PR #1, PR #2 and
+  PR #3 and accepted as known limits for now (each needs a test before the code changes):
   - `check-public.sh`: failures of `git show`, `ls-tree`, `diff-tree` are not each tested;
     names of people, phone numbers, IPs, base64 content and branch names are not detected
     (header "Known limits");
@@ -58,12 +58,16 @@ The order follows two ideas:
     GitHub section ran, and its stub has a dead first line;
   - report-mode tests pass if the script prints nothing in that section.
   - `audit-status.sh`, "Rust" section: five review rounds on PR #3. The reviews of 2557e7f and
-    1ac9d1d found minor bugs, fixed with tests in 1ac9d1d and c3f070e. The reviews of c3f070e,
+    1ac9d1d found minor bugs. All but one were fixed in 1ac9d1d and c3f070e; the missing time
+    limit on `rustup check` is the one left (below). The reviews of c3f070e,
     1363b18 and fb41029 found no bug, only breakages no test noticed. The owner decided
     (2026-11-23) to stop the rounds there. A later breakage of this section that shows no bug
     is listed on the PR and here, not closed with another round. Known limit: `rustup check`
     has no time limit. It runs only in report mode, after the hook gates, so no commit or push
-    waits on it.
+    waits on it. Breakages listed so far (review of 40e2d4c), each leaves all tests green:
+    - the first dot of the x.y.z check unescaped (`1x100.0` would pass);
+    - a single digit accepted for the major and patch numbers (`10.0.0` would be "not x.y.z");
+    - the captured rustup version may start with a dot.
   - from the targeted review of the third-round fixes:
     - the first push to a new remote scans the whole history and stops on the accepted
       exception `cd3620d` (CLAUDE.md): encode the exception if a second remote is ever added;

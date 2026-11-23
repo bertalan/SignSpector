@@ -25,10 +25,10 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    wrong cryptographic checks (digest compared to the wrong bytes, signed attributes not
    re-encoded as SET, signature algorithm not matched to the key, time checked against the wrong
    reference), anything that could report a forged or invalid file as valid.
-3. **Safety rules.** Originals are never written, moved or renamed; nothing is written except
-   the report without `extract` and its typed confirmation; existing files are never
-   overwritten; no panic on malformed input (no `unwrap`/`expect`/indexing on untrusted data
-   outside tests); no PowerShell; no OpenSSL or C dependencies. Confirmation and write safety
+3. **Safety rules.** Originals are never written, moved or renamed; without `extract` and its
+   typed confirmation nothing is written except the report and the tool's cache (R16);
+   existing files are never overwritten; no panic on malformed input (no
+   `unwrap`/`expect`/indexing on untrusted data outside tests); no PowerShell; no OpenSSL or C dependencies. Confirmation and write safety
    (R28–R34 in `docs/design.md`) is a fixed point of every review: look for any path that
    processes without the first confirmation, writes without a `ConfirmedPlan`, opens a file for
    writing without `create_new`, can resolve outside the selected folder, treats a non-terminal

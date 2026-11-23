@@ -10,13 +10,15 @@ extracts the signed documents safely. It is built for Windows, macOS and Linux.
 
 ## What does it do?
 
-It saves opening signed files one by one. Offices receive and archive CAdES `.p7m`, detached
-`.p7s` and time-stamped `.tsd` and `.m7m` files, often nested several layers deep. Opening
-them one by one is slow and tells little about the signatures.
+It checks every signed or time-stamped file in a folder and writes one report. Offices receive
+and archive CAdES `.p7m`, detached `.p7s` and time-stamped `.tsd` and `.m7m` files, often
+nested several layers deep. Opening them one by one is slow and tells little about the
+signatures.
 
 For each folder, SignSpector:
 
-- finds every signed or time-stamped file in it and its subfolders;
+- finds every signed or time-stamped file in it and its subfolders (hidden folders and
+  symbolic links are skipped and listed in the report);
 - opens every layer: BER/DER envelopes (including indefinite lengths), base64 envelopes,
   nested signatures, RFC 5544 time-stamped data;
 - verifies each signature (RSA, RSA-PSS, ECDSA; SHA-1/2) and the signer's certificate
@@ -38,24 +40,33 @@ For each folder, SignSpector:
 No. Signed documents are often the only official copy, so SignSpector is built so that it
 cannot damage them:
 
-- Without an explicit `extract`, it writes nothing except the report.
-- After you choose a folder, it only counts the signed files (envelopes) and asks before
-  analysing them.
+- Without an explicit `extract`, it writes no document. It writes only the report (in the
+  folder, or at the `--report` or `--json` path you name) and its own cache of trusted lists
+  and revocation lists.
+- After you choose a folder, it only counts the envelopes (signed or time-stamped files) and
+  asks before analysing them.
 - Writing needs a second confirmation on the complete write plan: you type the number of
   documents to write.
 - A risky folder gets a stronger warning, and you type the number of envelopes. Risky folders
-  are: the root of a drive or volume, the home folder, Desktop, Documents, system folders,
-  network share roots, and any folder with more than 10,000 envelopes.
+  are:
+  - the root of a drive or volume;
+  - the home folder, Desktop and Documents;
+  - system folders;
+  - network share roots;
+  - more than 10,000 envelopes in all the folders chosen.
 - From the context menu, the same confirmations appear in a window.
-- In scripts, only these run: `check` on an ordinary folder, `check --plan`, `extract --plan`
-  on an ordinary folder, and the `--plan` lists of `undo`, the menu commands and `uninstall`.
+- In scripts, only these run:
+  - `check` on an ordinary folder, and `check --plan`;
+  - `extract --plan` on an ordinary folder;
+  - the `--plan` lists of `undo`, the menu commands and `uninstall`.
+
   Everything else stops and says that a person must confirm.
 - Originals are read-only. They are never modified, moved or renamed.
 - Nothing is ever overwritten. Every file is created with an exclusive "create new" operation,
   so the operating system itself refuses to overwrite. A name clash becomes `x (1).pdf`.
-- Nothing is written outside the chosen folder. File names taken from envelopes are made valid
-  on Windows, macOS and Linux at once: no forbidden characters, no reserved names, no clashes
-  that differ only in letter case or Unicode form.
+- Extracted documents are never written outside the chosen folder. File names taken from envelopes
+  are made valid on Windows, macOS and Linux at once: no forbidden characters, no reserved names,
+  no clashes that differ only in letter case or Unicode form.
 - Every written file is logged with its SHA-256. `signspector undo` removes only the files that
   are still identical to what SignSpector wrote.
 - `signspector uninstall` removes only what SignSpector installed, and never user data.

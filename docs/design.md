@@ -58,7 +58,9 @@ beside the originals, ready to open.
 - *To decide*: layout and content of the report (start from the old tool's report as a sketch?).
 
 ### Extracting
-- R16. `check` (the default) writes nothing but the report. `extract` writes the signed
+- R16. `check` (the default) writes no document: only the report (in each folder, or at the
+  `--report` and `--json` paths the user names, R14, R15) and the tool's own cache of trusted
+  lists and revocation lists (R44, R47, R49). `extract` writes the signed
   documents beside the originals (`Relazione.pdf.p7m` -> `Relazione.pdf`) after the two
   confirmations of R28 and R29: typing the number of documents is the safeguard.
 - R17. Never overwrite: same content already there -> nothing to do; different content ->
@@ -104,7 +106,7 @@ beside the originals, ready to open.
     refuses a risky one, like `check`.
   - For the other commands it lists the items, with no question, also from a script.
 
-  `check` changes nothing but the report.
+  `check` writes no document: only the report and the tool's cache (R16).
   Options: `--open`, `--report`, `--no-report`, `--report-lang <code>`, `--json <file>`,
   `--threads`, `--offline`, `--trust-lists <auto|all|codes>`, `--trust-list <file>`,
   `--lang <code>`, `--interactive`, `--plain`, `--no-color`, `--plan`. Help translated (R27).
@@ -141,8 +143,8 @@ beside the originals, ready to open.
 Nothing is ever processed right after a person chooses a folder, and nothing is written
 without a second, separate confirmation. Writing never replaces an existing file. A folder
 named in a script has no person to ask: an ordinary folder is analysed (`check` writes only the
-report), a risky one is refused (only counted by `check --plan`), and nothing is written
-(R30).
+report and the tool's cache, R16), a risky one is refused (only counted by `check --plan`),
+and nothing is written (R30).
 
 - R28. **Confirm before analysing.** After the folders are chosen the tool only counts (no
   envelope is opened) and asks, default No (Enter alone cancels):

@@ -24,8 +24,8 @@ No exception for "infrastructure".
 4. **Proof**: every PR description quotes the red output (the failing test run) and the green
    one. Rules that protect (scripts under `scripts/`, safety code) are also checked by breaking
    each rule on a copy and seeing at least one test fail; a rule nobody's test notices gets a
-   test. One exception, decided by the owner: the "Rust" section of `audit-status.sh` (see
-   `docs/roadmap.md`, 0.5).
+   test. One exception, decided by the owner: in the "Rust" section of `audit-status.sh`, a
+   breakage that shows no bug is listed, not tested (`docs/roadmap.md`, 0.5).
 5. **Independent review**: a **newly started** `fable-reviewer` agent (different model) for
    every review, briefed only with the scope and where the requirements are: never resumed,
    never given my conclusions or earlier findings. Fix its findings or explain to the user why
@@ -138,7 +138,8 @@ in the history even if deleted later. Before every commit and push:
   (`--lang`, see R27 in `docs/design.md`). Source strings are English; every user-facing text
   goes through the translation layer, never hard-coded, and each new text gets its Italian
   translation in the same change.
-- `check` writes nothing but the report. **There is no `--apply`, `--yes` or `--expect`.**
+- `check` writes no document: only the report and the tool's cache of trusted lists and CRLs
+  (R16). **There is no `--apply`, `--yes` or `--expect`.**
   Every command that changes files or the system shows the exact plan first. The number is
   typed only for files found in a folder (risky folder, R28; documents to write, R29); `undo`,
   menus and `uninstall` ask a yes/no question, default No, answers in words (R19, R35). From
