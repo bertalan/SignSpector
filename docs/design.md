@@ -25,10 +25,11 @@ saves the signed documents beside the originals, ready to open.
   (non-UTF-8 names on Linux). *(done: `is_envelope`)*
 - R1b. The folder is walked recursively. Only regular files are tested with R1a: a folder named
   `archivio.p7m` is not an envelope.
-- R2. Some folders are not walked, and each is listed in the report, so nothing is left out
-  silently:
+- R2. Some entries are not walked or not checked, and each is listed in the report, so nothing
+  is left out silently:
   - an unreadable folder is reported and skipped, and the walk goes on;
-  - a symbolic link met during the walk is not followed (a selected folder is different: R19);
+  - a symbolic link met during the walk, to a file or to a folder, is not followed (a selected
+    folder is different: R19);
   - a hidden folder (name starting with `.`) is skipped.
 
 ### How does it open an envelope?
@@ -92,7 +93,7 @@ saves the signed documents beside the originals, ready to open.
   `--yes` or `--expect`.**
   - Every command that changes files or the system shows the exact plan first and acts only
     after a person confirms. How a person confirms, at a terminal, in a dialog or not at all
-    from a script, is R30. The one exception: `check` on an ordinary folder from a script writes
+    from a script, is R30. The one exception: `check` in an ordinary run from a script writes
     its report (HTML and JSON) and the cache with no question (R16, R30).
   - A number is typed only for files found in a folder: the files to process in a risky run
     (R28) and the documents to write (R29). `undo`, `install-menu`, `uninstall-menu` and
@@ -156,7 +157,7 @@ saves the signed documents beside the originals, ready to open.
   - The language is the one chosen with `--lang it`, otherwise the operating system's language,
     otherwise English.
   - No preference is saved. A command to save one can be added later, with its plan and
-    question (R19).
+    question (R30).
   - Source language English; first translation Italian; more can be added without code
     changes.
   - The report is written in the interface language by default. `--report-lang <code>` writes it
@@ -174,16 +175,17 @@ script. R31 says how every file is created and which files may ever be replaced.
     files of any kind, total size, number of subfolders, unreadable folders that will be
     skipped. The interface calls the envelopes "files to process". Zero envelopes: it says so and
     stops.
-  - **A risky run** gets a stronger warning, and the user must type the number of files to
-    process. A single risky folder makes the whole run risky. A run is risky when a chosen
-    folder is the root of a drive or volume, the user's
+  - A risky run gets a stronger warning, and the user must type the number of files to
+    process. A run is risky when one chosen folder is the root of a drive or volume, the user's
     home, Desktop, Documents, a system folder (`C:\Windows`, `Program Files`, `/System`,
     `/usr`, `/etc`...) or a network share root. It is also risky when the folders hold **more
     than 10,000 files of any kind** in all, subfolders included (owner's decision, 2026-11-23).
+    A run that is not risky is an ordinary run. "Risky" and "ordinary" always describe the
+    whole run, never one folder.
   - The 10,000 count covers the regular files of the folders the walk visits (R2). Files in
     hidden folders, behind symbolic links met during the walk, or in unreadable folders are not
     counted. A file in overlapping folders counts once.
-  - Every path-based kind of risky folder is judged on the path after resolving symbolic links.
+  - Each kind of folder above is judged on the path after resolving symbolic links.
 - R29. **Confirm before writing.** An extraction first builds the complete write plan and shows
   it: new documents, documents already present with identical content (not rewritten),
   documents saved under an alternative name `x (1).pdf`, and "existing files modified: 0"
@@ -206,25 +208,26 @@ script. R31 says how every file is created and which files may ever be replaced.
     - In every dialog the focus starts on Cancel. Enter alone and closing the window cancel.
       There is no time limit.
   - Script (no terminal, no `--interactive`): `extract`, `undo`, `install-menu`,
-    `uninstall-menu`, `uninstall`, and `check` on a risky folder (R28) stop with exit code 2,
-    write nothing, and say that a person must confirm. A `y` or a number arriving on a pipe is not a
-    confirmation. Only these run: `check` on an ordinary folder, `check --plan`,
-    `extract --plan` on an ordinary folder, and `--plan` of `undo`, the menus and `uninstall`
-    (a list).
+    `uninstall-menu`, `uninstall`, and `check` in a risky run (R28) stop with exit code 2,
+    write nothing, and say that a person must confirm. A `y` or a number arriving on a pipe is
+    not a confirmation. Only these run: `check` in an ordinary run, `check --plan` (also in a
+    risky run), `extract --plan` in an ordinary run, and `--plan` of `undo`, the menus and
+    `uninstall` (a list).
 - R31. **Never overwrite, never write outside.** This is the one place for these rules.
   - In code, writing a document requires a `ConfirmedPlan` that only the confirmation step can
     build (typestate): a path that writes without confirmation does not compile. Originals are
     held in a read-only `Original` type that write functions do not accept.
-  - **Every file the tool writes is created with `OpenOptions::create_new(true)`**: documents,
-    reports, JSON files, menu items, cache files, the manifest, and temporary files. The OS
-    refuses if the name exists, even if the file appeared after the plan.
+  - Documents, reports, JSON files, menu items and temporary files are created with
+    `OpenOptions::create_new(true)`. The OS refuses if the name exists, even if the file
+    appeared after the plan. A cache file and the manifest reach their name only by the rename
+    described below, also the first time.
   - When the name is taken: a document, report or JSON file takes the next free name (`(1)`,
     `(2)`...); a menu item is reported and left (R41). How this applies to registry keys and
     `.workflow` folders is still open (question "Before 5.1").
-  - **Only two kinds of file are ever replaced**: the tool's own cache files (R47) and its
+  - Only two kinds of file are ever replaced: the tool's own cache files (R47) and its
     install manifest (R41). They are replaced in two steps. The new content is written with
     `create_new` under a temporary name in the same folder; then that file is renamed over the
-    old one. A cache file or manifest that does not exist yet follows the same two steps. The
+    old one. The
     tool never follows a symbolic link there, and it refuses a name that exists and is not a
     regular file. Nothing is ever written in place.
   - A partly written file (error, disk full) is removed, only if the tool created it.
@@ -254,7 +257,7 @@ script. R31 says how every file is created and which files may ever be replaced.
   SHA-256 (R16, R20). `signspector undo <report>` removes only files written by SignSpector
   whose content still matches that hash. Changed or missing files are listed and left alone;
   originals are never touched. It shows what it would remove and removes it after a yes/no
-  question (R19); never from a script (R30). On a report that records no document it removes
+  question (R30); never from a script. On a report that records no document it removes
   nothing and says so.
 - R34. **Proof by tests.** A shared test helper snapshots the whole folder (paths and SHA-256)
   before and after every end-to-end test: originals identical, nothing changed but the
@@ -263,9 +266,9 @@ script. R31 says how every file is created and which files may ever be replaced.
     between plan and write; names with `..`, reserved names, forbidden characters, NFC/NFD and
     case collisions, over-long names; a symbolic link pointing outside; disk full (simulated);
     `undo` with a modified file; `undo` on a report that records no document.
-  - Scripts (R30): every changing command, `check` and `extract --plan` on a risky folder, and
-    `--interactive` without a desktop are refused with exit 2. `check` on an ordinary folder,
-    `check --plan` anywhere, `extract --plan` on an ordinary folder and `--plan` of `undo`, the
+  - Scripts (R30): every changing command, `check` and `extract --plan` in a risky run, and
+    `--interactive` without a desktop are refused with exit 2. `check` in an ordinary run,
+    `check --plan` in any run, `extract --plan` in an ordinary run and `--plan` of `undo`, the
     menus and `uninstall` run without a question. Output redirected counts as a script.
     `--interactive` with a terminal keeps the questions in the terminal.
   - `--plan` (R19): it writes nothing, not even the report or the cache, and downloads nothing;
@@ -297,13 +300,13 @@ script. R31 says how every file is created and which files may ever be replaced.
     in hidden folders, behind symbolic links met during the walk or in unreadable folders are not
     counted; a selected folder that is a symbolic link is resolved and counted; overlaps count
     once.
-  - Several folders (R19): the total is typed; one risky folder makes the run risky; all
+  - Several folders (R19): the total is typed; one risky folder makes the whole run risky; all
     folders empty stop the run; overlaps (also by letter case, symbolic link, trailing slash)
     are counted once; one report per selected folder that is not inside another; a symbolic
     link to a risky folder is risky.
   - Time (R9): a back-dated signing-time attribute changes no verdict; without a time stamp the
     report says "claimed, not proved".
-  - Yes/no questions (R19): Enter alone cancels, `y` on a pipe is refused, a number is not a
+  - Yes/no questions (R30): Enter alone cancels, `y` on a pipe is refused, a number is not a
     yes.
   - Dialogs (R30): when a number is required only the right one confirms; yes/no dialogs default
     to Cancel; the focus starts on Cancel; Enter alone and closing the window cancel; a wrong
@@ -337,8 +340,7 @@ Liechtenstein, Norway, United Kingdom).
     LOTL names for that country. Italy is one country among the others.
   - The repository stores no trusted list. The release build downloads the current LOTL and the
     Italian list and embeds them, so the tool works offline out of the box. At the first run with
-    network the tool refreshes them into its cache, which then takes precedence over the embedded
-    copy (R47).
+    network the tool refreshes them into its cache (R47).
   - XAdES needs XML canonicalisation (exclusive C14N) and XML signature verification. No mature
     pure-Rust library exists, so we write it here, test first, as carefully as the BER reader.
 - R45. **Automatic choice.** The analysis collects the country of every certifier found in the
@@ -353,12 +355,12 @@ Liechtenstein, Norway, United Kingdom).
   - Lists, and the CRLs of R49, are cached in the SignSpector cache folder and refreshed when
     their own `NextUpdate` date passes. A cached list that verifies (R44) takes precedence over
     the embedded copy. Removing the cache is R40.
-  - The cache folder is the operating system's standard one (R42); no option moves it. Tests
-    move it only through the system's own variables (`HOME`, `XDG_CACHE_HOME`; Windows is still
-    open).
+  - The cache folder is the operating system's standard one (R42); no option moves it. Tests move
+    it only through the system's own variables (`HOME`, `XDG_CACHE_HOME`; Windows: question
+    "Before 3.5", open).
   - The tool uses only names it derives itself: one fixed name per list, and for a CRL the
-    SHA-256 of its CA certificate (partitioned CRLs are still open). A name is never text taken
-    from the input.
+    SHA-256 of its CA certificate (partitioned CRLs: question "Before 3.9"). A name is never text
+    taken from the input.
   - It never replaces another file found in that folder. A cache file is replaced only as R31
     says: a new file, a rename, no symbolic link.
 - R48. **Verdicts.** Qualified status is checked at the reference time (R9) using the service
@@ -369,7 +371,7 @@ Liechtenstein, Norway, United Kingdom).
 - R49. **Revocation without a query per signature.** Network traffic grows with the number of
   certificates, never with the number of files. There is one result per certificate: the same
   certificate in a thousand files is checked once. A CRL is fetched at most once per CA per
-  run (partitioned CRLs are still open).
+  run (partitioned CRLs: question "Before 3.9").
   - The reference time is the proved time of R9 (a time stamp), otherwise the time of the
     check.
   - Revocation data inside the signature (CAdES -LT/-LTA) is used only if its own signature
@@ -438,7 +440,10 @@ statement).
 - R38. **Context menu and dialogs**: only native OS menus and native dialogs, which inherit the
   OS accessibility (screen readers, keyboard), with clear labels in the user's language. The
   dialogs ask the confirmations of R30 for runs started from the context menu. No custom-drawn
-  GUI, no PowerShell.
+  GUI, no PowerShell. Helper programs that show a dialog are run from fixed system paths
+  (`/usr/bin/osascript`, `/usr/bin/zenity`...), never found through `PATH`. Folder names reach
+  them as arguments, never spliced into script source or markup. In a number field, Enter
+  confirms only if the number is right; otherwise it does nothing.
 - R39. **Verification.** Automated: unit tests on the HTML structure (lang, headings, table
   headers, no colour-only status), an accessibility checker on sample reports in CI (for
   example `axe-core` or `pa11y`), and console tests with `NO_COLOR` and `--plain`. Manual
@@ -474,7 +479,7 @@ statement).
     it in Settings -> Apps. Its `UninstallString` runs
     `signspector.exe uninstall --interactive`, which shows the list in a native dialog (R30). A
     running `.exe` cannot delete itself: the tool says where it is so the user can delete it
-    (no PowerShell, no scheduled tricks). The cache and manifest folders are still open.
+    (no PowerShell, no scheduled tricks). The cache and manifest folders: question "Before 3.5".
   - macOS: Quick Actions in `~/Library/Services`, the cache in `~/Library/Caches/SignSpector`,
     the manifest in `~/Library/Application Support/SignSpector`.
   - Linux: Nautilus script, Dolphin service menu, the cache in `~/.cache/signspector`, the
@@ -565,6 +570,11 @@ answered before the roadmap step named in its heading; that step points back her
   name changes between the check and the rename?
 - R31 keeps documents inside the selected folder. Does a rule cover a report written into a
   selected folder that is a symbolic link?
+- The first creation of a cache file or the manifest is also a rename (R31). A foreign file that
+  appears at that name between the check and the rename would be replaced: how is that
+  prevented?
+- What does a wrong or empty number do at the terminal (R29, R30)? The dialog case is in R30;
+  the terminal case is only in the R34 tests.
 
 ### Before 3.1 (crypto)
 - Brainpool curves: are they needed by the real files?
@@ -597,9 +607,18 @@ answered before the roadmap step named in its heading; that step points back her
   list given with `--trust-list <file>` cached at all?
 - How are temporary files named (R31), so that a leftover from an interrupted refresh does not
   block every later refresh? Is a temporary name one the tool derives (R47)?
+- Certificates carry ISO country codes (`GR`, `GB`); the LOTL uses `EL` for Greece and `UK` for
+  the United Kingdom (audit 0008, F4). How is a certificate's `C=` matched to a list, and which
+  codes does `--trust-lists` accept?
+- After an upgrade, the embedded LOTL may be newer than a cached one whose `NextUpdate` has not
+  passed. Does the higher sequence number win over R47's precedence of the cache?
+- Which event triggers the first refresh: the first run with network (R44) or a passed
+  `NextUpdate` (R47)?
+- Which limits on size and time apply to list downloads?
 
 ### Before 3.6 (chains)
 - The download of missing intermediates (AIA): is it needed by the real files?
+- R10 says the chain may optionally reach the system trust store. Which option turns it on?
 
 ### Before 3.7 (countersignatures and time stamps)
 - Which time stamp counts when there are several?
@@ -607,16 +626,19 @@ answered before the roadmap step named in its heading; that step points back her
 ### Before 3.9 (revocation)
 - What is the verdict when the revocation time equals the time stamp? How are the revocation
   reasons `removeFromCRL` and `keyCompromise` treated? Settled together with the tests.
+- Which values do the CRL limits on size and time take (R49)?
 - A CA that publishes partitioned CRLs has several CRLs. Is each file named by the hash of the CA
   and of the distribution point, or is one kept? R47 and R49 change with the answer.
 
 ### Before 4.2 (HTML report)
 - Layout and content of the report: do we start from the old tool's report as a sketch?
+- Which accessibility checker runs in CI (R39: `axe-core`, `pa11y`, or another)?
 
 ### Before 4.4 (command line)
 - What do `--open` and `--threads` do? (R23 asks for parallel work, not an option.)
 - Is `extract --no-report` refused as a usage error (exit 2, nothing written), or accepted with a
   message saying that the extraction report is written anyway (R16)?
+- How is a double-click on Windows detected (R20), and which folder does it analyse?
 
 ### Before 5.1 (install manifest)
 - How does "created with `create_new`" (R31) apply to a registry key (for example
@@ -643,11 +665,7 @@ answered before the roadmap step named in its heading; that step points back her
   Cancel. Windows has no stock dialog with a text field (MessageBox and TaskDialog have none):
   an own Win32 dialog in Rust, no PowerShell. macOS: AppleScript `display dialog` (text field,
   default button Cancel). Linux: `zenity` or `kdialog`, which may be missing; then a
-  context-menu run refuses (R19). Which crate or code per OS? Whatever is chosen:
-  - helper programs are run from fixed system paths (`/usr/bin/osascript`, `/usr/bin/zenity`...),
-    never found through `PATH`;
-  - folder names reach them as arguments, never spliced into AppleScript source or markup;
-  - Enter in the number field confirms only if the number is right; otherwise it does nothing.
+  context-menu run refuses (R30). Which crate or code per OS? Whatever is chosen follows R38.
 - Several folders selected in Windows Explorer start one process each with plain registry
   verbs. One summary needs a multi-selection entry (`IExecuteCommand`, a drop target, or one
   instance collecting the others).

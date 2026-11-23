@@ -62,8 +62,8 @@ cannot damage them:
   file in overlapping folders counts once.
 - From the context menu, the same confirmations appear in a window.
 - In scripts, only these run:
-  - `check` on an ordinary folder, and `check --plan`;
-  - `extract --plan` on an ordinary folder;
+  - `check` in an ordinary run, and `check --plan`;
+  - `extract --plan` in an ordinary run;
   - the `--plan` lists of `undo`, the menu commands and `uninstall`.
 
   Everything else stops and says that a person must confirm.
@@ -125,7 +125,7 @@ signspector uninstall            # remove everything SignSpector installed
 ```
 
 Every command that changes something shows its plan first and acts only after you confirm.
-The one exception is `check` on an ordinary folder from a script, which writes its report and
+The one exception is `check` in an ordinary run from a script, which writes its report and
 the cache without a question.
 
 - `extract` asks you to type the number of documents it will write.

@@ -141,11 +141,11 @@ in the history even if deleted later. Before every commit and push:
 - `check` writes no document: only the report (HTML and JSON) and the tool's cache of trusted lists
   and CRLs (R16); documents come only from an extraction confirmed through R29 (`extract`, or the
   interactive end of a `check` run, R20). **There is no `--apply`, `--yes` or `--expect`.** Every
-  command that changes files or the system shows the exact plan first, except `check` on an
-  ordinary folder from a script, which writes its report and the cache without a question (R16,
-  R30). The number is typed only for files found in a folder (files to process in a risky folder,
+  command that changes files or the system shows the exact plan first, except `check` in an
+  ordinary run from a script, which writes its report and the cache without a question (R16,
+  R30). The number is typed only for files found in a folder (files to process in a risky run,
   R28; documents to write, R29); `undo`, menus and `uninstall` ask a yes/no question, default No,
-  answers in words (R19, R35). From the context menu the same confirmations come in a native
+  answers in words (R30, R35). From the context menu the same confirmations come in a native
   dialog, focus on Cancel; from a script they refuse (R30); `--plan` shows the plan and stops.
   These rules are for the tool; the developer script `scripts/cleanup.sh` is the one exception (it
   removes only junk and merged branches, without asking, see above). Never ask the developer to
@@ -153,7 +153,7 @@ in the history even if deleted later. Before every commit and push:
 - Originals are only read, never modified, moved or renamed; existing files are never
   overwritten ("x.pdf" exists with other content -> "x (1).pdf").
 - **Never process right after a person chooses a folder**: first count and ask for
-  confirmation (R28; from a script an ordinary folder is analysed without a question, a risky
+  confirmation (R28; from a script an ordinary run is analysed without a question, a risky
   one is refused); writing needs a second confirmation on the full write plan, with the number typed
   (R29); no implicit yes, ever (R30: terminal, dialog from the context menu, refusal in
   scripts). How every file is written, and the only files ever replaced, is R31 in

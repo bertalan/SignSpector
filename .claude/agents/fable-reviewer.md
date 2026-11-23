@@ -36,8 +36,8 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    `create_new`, a file replaced in place, a file replaced other than a cache file or the manifest,
    a symbolic link followed, a non-regular file replaced), can write a document outside the
    selected folder, lets `--plan` write or download anything, treats a non-terminal input as a
-   yes, confirms anything from a script (only `check` on an ordinary folder, `check --plan`,
-   `extract --plan` on an ordinary folder, and the `--plan` lists of `undo`, the menus and
+   yes, confirms anything from a script (only `check` in an ordinary run, `check --plan`,
+   `extract --plan` in an ordinary run, and the `--plan` lists of `undo`, the menus and
    `uninstall` run there), judges time from the signer's claimed signing time, skips the native
    dialog of a context-menu run, counts several selected folders wrongly (a row each, the total
    typed, overlaps counted once), or produces a file name that is invalid on another OS (Windows

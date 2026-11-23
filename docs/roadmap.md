@@ -24,7 +24,8 @@ The order follows two ideas:
   force-push. CI is an alarm; the local hooks are the barrier.
 - [x] 0.2.1 Confirmation rules simplified: the typed number only for files found in a folder
   (R28, R29); `undo`, menus and `uninstall` ask yes/no; from the context menu the same
-  confirmations come in a native dialog; from a script nothing that changes anything runs (R30);
+  confirmations come in a native dialog; from a script nothing that changes anything runs except
+  `check` in an ordinary run, which writes its report and the cache (R30);
   `check`/`extract` take several folders (a row each, the total typed); revocation without a
   query per signature (R49); no `--yes`/`--expect`; `scripts/cleanup.sh` removes its safe
   leftovers without asking.
@@ -117,16 +118,15 @@ The order follows two ideas:
   included).
 - [ ] 1.6 **Confirmation logic** (R28–R30): pure functions turning (counts, folder, terminal,
   dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the
-  answer: typed count (R28 risky folder,
-  R29), yes/no default No (R19). Typestate `ConfirmedPlan`. Tests: Enter, `n`, wrong number,
-  changing command, and `check` or `extract --plan` on a risky folder, refused from a
-  script; `check --plan`, `extract --plan` on an ordinary folder and the item lists of
-  `--plan` run from a script; symbolic links
-  resolved before the risky-folder check (all path-based kinds of risky folder, not only shares);
-  several folders (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
+  answer: typed count (R28 risky run, R29), yes/no default No (R30). Typestate
+  `ConfirmedPlan`. Tests: Enter, `n`, wrong number, changing command, and `check` or
+  `extract --plan` in a risky run, refused from a script; `check --plan`, `extract --plan` in an
+  ordinary run and the item lists of `--plan` run from a script; symbolic links resolved before
+  each folder is judged (all path-based kinds of risky folder, not only shares); several folders
+  (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
 - [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, removal of partial files,
   stays inside the folder (`..`, symbolic links), free-space check, re-check of originals. First
-  decide the question "Before 1.7" in `docs/design.md`. Folder snapshot test helper (R34)
+  decide the questions "Before 1.7" in `docs/design.md`. Folder snapshot test helper (R34)
   introduced here and used from now on.
 
 ## Phase 2: opening envelopes (thin slice)
