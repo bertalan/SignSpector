@@ -44,7 +44,7 @@ The order follows two ideas:
   - risky runs counted on files of any kind (R28);
   - reports never replaced, and the second report (R16, R20, R31, R33);
   - `--plan` writes and downloads nothing (R19);
-  - a wrong or empty number never confirms at the terminal (R30);
+  - at the terminal, any answer other than the right number never confirms (R30);
   - the cache (R47);
   - no saved preference (R27);
   - `--no-report` (R14, R16);
@@ -110,29 +110,31 @@ The order follows two ideas:
 - [ ] 1.4 **i18n skeleton** (R27): pick the mechanism (Fluent vs `rust-i18n`, decided with the
   user), English + Italian, `--lang`, OS language detection. Needed before any message below.
   First decide the questions "Before 1.4" in `docs/design.md`.
-- [ ] 1.5 **Walk and count** (first decide the questions "Before 1.5" in `docs/design.md`) (R1b, R2,
-  R19, R28): one or more folders, a row per folder and the total; regular files only, symbolic links
-  met during the walk not followed (a selected one is resolved) and hidden folders skipped (both
-  listed in the report), unreadable folders listed; two counts (files to process, files of any
-  kind), total size, subfolders. Detection of sensitive folders (drive roots, home, Desktop,
-  Documents, system folders, network share roots) and of a risky run (a sensitive folder, or more
-  than 10,000 files of any kind over all the folders, subfolders included). Tests: the walk cases of
-  R34 "Counting" (10,000 against 10,001, files not counted, a selected folder that is a symbolic
-  link, overlaps) and of "Several folders" (overlaps, a symbolic link to each kind of sensitive
-  folder).
+- [ ] 1.5 **Walk and count** (first decide the questions "Before 1.5" in `docs/design.md`) (R1b,
+  R2, R19, R28): one or more folders, a row per folder and the total; regular files only,
+  symbolic links met during the walk not followed (a selected one is resolved) and hidden
+  folders skipped (both listed in the report), unreadable folders listed; two counts (files to
+  process, files of any kind), total size, subfolders. Detection of sensitive folders (drive
+  roots, home, Desktop, Documents, system folders, network share roots) and of a risky run (a
+  sensitive folder, or more than 10,000 files of any kind over all the folders, subfolders
+  included). Tests: the walk cases of R34 "Counting" (10,000 against 10,001, also as a total
+  over several folders; files not counted; a selected folder that is a symbolic link; overlaps)
+  and of "Several folders" (overlaps, a symbolic link to each kind of sensitive folder).
 - [ ] 1.6 **Confirmation logic** (R28–R30; first decide the questions "Before 1.6" in
-  `docs/design.md`): pure functions turning (counts, folder, terminal, dialog via `--interactive`,
-  or script; `--plan`) into the question to ask and parsing the answer: typed count (R28 risky run,
-  R29), yes/no default No (R30). Typestate `ConfirmedPlan`. Tests: the R34 items "Risky run at the
-  terminal", "Yes/no questions" and "Scripts". The answers of "Writing and undo" (empty answer, `y`,
-  `n`, wrong number) at the count of documents. From "Several folders": the total is typed, one
-  sensitive folder makes the whole run risky, all folders empty stop the run. The reason for a risky
-  run in the terminal question. The dialogs themselves come with the menus (5.2).
-- [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, the two-step replace of cache
-  files and the manifest (temporary file, then rename), removal of partial files, stays inside the
-  folder (`..`, symbolic links), free-space check, re-check of originals. First decide the questions
-  "Before 1.7" in `docs/design.md`. Folder snapshot test helper (R34) introduced here and used from
-  now on.
+  `docs/design.md`): pure functions turning (counts, folder, terminal, dialog via
+  `--interactive`, or script; `--plan`) into the question to ask and parsing the answer: typed
+  count (R28 risky run, R29), yes/no default No (R30). Typestate `ConfirmedPlan`. Tests: the R34
+  items "Risky run at the terminal", "Yes/no questions" and "Scripts". Tests also cover: the
+  answers of "Writing and undo" at the count of documents; from "Counting", both counts in each
+  row and in the totals of the terminal summary, the reason for a risky run, and the number
+  typed being the files to process (also when the run is risky only by the 10,000 limit); from
+  "Several folders", the typed total, one sensitive folder making the whole run risky, and all
+  folders empty stopping the run. The dialogs themselves come with the menus (5.2).
+- [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, the two-step replace of
+  cache files and the manifest (temporary file, then rename), removal of partial files, stays
+  inside the folder (`..`, symbolic links), free-space check, re-check of originals. First
+  decide the questions "Before 1.7" in `docs/design.md`. Folder snapshot test helper (R34)
+  introduced here and used from now on.
 
 ## Phase 2: opening envelopes (thin slice)
 - [ ] 2.1 `ber` reader: definite and indefinite lengths, limits on depth and size, checked
@@ -141,7 +143,8 @@ The order follows two ideas:
   verification yet); base64 envelopes; nested layers (R3, R4, R7).
 - [ ] 2.3 End-to-end slice: `check` and `extract` on simple fixtures through the real flow,
   minimal console output with `--plain`, `--no-color` (R35), minimal JSON (R15), written
-  documents recorded in the report with SHA-256, and `undo` (R33).
+  documents recorded in the report with SHA-256, and `undo` (R33). Test from R34 "Several
+  folders": one report per selected folder that is not inside another.
 
 ## Phase 3: verification
 - [ ] 3.1 `crypto`: digests, RSA PKCS#1 v1.5, RSA-PSS, ECDSA P-256/P-384/P-521 (R8). First decide
