@@ -157,8 +157,8 @@ in the history even if deleted later. Before every commit and push:
   one is refused); writing needs a second confirmation on the full write plan, with the number typed
   (R29); no implicit yes, ever (R30: terminal, dialog from the context menu, refusal in
   scripts). Documents are written only through a `ConfirmedPlan` and never outside the chosen
-  folder; every file `check` and `extract` write outside the cache, the report too, is created
-  with `create_new` (R31).
+  folder; every file the tool writes is created with `create_new`, the report too, except
+  the fixed-name files of its cache and its install manifest (R31).
   File names valid on Windows, macOS and Linux at once (R32). Any change here needs the tests
   of R34.
 - **Accessibility is a requirement, not a polish step** (EN 301 549; WCAG 2.2 AA for the

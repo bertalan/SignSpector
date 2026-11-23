@@ -63,12 +63,13 @@ beside the originals, ready to open.
   - the JSON file of `--json <file>` (R15);
   - the tool's own cache of trusted lists and CRLs (R44, R47, R49).
 
-  The report and the JSON file never replace an existing file: they are created with `create_new`,
-  and a name already taken gets the next free name (`(1)`, `(2)`...), as in R17. `check` and
-  `extract` replace no file outside the tool's cache folder. One exception writes documents in a
-  `check` run: extraction chosen at the interactive end of run (R20), through R29. `extract` writes
-  the signed documents beside the originals (`Relazione.pdf.p7m` -> `Relazione.pdf`) after the two
-  confirmations of R28 and R29: typing the number of documents is the safeguard.
+  The report and the JSON file never replace an existing file: they are created with
+  `create_new`, and a name already taken gets the next free name (`(1)`, `(2)`...), as in R17.
+  `check` and `extract` replace no file outside the tool's cache folder (R31). One exception
+  writes documents in a `check` run: extraction chosen at the interactive end of run (R20),
+  through R29. `extract` writes the signed documents beside the originals (`Relazione.pdf.p7m` ->
+  `Relazione.pdf`) after the two confirmations of R28 and R29: typing the number of documents is
+  the safeguard.
 - R17. Never overwrite: same content already there -> nothing to do; different content ->
   `Relazione (1).pdf`. Originals are never modified, moved or renamed.
 - R18. Name without a usable extension: guess it from the content (PDF, ZIP-based office
@@ -120,11 +121,21 @@ beside the originals, ready to open.
   Options: `--open`, `--report`, `--no-report`, `--report-lang <code>`, `--json <file>`,
   `--threads`, `--offline`, `--trust-lists <auto|all|codes>`, `--trust-list <file>`,
   `--lang <code>`, `--interactive`, `--plain`, `--no-color`, `--plan`. Help translated (R27).
+  `--no-report` skips the report of an analysis. An extraction always writes its report, and
+  its JSON file when `--json` is given, so that `undo` has the list of documents (R33; owner's
+  decision, 2026-11-23).
+- *To decide*: what `--open` and `--threads` do (R23 asks for parallel work, not an option).
+  `--no-report` skips the report of an analysis. An extraction always writes its report, and
+  its JSON file when `--json` is given, so that `undo` has the list of documents (R33; owner's
+  decision, 2026-11-23).
+- *To decide*: what `--open` and `--threads` do (R23 asks for parallel work, not an option).
 - R20. Interactive end of run (double-click on Windows, context menu, `--interactive`): after
   the analysis, offer to view the report or to extract; extraction goes through the write
   plan and its confirmation (R29) and reuses the analysis already done. The first report is
   never rewritten: the extraction writes a second report beside it (next free name, R16) with
-  the analysis and the documents written, and `undo` uses that one (R33).
+  the analysis and the documents written, and `undo` uses that one (R33). With `--json` it
+  also writes a second JSON file beside the first. With `--json` it
+  also writes a second JSON file beside the first.
 - R21. `install-menu` / `uninstall-menu` (plan and yes/no question, R19) for the file manager's
   context menu: Windows per-user registry keys (no admin, no PowerShell); macOS Quick Actions;
   Linux Nautilus script and Dolphin service menu. Full removal: `uninstall` (R40–R43).
@@ -169,8 +180,9 @@ risky one is refused, only counted by `check --plan`, and nothing is written (R3
   `Program Files`, `/System`, `/usr`, `/etc`...), network share roots, or a folder that holds
   **more than 10,000 files of any kind**, subfolders included: a stronger warning and the user
   must type the number of files to process (envelopes). The 10,000 count covers the regular
-  files of the folders the walk visits (R2): files in hidden folders, behind symbolic links
-  or in unreadable folders are not counted, and a file in overlapping folders counts once.
+  files of the folders the walk visits (R2). Files in hidden folders, behind symbolic links met
+  during the walk or in unreadable folders are not counted. A file in overlapping folders
+  counts once. A selected folder that is itself a symbolic link is resolved and counted (R19).
   Every path-based kind of risky folder is judged on the path after resolving symbolic links.
 - R29. **Confirm before writing.** Extraction first builds the complete write plan and shows
   it: new documents, documents already present with identical content (not rewritten),
@@ -181,13 +193,12 @@ risky one is refused, only counted by `check --plan`, and nothing is written (R3
   - Terminal (`std::io::IsTerminal` on input and output): questions in the console (R28, R29,
     R19).
   - Context menu: no terminal, started with `--interactive`: the same confirmations in a native
-    dialog (R38), with a shorter summary than the console. The dialog lists every selected
-    folder with its number of files to process (envelopes to analyse, R28; documents to write,
-    R29), the total, the reason when the run is risky (R19) and the operation proposed, then
-    asks the question. When a number is
-    required (R28 risky folder, R29) it is typed in a text field and Confirm accepts only the
-    right number; otherwise the dialog is a yes/no question. In every dialog the focus starts on
-    Cancel; Enter alone and closing the window cancel; no time limit.
+    dialog (R38), with a shorter summary than the console. The dialog lists every selected folder
+    with its number of files to process (envelopes to analyse, R28; documents to write, R29), the
+    total, the reason when the run is risky (R19) and the operation proposed, then asks the
+    question. When a number is required (R28 risky folder, R29) it is typed in a text field and
+    Confirm accepts only the right number; otherwise the dialog is a yes/no question. In every
+    dialog the focus starts on Cancel; Enter alone and closing the window cancel; no time limit.
   - Script (no terminal, no `--interactive`): `extract`, `undo`, `install-menu`,
     `uninstall-menu`, `uninstall` and `check` on a risky folder (R28) stop with exit code 2
     and say that a person must confirm. A `y` or a number arriving on a pipe is not a
@@ -199,10 +210,12 @@ risky one is refused, only counted by `check --plan`, and nothing is written (R3
   - In code, writing a document requires a `ConfirmedPlan` that only the confirmation step can
     build (typestate): a path that writes without confirmation does not compile. Originals are
     held in a read-only `Original` type that write functions do not accept.
-  - Every file `check` and `extract` write outside the cache (documents, report, JSON) is created
-    with `OpenOptions::create_new(true)`: the OS refuses if the name exists, even if the file
-    appeared after the plan; then the next free name (`(1)`, `(2)`...) is used. A partly written
-    file (error, disk full) is removed, only if we created it.
+  - Every file the tool writes is created with `OpenOptions::create_new(true)`, except two kinds
+    of its own files: the fixed-name files of its cache (R47) and its install manifest (R41).
+    Documents, reports, JSON files and menu items are all created this way: the OS refuses if the
+    name exists, even if the file appeared after the plan; then the next free name (`(1)`,
+    `(2)`...) is used. A partly written file (error, disk full) is removed, only if we created
+    it.
   - Before writing, each original is re-checked against the analysis (size, mtime, SHA-256);
     if the folder changed, the plan is rebuilt and confirmed again.
   - Every target must stay inside the selected folder its envelope was found in, after
@@ -247,10 +260,22 @@ risky one is refused, only counted by `check --plan`, and nothing is written (R3
     existing report or JSON file, also one named with `--report` or `--json`, is not replaced:
     the new one gets the next free name; `extract --plan` names the lists a real run would
     download; end-to-end tests point the cache to a temporary folder through the system's own
-    variables (R47), never the user's real one; a file in the cache folder that the tool did
-    not create is never replaced;
+    variables (R47), never the user's real one; a file in the cache folder whose name is not
+    one of the tool's fixed names is never replaced;
   - interactive end of run (R20): documents are written only through R29, declining writes
-    none, and an extraction writes a second report without touching the first;
+    none, and an extraction writes a second report without touching the first; `undo` on the
+    second report removes the documents, on the first it removes nothing and says so;
+  - `extract --no-report` still writes the extraction report;
+  - `install-menu` meeting a foreign item with the same name reports it, leaves it, and
+    `uninstall` does not remove it;
+  - the console summary shows both counts in each row and in the totals, and the reason for a
+    risky run; the dialog shows the reason; `undo` on the
+    second report removes the documents, on the first it removes nothing and says so;
+  - `extract --no-report` still writes the extraction report;
+  - `install-menu` meeting a foreign item with the same name reports it, leaves it, and
+    `uninstall` does not remove it;
+  - the console summary shows both counts in each row and in the totals, and the reason for a
+    risky run; the dialog shows the reason;
   - risky folder: more than 10,000 files of any kind (subfolders included) is risky even with
     few envelopes, and the number typed is the files to process; exactly 10,000 is not risky,
     10,001 is, also as a total over several folders; files in hidden folders, behind symbolic
@@ -307,8 +332,8 @@ Liechtenstein, Norway, United Kingdom).
   refreshed when their own `NextUpdate` date passes; `uninstall` removes the cache (R40). The
   cache folder is the operating system's standard one (R42); no option moves it. Tests move it
   only through the system's own variables (`HOME`, `XDG_CACHE_HOME`, `LOCALAPPDATA`). The tool
-  replaces only the files with the fixed names it creates there, never another file found in
-  that folder.
+  replaces only the files with the fixed names it uses there, never another file found in that
+  folder. A CRL file is named by a hash of its CA, never by text taken from the input.
 - R48. **Verdicts.** Qualified status is checked at the reference time (R9) using the service
   history in the list (a service withdrawn later still validates an earlier signature). A
   certifier on no list is reported as "not on a European trusted list", distinct from "invalid
@@ -405,20 +430,40 @@ public administration checks the applicable obligations (e.g. accessibility stat
   registry key, plus a hash of the content) in a manifest in the SignSpector config folder;
   `uninstall` removes only manifest items that still match, reports changed or foreign items
   and leaves them. If the manifest is lost, entries are recognised by an explicit SignSpector
-  marker, never by guessing. Running it twice is harmless.
+  marker, never by guessing. Running it twice is harmless. Each item is created with
+  `create_new`: when an item with the same name exists and is not in the manifest,
+  `install-menu` reports it and leaves it, and it never enters the manifest, so `uninstall`
+  never removes it (owner's decision, 2026-11-23). The manifest is the one file `install-menu`
+  and `uninstall` replace. Each item is created with
+  `create_new`: when an item with the same name exists and is not in the manifest,
+  `install-menu` reports it and leaves it, and it never enters the manifest, so `uninstall`
+  never removes it (owner's decision, 2026-11-23). The manifest is the one file `install-menu`
+  and `uninstall` replace.
 - R42. **Per platform.**
   - Windows: per-user, no admin: registry keys under `HKCU`, plus an uninstall entry in
     `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SignSpector` so the user finds it
-    in Settings → Apps; its `UninstallString` runs `signspector.exe uninstall --interactive`,
+    in Settings -> Apps; its `UninstallString` runs `signspector.exe uninstall --interactive`,
     which shows the list in a native dialog with the focus on Cancel (R30).
     A running `.exe` cannot delete itself: the tool says where it is so the user can delete it
     (no PowerShell, no scheduled tricks).
   - macOS: Quick Actions in `~/Library/Services`, caches in `~/Library/Caches/SignSpector`,
     the manifest in `~/Library/Application Support/SignSpector`.
-  - Linux: Nautilus script, Dolphin service menu, `~/.cache/signspector`,
-    `~/.config/signspector`. `.deb`/`.rpm` remove only system files they installed; the
+  - Linux: Nautilus script, Dolphin service menu, the cache in `~/.cache/signspector`, the
+    manifest in `~/.config/signspector`. `.deb`/`.rpm` remove only system files they installed; the
     per-user items are removed by `signspector uninstall` (the package's removal message
     says so).
+- *To decide* (before roadmap 3.5): the Windows cache and manifest folders, and how the tool
+  finds them so that tests can move them. The candidate crate `directories` asks the system
+  (`SHGetKnownFolderPath`) and ignores `LOCALAPPDATA`, so the test rule of R47 cannot work with
+  it as is (audit 0007, F2). Tests of `install-menu` must also move the manifest folder.
+- *To decide*: whether the dialog of R30 also shows the count of files of any kind, as the
+  console summary does (R19).
+- *To decide* (before roadmap 3.5): the Windows cache and manifest folders, and how the tool
+  finds them so that tests can move them. The candidate crate `directories` asks the system
+  (`SHGetKnownFolderPath`) and ignores `LOCALAPPDATA`, so the test rule of R47 cannot work with
+  it as is (audit 0007, F2). Tests of `install-menu` must also move the manifest folder.
+- *To decide*: whether the dialog of R30 also shows the count of files of any kind, as the
+  console summary does (R19).
 - R43. **User data is never removed**: originals, extracted documents and reports stay; at
   the end the tool lists what it left in place on purpose and where the executable is.
 

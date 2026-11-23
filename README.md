@@ -44,20 +44,21 @@ cannot damage them:
 - `check` writes no document. It writes only the HTML report (in each folder, or at the
   `--report` path you name), the JSON file of `--json`, and its own cache of trusted lists and
   CRLs. Documents are written only by an extraction you ask for and confirm.
-- After you choose a folder, it only counts the signed or time-stamped files (the tool calls
-  them "files to process") and asks before analysing them.
+- After you choose a folder, it only counts: the signed or time-stamped files (the tool calls
+  them "files to process") and the files of any kind. Then it asks before analysing.
 - Writing documents needs a second confirmation on the complete write plan: you type the
   number of documents to write.
-- A risky run gets a stronger warning, says why, and you type the number of files to process.
-  A run is risky when a chosen folder is:
+- A risky run gets a stronger warning that says why. You type the number of files to
+  process. A run is risky when a chosen folder is:
   - the root of a drive or volume;
   - the home folder, Desktop or Documents;
   - a system folder;
   - a network share root;
   - a folder that holds more than 10,000 files of any kind, subfolders included.
 
-  A run is also risky when the folders chosen hold more than 10,000 files in all. Hidden
-  folders and symbolic links, which the analysis skips, are not counted.
+  A run is also risky when the folders chosen hold more than 10,000 files in all. Files the
+  analysis skips are not counted (hidden folders, symbolic links, unreadable folders), and a
+  file in overlapping folders counts once.
 - From the context menu, the same confirmations appear in a window.
 - In scripts, only these run:
   - `check` on an ordinary folder, and `check --plan`;
@@ -66,9 +67,10 @@ cannot damage them:
 
   Everything else stops and says that a person must confirm.
 - Originals are read-only. They are never modified, moved or renamed.
-- Nothing is ever overwritten, not even an earlier report. Every file is created with an
-  exclusive "create new" operation, so the operating system itself refuses to overwrite. A
-  name clash becomes `x (1).pdf`. Only the tool's own cache is refreshed in place.
+- Nothing is ever overwritten, not even an earlier report or a menu entry that is not
+  SignSpector's. Every file is created with an exclusive "create new" operation, so the
+  operating system itself refuses to overwrite. A name clash becomes `x (1).pdf`. Only the
+  tool's own cache and its install record are refreshed in place.
 - Extracted documents are never written outside the chosen folder. File names taken from the
   signed files are made valid on Windows, macOS and Linux at once: no forbidden characters, no
   reserved names, no clashes that differ only in letter case or Unicode form.

@@ -35,7 +35,12 @@ The order follows two ideas:
   machine-made patterns (after Wikipedia's "Signs of AI writing"), answer first, short
   sentences, code and commands verbatim. Rewrite README, design, roadmap, CLAUDE.md and the
   agent prompts with it; comment in `rust-toolchain.toml` (targets and R25, how to update the
-  pinned version); session report line when a newer stable Rust exists.
+  pinned version); session report line when a newer stable Rust exists. The reviews of this
+  step also led to owner's decisions on requirements (2026-11-23), recorded in
+  `docs/design.md`: what `check` writes (R16), risky folders counted on files of any kind
+  (R28), reports never replaced and the second report (R16, R20, R33), `--plan` writing and
+  downloading nothing (R19), the cache (R47), no saved preference (R27), `--no-report` (R19),
+  foreign menu items (R41). Questions they opened are listed as *To decide* there.
 - [ ] 0.5 Remaining gaps in the rule-script tests, found by the reviews of PR #1, PR #2 and
   PR #3 and accepted as known limits for now (each needs a test before the code changes):
   - `check-public.sh`: failures of `git show`, `ls-tree`, `diff-tree` are not each tested;
