@@ -57,7 +57,8 @@ cannot damage them:
   - a folder that holds more than 10,000 files of any kind, subfolders included.
 
   A run is also risky when the folders chosen hold more than 10,000 files in all. Files the
-  analysis skips are not counted (hidden folders, symbolic links, unreadable folders), and a
+  analysis skips are not counted (hidden folders, symbolic links inside the folders, unreadable
+  folders), and a
   file in overlapping folders counts once.
 - From the context menu, the same confirmations appear in a window.
 - In scripts, only these run:
@@ -67,10 +68,11 @@ cannot damage them:
 
   Everything else stops and says that a person must confirm.
 - Originals are read-only. They are never modified, moved or renamed.
-- Nothing is ever overwritten, not even an earlier report or a menu entry that is not
-  SignSpector's. Every file is created with an exclusive "create new" operation, so the
-  operating system itself refuses to overwrite. A name clash becomes `x (1).pdf`. Only the
-  tool's own cache and its install record are refreshed in place.
+- Nothing is ever overwritten, not even an earlier report. Every file is created with an
+  exclusive "create new" operation, so the operating system itself refuses to overwrite. A
+  document or report whose name is taken becomes `x (1).pdf`. A menu entry that is not
+  SignSpector's is reported and left alone. Only the tool's own cache and its manifest (the
+  list of what it installed) are refreshed, and never through a symbolic link.
 - Extracted documents are never written outside the chosen folder. File names taken from the
   signed files are made valid on Windows, macOS and Linux at once: no forbidden characters, no
   reserved names, no clashes that differ only in letter case or Unicode form.

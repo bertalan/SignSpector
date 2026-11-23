@@ -31,19 +31,19 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    files are never overwritten, not even a report; no panic on malformed input (no
    `unwrap`/`expect`/indexing on untrusted data outside tests); no PowerShell; no OpenSSL or C
    dependencies. Confirmation and write safety (R28–R34 in `docs/design.md`) is a fixed point of
-   every review: look for any path that processes without the first confirmation, writes a document
-   without a `ConfirmedPlan`, opens any file
-   for writing without `create_new` (the report and menu items too; only the cache's
-   fixed-name files and the install manifest are exempt, R31), replaces a file in the cache
-   that is not one of its fixed names, can write a
-   document outside the selected folder, lets `--plan` write or download anything, treats a
-   non-terminal input as a yes, confirms anything from a script (only `check` on an ordinary
-   folder, `check --plan`, `extract --plan` on an ordinary folder, and the `--plan` lists of
-   `undo`, the menus and `uninstall` run there), judges time from the signer's claimed signing
-   time, skips the native dialog of a context-menu run, counts several selected folders wrongly (a
-   row each, the total typed, overlaps counted once), or produces a file name that is invalid on
-   another OS (Windows reserved names and characters, trailing dot/space, NFC/NFD or case
-   collisions, over-long names).
+   every review: look for any path that processes without the first confirmation, writes a
+   document without a `ConfirmedPlan`, opens any file for writing without `create_new` (the
+   report and menu items too; only the cache files, under names the tool derives, and the install
+   manifest are exempt, R31), replaces a file in the cache under a name it does not derive,
+   follows a symbolic link in the cache or at the manifest, can write a document outside the
+   selected folder, lets `--plan` write or download anything, treats a non-terminal input as a
+   yes, confirms anything from a script (only `check` on an ordinary folder, `check --plan`,
+   `extract --plan` on an ordinary folder, and the `--plan` lists of `undo`, the menus and
+   `uninstall` run there), judges time from the signer's claimed signing time, skips the native
+   dialog of a context-menu run, counts several selected folders wrongly (a row each, the total
+   typed, overlaps counted once), or produces a file name that is invalid on another OS (Windows
+   reserved names and characters, trailing dot/space, NFC/NFD or case collisions, over-long
+   names).
 4. **Language**: code, comments, docs and developer messages in English. User-facing texts of
    the tool go through the translation layer (R27 in `docs/design.md`), never hard-coded, and
    every new text has its Italian translation. Every changed text (docs, comments, commit

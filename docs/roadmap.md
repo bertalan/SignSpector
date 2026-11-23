@@ -37,10 +37,18 @@ The order follows two ideas:
   agent prompts with it; comment in `rust-toolchain.toml` (targets and R25, how to update the
   pinned version); session report line when a newer stable Rust exists. The reviews of this
   step also led to owner's decisions on requirements (2026-11-23), recorded in
-  `docs/design.md`: what `check` writes (R16), risky folders counted on files of any kind
-  (R28), reports never replaced and the second report (R16, R20, R33), `--plan` writing and
-  downloading nothing (R19), the cache (R47), no saved preference (R27), `--no-report` (R19),
-  foreign menu items (R41). Questions they opened are listed as *To decide* there.
+  `docs/design.md`:
+  - what `check` writes (R16);
+  - risky folders counted on files of any kind (R28);
+  - reports never replaced, and the second report (R16, R20, R33);
+  - `--plan` writes and downloads nothing (R19);
+  - the cache (R47);
+  - no saved preference (R27);
+  - `--no-report` (R19);
+  - foreign menu items (R41).
+
+  The questions they opened are listed as *To decide* in `docs/design.md`, each with the
+  roadmap step that needs the answer (3.5, 4.4, 5.1, 5.2, 5.3).
 - [ ] 0.5 Remaining gaps in the rule-script tests, found by the reviews of PR #1, PR #2 and
   PR #3 and accepted as known limits for now (each needs a test before the code changes):
   - `check-public.sh`: failures of `git show`, `ls-tree`, `diff-tree` are not each tested;
@@ -134,7 +142,8 @@ The order follows two ideas:
 - [ ] 3.4 `tsl`: LOTL and national lists, signatures verified, embedded LOTL + Italian list,
   service history (R44, R48).
 - [ ] 3.5 Choice of lists from the certifiers' countries, download, cache, `--trust-lists`,
-  `--offline` (R45–R47).
+  `--offline` (R45–R47). First decide the Windows cache folder and how tests move it (*To
+  decide* after R42 in `docs/design.md`).
 - [ ] 3.6 Chain building against the TSL and the system store (R10).
 - [ ] 3.7 Countersignatures (R11); `tsp`: RFC 3161, `.tsd`, `.m7m` (R5, R12); detached `.p7s` (R6).
   A time stamp is a proved time (R9) only if it verifies per R12 (chain to a trusted-list
@@ -154,15 +163,19 @@ The order follows two ideas:
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).
 - [ ] 4.2 Accessible HTML report, WCAG 2.2 AA (R14, R36), checker in CI (R39).
 - [ ] 4.3 Full `--json` (R15); parallel processing with stable output order (R23).
-- [ ] 4.4 Command line and translated help, interactive end of run (R19, R20, R37).
+- [ ] 4.4 Command line and translated help, interactive end of run (R19, R20, R37). First
+  decide `--open`, `--threads` and `extract --no-report` (*To decide* in R19).
 
 ## Phase 5: system integration
-- [ ] 5.1 Install manifest (R41).
+- [ ] 5.1 Install manifest (R41). First decide how `create_new` applies to registry keys and
+  `.workflow` folders (*To decide* after R42).
 - [ ] 5.2 Context menu per OS (R21, R38) with the confirmation dialogs (R30): decide what the
   shorter dialog summary must still show (unreadable folders, alternative names, "existing files
-  modified: 0", a way to see the full list; the list for `undo`, menus and `uninstall`), with
+  modified: 0", a way to see the full list; the list for `undo`, menus and `uninstall`; the
+  count of files of any kind, *To decide* in R30), with
   R34 tests; Windows "Installed apps" entry (R42).
-- [ ] 5.3 `uninstall` (R40–R43).
+- [ ] 5.3 `uninstall` (R40–R43). First decide what happens to a file in the cache folder that
+  the tool did not write (*To decide* after R42 in `docs/design.md`).
 
 ## Phase 6: release
 - [ ] 6.1 Builds for all targets; `.deb`, `.rpm`, `.tar.gz` (R24, R25); one self-contained
