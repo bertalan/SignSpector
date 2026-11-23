@@ -563,8 +563,9 @@ answered before the roadmap step named in its heading; that step points back her
   reverse?
 
 ### Before 1.6 (confirmation logic)
-- What does a wrong or empty number do at the terminal (R28, R29, R30)? R30 and R34 say only
-  that a wrong number never confirms.
+- What does a wrong or empty number do at the terminal? R34 says that a wrong number or Enter
+  alone writes no document (R29). Nothing says it for the number of a risky run (R28), nor
+  whether the question is asked again or the run stops, and with which exit code.
 
 ### Before 1.7 (safe writer) and the first pseudo-terminal test
 - Pseudo-terminal tests (R34) need a pty crate as a dev-dependency, accepted by `deny.toml`:
@@ -656,9 +657,10 @@ answered before the roadmap step named in its heading; that step points back her
   the menu folders on macOS and Linux is to be checked.
 
 ### Before 5.2 (context menu and dialogs)
-- In a dialog number field (R30), what does Enter do after the right number: confirm, or cancel
-  because the focus is on Cancel? What do Enter and Confirm do after a wrong or empty number:
-  nothing (the dialog stays open), or cancel?
+- R30 says Enter alone cancels a dialog. In a dialog number field, what does Enter do after the
+  right number: confirm, or cancel because the focus is on Cancel? What do Enter after a wrong
+  number, and Confirm after a wrong or empty one, do: nothing (the dialog stays open), or
+  cancel?
 - What must the shorter dialog summary still show: unreadable folders, alternative names,
   "existing files modified: 0", a way to see the full list, and the list for `undo`, the menus
   and `uninstall`?
