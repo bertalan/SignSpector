@@ -123,6 +123,9 @@ in the history even if deleted later. Before every commit and push:
 
 ## Conventions
 
+- **Writing.** Every text (docs, comments, commit messages, PR texts, agent prompts, the
+  tool's strings) follows `docs/writing.md`: answers to the reader's questions, answer first,
+  short sentences, code and commands verbatim.
 - **Language.** Everything in the repository is in English: code, comments, file headers,
   docs, commit messages, script and hook messages, agent prompts and reports. Italian is used
   only when talking to the user (the developer) in the conversation.
