@@ -366,8 +366,11 @@ commit e
 sh scripts/audit-status.sh 2>&1 | grep -qx "AUDIT DUE";  expect "report: 5 commits, AUDIT DUE" 0 $?
 # Red checks on an open pull request are reported (this line is what must stop new work).
 printf '#!/bin/sh\ncase "$*" in\n  "auth status"*) exit 0 ;;\n  *statusCheckRollup*) echo "#2 failing: Test (x86_64-pc-windows-gnu)" ;;\n  *) exit 0 ;;\nesac\n' > "$work/ghshim/gh"
+chmod +x "$work/ghshim/gh"
 out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
 printf '%s\n' "$out" | grep -A1 "^RED CHECKS on open pull requests:" | grep -qx "#2 failing: Test (x86_64-pc-windows-gnu)"; expect "report: red checks on a PR shown" 0 $?
+printf '#!/bin/sh\n[ "$1 $2" = "auth status" ] && exit 0\nexit 0\n' > "$work/ghshim/gh"; chmod +x "$work/ghshim/gh"
+PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -q "RED CHECKS"; expect "report: no red checks, no RED CHECKS line" 1 $?
 # A tag called "main" does not hide unmerged branches or garble branch names in the report.
 new_repo
 git switch -q -c feat && echo f > f.txt && git add f.txt && git commit -qm feat && git tag main feat && git tag feat

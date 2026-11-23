@@ -24,8 +24,8 @@ failed=0
 ok()  { passed=$((passed + 1)); }
 bad() { failed=$((failed + 1)); echo "FAIL: $1" >&2; }
 check() { if eval "$2"; then ok; else bad "$1"; fi; } # check <description> <shell condition>
-# Windows (Git Bash): "\" is a path separator and '"' is not allowed in names, and a read-only
-# folder does not stop rm; the tests that need those are skipped there, and counted.
+# Windows (Git Bash): "\" is a path separator, and a read-only folder does not stop rm; the
+# tests that need those are skipped there, and counted.
 skipped=0
 skip() { skipped=$((skipped + $1)); echo "SKIP ($1 checks): $2" >&2; }
 on_windows=0
@@ -261,6 +261,10 @@ echo junk > y.orig
 sh scripts/cleanup.sh >/dev/null 2>&1; r=$?
 check "case test: the cleanup really ran"     '[ $r -eq 0 ] && [ ! -e y.orig ]'
 check "protection ignores letter case"        '[ -f tests/Corpus/x.orig ] && [ -f tests/OUT/r.orig ] && [ -f TARGET/b.orig ]'
+
+# Skips are for Windows only: read the system a second way (Windows sets OS=Windows_NT, also
+# in Git Bash), so a broken switch cannot turn the safety checks off everywhere.
+check "no skipped checks outside Windows"     '[ "${OS:-}" = Windows_NT ] || [ "$skipped" -eq 0 ]'
 
 echo "cleanup tests: $passed passed, $failed failed, $skipped skipped"
 [ "$failed" -eq 0 ]

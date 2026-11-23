@@ -130,7 +130,7 @@ in the history even if deleted later. Before every commit and push:
   Every command that changes files or the system shows the exact plan first. The number is
   typed only for files found in a folder (risky folder, R28; documents to write, R29); `undo`,
   menus and `uninstall` ask a yes/no question, default No, answers in words (R19, R35). From
-  the context menu the same questions come in a native dialog, focus on Cancel; from a script
+  the context menu the same confirmations come in a native dialog, focus on Cancel; from a script
   they refuse (R30); `--plan` shows the plan and stops. These rules are for the tool; the
   developer script `scripts/cleanup.sh` is the one exception (it removes only junk and merged
   branches, without asking, see above). Never ask the developer to type numbers in chat: the

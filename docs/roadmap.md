@@ -23,7 +23,7 @@ The order follows two ideas:
   force-push. CI is an alarm; the local hooks are the barrier.
 - [x] 0.2.1 Confirmation rules simplified: the typed number only for files found in a folder
   (R28, R29); `undo`, menus and `uninstall` ask yes/no; from the context menu the same
-  questions come in a native dialog; from a script nothing that changes anything runs (R30);
+  confirmations come in a native dialog; from a script nothing that changes anything runs (R30);
   `check`/`extract` take several folders (a row each, the total typed); revocation without a
   query per signature (R49); no `--yes`/`--expect`; `scripts/cleanup.sh` removes its safe
   leftovers without asking.
@@ -50,8 +50,11 @@ The order follows two ideas:
     deleted has no test (it guards a race);
   - `audit-status.sh`: in the unfinished-work section, uncommitted changes, stashes and the
     unpushed / not pulled counts have no test (the "AUDIT DUE" and "RED CHECKS" lines, the
-    current branch name, unmerged local and remote branches, a missing `main` or
-    `origin/main`, the `origin/HEAD` filter and "no tags or other refs" do);
+    current branch name, unmerged local and remote branches, a missing `main` or `origin/main`,
+    the `origin/HEAD` filter and "no tags or other refs" do); the "RED CHECKS" test covers the
+    printed line and its absence, not which checks are selected as red (the `gh` stub returns
+    the formatted line); only `FAILURE` counts as red today, not cancelled or timed-out jobs nor
+    commit statuses: decide and test;
   - report-mode tests pass if the script prints nothing in that section.
   - from the targeted review of the third-round fixes:
     - the first push to a new remote scans the whole history and stops on the accepted
@@ -136,8 +139,10 @@ The order follows two ideas:
 
 ## Phase 5: system integration
 - [ ] 5.1 Install manifest (R41).
-- [ ] 5.2 Context menu per OS (R21, R38) with the confirmation dialogs (R30); Windows
-  "Installed apps" entry (R42).
+- [ ] 5.2 Context menu per OS (R21, R38) with the confirmation dialogs (R30): decide what the
+  shorter dialog summary must still show (unreadable folders, alternative names, "existing files
+  modified: 0", a way to see the full list; the list for `undo`, menus and `uninstall`), with
+  R34 tests; Windows "Installed apps" entry (R42).
 - [ ] 5.3 `uninstall` (R40–R43).
 
 ## Phase 6: release
