@@ -2,8 +2,9 @@
 
 SignSpector checks signed and time-stamped files (`.p7m`, `.p7s`, `.tsd`, `.m7m`) in bulk. It
 verifies CAdES signatures and time stamps against the European trusted lists (Italy, Romania,
-France and every other EU/EEA country). It writes an accessible HTML report and, on request,
-extracts the signed documents safely. It is built for Windows, macOS and Linux.
+France and every other country on the EU List of Trusted Lists). It writes an accessible HTML
+report and, on request, extracts the signed documents safely. It is built for Windows, macOS
+and Linux.
 
 > Status: early development. Nothing is usable yet. We build the project step by step, test
 > first. The [roadmap](docs/roadmap.md) shows what is done and what comes next.
@@ -33,27 +34,28 @@ For each folder, SignSpector:
 - reports the results on the console and in a self-contained HTML report (and JSON for
   scripts);
 - extracts the signed documents beside the originals, only on request:
-  `Relazione.pdf.p7m` → `Relazione.pdf`.
+  `Relazione.pdf.p7m` -> `Relazione.pdf`.
 
 ## Can it damage my documents?
 
 No. Signed documents are often the only official copy, so SignSpector is built so that it
 cannot damage them:
 
-- Without an explicit `extract`, it writes no document. It writes only the report (in the
-  folder, or at the `--report` or `--json` path you name) and its own cache of trusted lists
-  and revocation lists.
-- After you choose a folder, it only counts the envelopes (signed or time-stamped files) and
-  asks before analysing them.
-- Writing needs a second confirmation on the complete write plan: you type the number of
-  documents to write.
-- A risky folder gets a stronger warning, and you type the number of envelopes. Risky folders
-  are:
+- `check` writes no document. It writes only the HTML report (in each folder, or at the
+  `--report` path you name), the JSON file of `--json`, and its own cache of trusted lists and
+  CRLs. Documents are written only by an extraction you ask for and confirm.
+- After you choose a folder, it only counts the files to process (signed or time-stamped
+  files) and asks before analysing them.
+- Writing documents needs a second confirmation on the complete write plan: you type the
+  number of documents to write.
+- A risky run gets a stronger warning, and you type the number of files to process. A run is
+  risky when a chosen folder is:
   - the root of a drive or volume;
-  - the home folder, Desktop and Documents;
-  - system folders;
-  - network share roots;
-  - more than 10,000 envelopes in all the folders chosen.
+  - the home folder, Desktop or Documents;
+  - a system folder;
+  - a network share root;
+  - a folder that holds more than 10,000 files of any kind, subfolders included (counted over
+    all the folders chosen).
 - From the context menu, the same confirmations appear in a window.
 - In scripts, only these run:
   - `check` on an ordinary folder, and `check --plan`;
@@ -62,13 +64,14 @@ cannot damage them:
 
   Everything else stops and says that a person must confirm.
 - Originals are read-only. They are never modified, moved or renamed.
-- Nothing is ever overwritten. Every file is created with an exclusive "create new" operation,
-  so the operating system itself refuses to overwrite. A name clash becomes `x (1).pdf`.
+- Nothing is ever overwritten, not even an earlier report. Every file is created with an
+  exclusive "create new" operation, so the operating system itself refuses to overwrite. A
+  name clash becomes `x (1).pdf`. Only the tool's own cache is refreshed in place.
 - Extracted documents are never written outside the chosen folder. File names taken from envelopes
   are made valid on Windows, macOS and Linux at once: no forbidden characters, no reserved names,
   no clashes that differ only in letter case or Unicode form.
-- Every written file is logged with its SHA-256. `signspector undo` removes only the files that
-  are still identical to what SignSpector wrote.
+- Every extracted document is logged in the report with its SHA-256. `signspector undo`
+  removes only the files that are still identical to what SignSpector wrote.
 - `signspector uninstall` removes only what SignSpector installed, and never user data.
 
 ## Is it accessible?
@@ -113,7 +116,9 @@ signspector uninstall-menu       # remove only the context-menu entries
 signspector uninstall            # remove everything SignSpector installed
 ```
 
-Every command that changes something shows its plan first and acts only after you confirm:
+Every command that changes something shows its plan first and acts only after you confirm.
+The one exception is `check` on an ordinary folder from a script, which writes its report and
+the cache without a question.
 
 - `extract` asks you to type the number of documents it will write.
 - `undo`, `install-menu`, `uninstall-menu` and `uninstall` ask a yes/no question. The default

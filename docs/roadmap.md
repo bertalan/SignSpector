@@ -61,13 +61,15 @@ The order follows two ideas:
     1ac9d1d found minor bugs. All but one were fixed in 1ac9d1d and c3f070e; the missing time
     limit on `rustup check` is the one left (below). The reviews of c3f070e,
     1363b18 and fb41029 found no bug, only breakages no test noticed. The owner decided
-    (2026-11-23) to stop the rounds there. A later breakage of this section that shows no bug
+    (2026-11-23) to stop the rounds there. A breakage of this section that shows no bug
     is listed on the PR and here, not closed with another round. Known limit: `rustup check`
     has no time limit. It runs only in report mode, after the hook gates, so no commit or push
-    waits on it. Breakages listed so far (review of 40e2d4c), each leaves all tests green:
-    - the first dot of the x.y.z check unescaped (`1x100.0` would pass);
-    - a single digit accepted for the major and patch numbers (`10.0.0` would be "not x.y.z");
-    - the captured rustup version may start with a dot.
+    waits on it. The script is correct today; breaking these rules on a copy leaves all tests
+    green (review of 40e2d4c):
+    - unescaping the first dot of the x.y.z check (`1x100.0` would then pass);
+    - accepting only a single digit for the major and patch numbers (`10.0.0` would then be
+      "not x.y.z");
+    - letting the captured rustup version start with a dot.
   - from the targeted review of the third-round fixes:
     - the first push to a new remote scans the whole history and stops on the accepted
       exception `cd3620d` (CLAUDE.md): encode the exception if a second remote is ever added;
@@ -94,7 +96,8 @@ The order follows two ideas:
   the total; regular files only, symbolic links not followed and
   hidden folders skipped (both listed in the report),
   unreadable folders listed; count, total size, subfolders. Risky-folder detection (drive
-  roots, home, Desktop, Documents, system folders, network share roots, > 10,000 envelopes).
+  roots, home, Desktop, Documents, system folders, network share roots, > 10,000 files of any
+  kind, subfolders included).
 - [ ] 1.6 **Confirmation logic** (R28–R30): pure functions turning (counts, folder, terminal,
   dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the
   answer: typed count (R28 risky folder,

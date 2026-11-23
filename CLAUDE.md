@@ -140,8 +140,10 @@ in the history even if deleted later. Before every commit and push:
   translation in the same change.
 - `check` writes no document: only the report and the tool's cache of trusted lists and CRLs
   (R16). **There is no `--apply`, `--yes` or `--expect`.**
-  Every command that changes files or the system shows the exact plan first. The number is
-  typed only for files found in a folder (risky folder, R28; documents to write, R29); `undo`,
+  Every command that changes files or the system shows the exact plan first (except the report
+  and cache of `check`, R16). The number is
+  typed only for files found in a folder (files to process in a risky folder, R28; documents
+  to write, R29); `undo`,
   menus and `uninstall` ask a yes/no question, default No, answers in words (R19, R35). From
   the context menu the same confirmations come in a native dialog, focus on Cancel; from a script
   they refuse (R30); `--plan` shows the plan and stops. These rules are for the tool; the
@@ -154,9 +156,10 @@ in the history even if deleted later. Before every commit and push:
   confirmation (R28; from a script an ordinary folder is analysed without a question, a risky
   one is refused); writing needs a second confirmation on the full write plan, with the number typed
   (R29); no implicit yes, ever (R30: terminal, dialog from the context menu, refusal in
-  scripts). Writing only through a `ConfirmedPlan`, files created with `create_new`, never
-  outside the chosen folder (R31). File names valid on
-  Windows, macOS and Linux at once (R32). Any change here needs the tests of R34.
+  scripts). Documents are written only through a `ConfirmedPlan` and never outside the chosen
+  folder; every file the tool writes, the report too, is created with `create_new` (R31).
+  File names valid on Windows, macOS and Linux at once (R32). Any change here needs the tests
+  of R34.
 - **Accessibility is a requirement, not a polish step** (EN 301 549; WCAG 2.2 AA for the
   report; R35–R39). Never convey information by colour or symbols alone; honour `NO_COLOR`,
   `--no-color`, `--plain`; no spinners or rapid line rewriting; no time limits on prompts;
