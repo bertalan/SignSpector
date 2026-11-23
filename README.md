@@ -49,17 +49,16 @@ cannot damage them:
 - Writing documents needs a second confirmation on the complete write plan: you type the
   number of documents to write.
 - A risky run gets a stronger warning that says why. You type the number of files to
-  process. A run is risky when a chosen folder is:
+  process. A run is risky when a chosen folder is a sensitive folder:
   - the root of a drive or volume;
   - the home folder, Desktop or Documents;
   - a system folder;
   - a network share root.
 
   A run is also risky when the folders chosen hold more than 10,000 files of any kind in all,
-  subfolders included. A run that is not risky is an ordinary run. Files the
-  analysis skips are not counted (hidden folders, symbolic links inside the folders, unreadable
-  folders), and a
-  file in overlapping folders counts once.
+  subfolders included. A run that is not risky is an ordinary run. Files the analysis skips are
+  not counted (hidden folders, symbolic links inside the folders, unreadable folders), and a file
+  in overlapping folders counts once.
 - From the context menu, the same confirmations appear in a window.
 - In scripts, only these run:
   - `check` in an ordinary run, and `check --plan`;

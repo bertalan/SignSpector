@@ -102,7 +102,7 @@ saves the signed documents beside the originals, ready to open.
     selected in the file manager). They are counted and confirmed together:
     - one summary with a row per folder (path, number of files to process, number of files of
       any kind) and the totals, and one question for all. The number typed is the total;
-    - when the run is risky (R28), the summary says why: the kind of folder, or the
+    - when the run is risky (R28), the summary says why: the kind of sensitive folder, or the
       10,000-file limit;
     - a folder with no envelopes is shown with 0; if all are empty, the run stops;
     - the same folder given twice (also spelt differently: letter case, a symbolic link, a
@@ -135,7 +135,7 @@ saves the signed documents beside the originals, ready to open.
     free name, R31) with the analysis and the documents written, and `undo` uses that one (R33).
   - With `--json`, it also writes a second JSON file beside the first.
   - After `check --no-report` there is no first report: the extraction report is the only one.
-- R21. `install-menu` and `uninstall-menu` (plan and yes/no question, R30) add and remove the
+- R21. `install-menu` and `uninstall-menu` (plan, R19; yes/no question, R30) add and remove the
   file manager's context menu: Windows per-user registry keys (no admin, no PowerShell), macOS
   Quick Actions, a Linux Nautilus script and Dolphin service menu. Full removal: `uninstall`
   (R40–R43).
@@ -563,15 +563,16 @@ answered before the roadmap step named in its heading; that step points back her
   reverse?
 
 ### Before 1.6 (confirmation logic)
-- What does a wrong or empty number do at the terminal (R29, R30)? The dialog case is in R30;
-  the terminal case is only in the R34 tests.
+- What does a wrong or empty number do at the terminal (R28, R29, R30)? R30 and R34 say only
+  that a wrong number never confirms.
 
 ### Before 1.7 (safe writer) and the first pseudo-terminal test
 - Pseudo-terminal tests (R34) need a pty crate as a dev-dependency, accepted by `deny.toml`:
   which one, for Unix and Windows ConPTY?
 - R31 checks that a cache or manifest name is a regular file, then renames over it. What if the
   name changes between the check and the rename, or a foreign file appears at a name that did
-  not exist yet (the first creation is also a rename)? How is that prevented?
+  not exist yet (the first creation is also a rename) and would be replaced? How is that
+  prevented?
 - R31 keeps documents inside the selected folder. Does a rule cover a report written into a
   selected folder that is a symbolic link?
 
@@ -655,6 +656,9 @@ answered before the roadmap step named in its heading; that step points back her
   the menu folders on macOS and Linux is to be checked.
 
 ### Before 5.2 (context menu and dialogs)
+- In a dialog number field (R30), what does Enter do after the right number: confirm, or cancel
+  because the focus is on Cancel? What do Enter and Confirm do after a wrong or empty number:
+  nothing (the dialog stays open), or cancel?
 - What must the shorter dialog summary still show: unreadable folders, alternative names,
   "existing files modified: 0", a way to see the full list, and the list for `undo`, the menus
   and `uninstall`?

@@ -120,11 +120,12 @@ The order follows two ideas:
   `docs/design.md`): pure functions turning (counts, folder, terminal,
   dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the
   answer: typed count (R28 risky run, R29), yes/no default No (R30). Typestate
-  `ConfirmedPlan`. Tests at the terminal: Enter, `n`, wrong number, changing command. Tests
-  from a script: `check` and `extract --plan` in a risky run are refused; `check --plan`,
+  `ConfirmedPlan`. Tests at the terminal: Enter, `n`, wrong number. Tests from a script: every
+  changing command, and `check` and `extract --plan` in a risky run, are refused; `check --plan`,
   `extract --plan` in an ordinary run and the item lists of `--plan` run. Also: symbolic links
   resolved before each folder is judged (all kinds of sensitive folder, not only shares);
-  several folders (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
+  several folders (total, overlaps counted once). The dialogs themselves come with the menus
+  (5.2).
 - [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, removal of partial files,
   stays inside the folder (`..`, symbolic links), free-space check, re-check of originals. First
   decide the questions "Before 1.7" in `docs/design.md`. Folder snapshot test helper (R34)
