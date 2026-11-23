@@ -119,13 +119,11 @@ The order follows two ideas:
 - [ ] 1.6 **Confirmation logic** (R28–R30; first decide the question "Before 1.6" in
   `docs/design.md`): pure functions turning (counts, folder, terminal, dialog via `--interactive`,
   or script; `--plan`) into the question to ask and parsing the answer: typed count (R28 risky run,
-  R29), yes/no default No (R30). Typestate `ConfirmedPlan`. Tests at the terminal: Enter, `n`, wrong
-  number. Tests from a script: `extract`, `undo`, `install-menu`, `uninstall-menu`, `uninstall`, and
-  `check` and `extract --plan` in a risky run, are refused; `check` in an ordinary run runs without
-  a question; `check --plan` in any run, `extract --plan` in an ordinary run and the item lists of
-  `--plan` run. Also: symbolic links resolved before each folder is judged (all kinds of sensitive
-  folder, not only shares); several folders (total, overlaps counted once). The dialogs themselves
-  come with the menus (5.2).
+  R29), yes/no default No (R30). Typestate `ConfirmedPlan`. Tests: the terminal and script cases of
+  R34 ("Yes/no questions", "Scripts"), with a wrong or empty number at each typed count. Also:
+  symbolic links resolved before each folder is judged (all kinds of sensitive folder, not only
+  shares); several folders (total, overlaps counted once). The dialogs themselves come with the
+  menus (5.2).
 - [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, removal of partial files,
   stays inside the folder (`..`, symbolic links), free-space check, re-check of originals. First
   decide the questions "Before 1.7" in `docs/design.md`. Folder snapshot test helper (R34)
@@ -180,7 +178,7 @@ The order follows two ideas:
   `.workflow` folders and the other questions "Before 5.1" in `docs/design.md`.
 - [ ] 5.2 Context menu per OS (R21, R38) with the confirmation dialogs (R30): first decide the
   questions "Before 5.2" in `docs/design.md` (Enter in a number field, what the shorter dialog
-  summary must show), with R34 tests; Windows "Installed apps" entry (R42).
+  summary must show, and the other questions), with R34 tests; Windows "Installed apps" entry (R42).
 - [ ] 5.3 `uninstall` (R40–R43). First decide what happens to a file in the cache folder that
   the tool did not write (questions "Before 5.3" in `docs/design.md`).
 

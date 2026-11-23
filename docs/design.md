@@ -563,9 +563,11 @@ answered before the roadmap step named in its heading; that step points back her
   reverse?
 
 ### Before 1.6 (confirmation logic)
-- What does a wrong or empty number do at the terminal? R34 says that a wrong number or Enter
-  alone writes no document (R29). Nothing says it for the number of a risky run (R28), nor
-  whether the question is asked again or the run stops, and with which exit code.
+- A wrong or empty number never confirms, for the files of a risky run (R28) or for the
+  documents (R29). R34 tests it at the terminal only for R29. At the terminal, is the question
+  asked again or does the run stop? Which exit code does a run declined at the terminal give
+  (`n`, Enter, a wrong number)? R13 has 0, 1 and 2, and R30 gives 2 only for scripts. Does R34
+  get the same test for the R28 number?
 
 ### Before 1.7 (safe writer) and the first pseudo-terminal test
 - Pseudo-terminal tests (R34) need a pty crate as a dev-dependency, accepted by `deny.toml`:
@@ -658,9 +660,9 @@ answered before the roadmap step named in its heading; that step points back her
 
 ### Before 5.2 (context menu and dialogs)
 - R30 says Enter alone cancels a dialog. In a dialog number field, what does Enter do after the
-  right number: confirm, or cancel because the focus is on Cancel? What do Enter after a wrong
-  number, and Confirm after a wrong or empty one, do: nothing (the dialog stays open), or
-  cancel?
+  right number: confirm, or cancel because the focus is on Cancel? After a wrong number, does
+  Enter do nothing (the dialog stays open) or cancel? The same question for Confirm after a
+  wrong or empty number.
 - What must the shorter dialog summary still show: unreadable folders, alternative names,
   "existing files modified: 0", a way to see the full list, and the list for `undo`, the menus
   and `uninstall`?
