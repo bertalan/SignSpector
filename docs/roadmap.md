@@ -64,7 +64,7 @@ The order follows two ideas:
     (2026-11-23) to stop the rounds there. A breakage of this section that shows no bug
     is listed on the PR and here, not closed with another round. Known limit: `rustup check`
     has no time limit. It runs only in report mode, after the hook gates, so no commit or push
-    waits on it. The script is correct today; breaking these rules on a copy leaves all tests
+    waits on it. These three rules are correct today; breaking them on a copy leaves all tests
     green (review of 40e2d4c):
     - unescaping the first dot of the x.y.z check (`1x100.0` would then pass);
     - accepting only a single digit for the major and patch numbers (`10.0.0` would then be
@@ -92,12 +92,11 @@ The order follows two ideas:
   `Relazione.pdf.p7m` -> `Relazione.pdf`, nested `.pdf.p7m.tsd`, uppercase extensions.
 - [ ] 1.4 **i18n skeleton** (R27): pick the mechanism (Fluent vs `rust-i18n`, decided with the
   user), English + Italian, `--lang`, OS language detection. Needed before any message below.
-- [ ] 1.5 **Walk and count** (R1b, R2, R19, R28): one or more folders, a row per folder and
-  the total; regular files only, symbolic links not followed and
-  hidden folders skipped (both listed in the report),
-  unreadable folders listed; count, total size, subfolders. Risky-folder detection (drive
-  roots, home, Desktop, Documents, system folders, network share roots, > 10,000 files of any
-  kind, subfolders included).
+- [ ] 1.5 **Walk and count** (R1b, R2, R19, R28): one or more folders, a row per folder and the
+  total; regular files only, symbolic links not followed and hidden folders skipped (both listed in
+  the report), unreadable folders listed; two counts (files to process, files of any kind), total
+  size, subfolders. Risky-folder detection (drive roots, home, Desktop, Documents, system folders,
+  network share roots, > 10,000 files of any kind, subfolders included).
 - [ ] 1.6 **Confirmation logic** (R28–R30): pure functions turning (counts, folder, terminal,
   dialog via `--interactive`, or script; `--plan`) into the question to ask and parsing the
   answer: typed count (R28 risky folder,
@@ -117,8 +116,8 @@ The order follows two ideas:
 - [ ] 2.2 `cms` SignedData parsing: encapsulated content, certificates, signer infos (no
   verification yet); base64 envelopes; nested layers (R3, R4, R7).
 - [ ] 2.3 End-to-end slice: `check` and `extract` on simple fixtures through the real flow,
-  minimal console output with `--plain`, `--no-color` (R35), minimal JSON (R15), write log
-  with SHA-256 and `undo` (R33).
+  minimal console output with `--plain`, `--no-color` (R35), minimal JSON (R15), written
+  documents recorded in the report with SHA-256, and `undo` (R33).
 
 ## Phase 3: verification
 - [ ] 3.1 `crypto`: digests, RSA PKCS#1 v1.5, RSA-PSS, ECDSA P-256/P-384/P-521 (R8).

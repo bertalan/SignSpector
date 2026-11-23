@@ -26,21 +26,22 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    re-encoded as SET, signature algorithm not matched to the key, time checked against the wrong
    reference), anything that could report a forged or invalid file as valid.
 3. **Safety rules.** Originals are never written, moved or renamed; `check` writes no document,
-   only the report and the tool's cache (R16); documents need `extract` and its typed
-   confirmation; existing files are never overwritten, not even a report; no panic on
-   malformed input (no `unwrap`/`expect`/indexing on untrusted data outside tests); no
-   PowerShell; no OpenSSL or C dependencies. Confirmation and write safety (R28–R34 in
-   `docs/design.md`) is a fixed point of every review: look for any path that processes
-   without the first confirmation, writes a document without a `ConfirmedPlan`, opens any file
-   for writing (the report too) without `create_new`, can write a document outside the
-   selected folder, lets `--plan` write or download anything, treats a non-terminal
-   input as a yes, confirms anything from a script (only `check` on an ordinary folder, `check
-   --plan`, `extract --plan` on an ordinary folder, and the `--plan` lists of `undo`, the menus
-   and `uninstall` run there), judges time from the signer's claimed signing time, skips the
-   native dialog of a context-menu run, counts several selected folders wrongly (a row each, the
-   total typed, overlaps counted once), or produces a file name that is invalid on another OS
-   (Windows reserved names and characters, trailing dot/space, NFC/NFD or case collisions,
-   over-long names).
+   only the report (HTML and JSON) and the tool's cache (R16); documents need an extraction
+   confirmed by the typed number (`extract`, or the interactive end of run, R20, R29); existing
+   files are never overwritten, not even a report; no panic on malformed input (no
+   `unwrap`/`expect`/indexing on untrusted data outside tests); no PowerShell; no OpenSSL or C
+   dependencies. Confirmation and write safety (R28–R34 in `docs/design.md`) is a fixed point of
+   every review: look for any path that processes without the first confirmation, writes a document
+   without a `ConfirmedPlan`, opens any file for writing outside the tool's cache (the report too)
+   without `create_new`, replaces a file in the cache that the tool did not create, can write a
+   document outside the selected folder, lets `--plan` write or download anything, treats a
+   non-terminal input as a yes, confirms anything from a script (only `check` on an ordinary
+   folder, `check --plan`, `extract --plan` on an ordinary folder, and the `--plan` lists of
+   `undo`, the menus and `uninstall` run there), judges time from the signer's claimed signing
+   time, skips the native dialog of a context-menu run, counts several selected folders wrongly (a
+   row each, the total typed, overlaps counted once), or produces a file name that is invalid on
+   another OS (Windows reserved names and characters, trailing dot/space, NFC/NFD or case
+   collisions, over-long names).
 4. **Language**: code, comments, docs and developer messages in English. User-facing texts of
    the tool go through the translation layer (R27 in `docs/design.md`), never hard-coded, and
    every new text has its Italian translation. Every changed text (docs, comments, commit

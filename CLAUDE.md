@@ -138,18 +138,18 @@ in the history even if deleted later. Before every commit and push:
   (`--lang`, see R27 in `docs/design.md`). Source strings are English; every user-facing text
   goes through the translation layer, never hard-coded, and each new text gets its Italian
   translation in the same change.
-- `check` writes no document: only the report and the tool's cache of trusted lists and CRLs
-  (R16). **There is no `--apply`, `--yes` or `--expect`.**
-  Every command that changes files or the system shows the exact plan first (except the report
-  and cache of `check`, R16). The number is
-  typed only for files found in a folder (files to process in a risky folder, R28; documents
-  to write, R29); `undo`,
-  menus and `uninstall` ask a yes/no question, default No, answers in words (R19, R35). From
-  the context menu the same confirmations come in a native dialog, focus on Cancel; from a script
-  they refuse (R30); `--plan` shows the plan and stops. These rules are for the tool; the
-  developer script `scripts/cleanup.sh` is the one exception (it removes only junk and merged
-  branches, without asking, see above). Never ask the developer to type numbers in chat: the
-  typed count is a rule of the tool, not of the conversation.
+- `check` writes no document: only the report (HTML and JSON) and the tool's cache of trusted lists
+  and CRLs (R16); documents come only from an extraction confirmed through R29 (`extract`, or the
+  interactive end of a `check` run, R20). **There is no `--apply`, `--yes` or `--expect`.** Every
+  command that changes files or the system shows the exact plan first, except `check` on an
+  ordinary folder from a script, which writes its report and the cache without a question (R16,
+  R30). The number is typed only for files found in a folder (files to process in a risky folder,
+  R28; documents to write, R29); `undo`, menus and `uninstall` ask a yes/no question, default No,
+  answers in words (R19, R35). From the context menu the same confirmations come in a native
+  dialog, focus on Cancel; from a script they refuse (R30); `--plan` shows the plan and stops.
+  These rules are for the tool; the developer script `scripts/cleanup.sh` is the one exception (it
+  removes only junk and merged branches, without asking, see above). Never ask the developer to
+  type numbers in chat: the typed count is a rule of the tool, not of the conversation.
 - Originals are only read, never modified, moved or renamed; existing files are never
   overwritten ("x.pdf" exists with other content -> "x (1).pdf").
 - **Never process right after a person chooses a folder**: first count and ask for
@@ -157,7 +157,8 @@ in the history even if deleted later. Before every commit and push:
   one is refused); writing needs a second confirmation on the full write plan, with the number typed
   (R29); no implicit yes, ever (R30: terminal, dialog from the context menu, refusal in
   scripts). Documents are written only through a `ConfirmedPlan` and never outside the chosen
-  folder; every file the tool writes, the report too, is created with `create_new` (R31).
+  folder; every file `check` and `extract` write outside the cache, the report too, is created
+  with `create_new` (R31).
   File names valid on Windows, macOS and Linux at once (R32). Any change here needs the tests
   of R34.
 - **Accessibility is a requirement, not a polish step** (EN 301 549; WCAG 2.2 AA for the
