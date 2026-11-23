@@ -195,8 +195,10 @@ script. R31 says how every file is created and which files may ever be replaced.
   - Terminal (`std::io::IsTerminal` on input and output): questions in the console (R19, R28,
     R29). "Terminal" means both input and output are a terminal. With output redirected
     (`| tee log`, `> file`) the run counts as a script. Yes/no questions default to No, and
-    Enter alone cancels. The answers and the default are written out in words in the user's
-    language (R35, R27).
+    Enter alone cancels. A typed number confirms only if it is the right one: a wrong number or
+    Enter alone never confirms, for the files to process of a risky run (R28) and for the
+    documents to write (R29) (owner's decision, 2026-11-23). The answers and the default are
+    written out in words in the user's language (R35, R27).
   - Context menu (no terminal, started with `--interactive`): the same confirmations, with the
     same number to type and the same default, in a native dialog (R38), with a shorter summary
     than the console.
@@ -266,6 +268,8 @@ script. R31 says how every file is created and which files may ever be replaced.
     between plan and write; names with `..`, reserved names, forbidden characters, NFC/NFD and
     case collisions, over-long names; a symbolic link pointing outside; disk full (simulated);
     `undo` with a modified file; `undo` on a report that records no document.
+  - Risky run at the terminal (R28, R30): an empty answer, `n` or a wrong number starts no
+    analysis.
   - Scripts (R30): every changing command, `check` and `extract --plan` in a risky run, and
     `--interactive` without a desktop are refused with exit 2. `check` in an ordinary run,
     `check --plan` in any run, `extract --plan` in an ordinary run and `--plan` of `undo`, the
@@ -306,8 +310,8 @@ script. R31 says how every file is created and which files may ever be replaced.
     link to a sensitive folder makes the run risky.
   - Time (R9): a back-dated signing-time attribute changes no verdict; without a time stamp the
     report says "claimed, not proved".
-  - Yes/no questions (R30): Enter alone cancels, `y` on a pipe is refused, a number is not a
-    yes.
+  - Yes/no questions (R30): Enter alone and `n` cancel, `y` on a pipe is refused, a number is
+    not a yes.
   - Dialogs (R30, R38): when a number is required only the right one confirms; yes/no dialogs
     default to Cancel; the focus starts on Cancel; Enter alone and closing the window cancel; a
     wrong number does not confirm; every selected folder with its count, the total and the operation
@@ -563,11 +567,9 @@ answered before the roadmap step named in its heading; that step points back her
   reverse?
 
 ### Before 1.6 (confirmation logic)
-- A wrong or empty number never confirms, for the files of a risky run (R28) or for the
-  documents (R29). R34 tests it at the terminal only for R29. At the terminal, is the question
+- R30 says a wrong or empty number never confirms. At the terminal, after one, is the question
   asked again or does the run stop? Which exit code does a run declined at the terminal give
-  (`n`, Enter, a wrong number)? R13 has 0, 1 and 2, and R30 gives 2 only for scripts. Does R34
-  get the same test for the R28 number?
+  (`n`, Enter, a wrong number)? R13 has 0, 1 and 2, and R30 gives 2 only for scripts.
 
 ### Before 1.7 (safe writer) and the first pseudo-terminal test
 - Pseudo-terminal tests (R34) need a pty crate as a dev-dependency, accepted by `deny.toml`:

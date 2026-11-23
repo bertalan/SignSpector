@@ -44,6 +44,7 @@ The order follows two ideas:
   - risky runs counted on files of any kind (R28);
   - reports never replaced, and the second report (R16, R20, R31, R33);
   - `--plan` writes and downloads nothing (R19);
+  - a wrong or empty number never confirms at the terminal (R30);
   - the cache (R47);
   - no saved preference (R27);
   - `--no-report` (R14, R16);
@@ -119,15 +120,15 @@ The order follows two ideas:
 - [ ] 1.6 **Confirmation logic** (R28–R30; first decide the question "Before 1.6" in
   `docs/design.md`): pure functions turning (counts, folder, terminal, dialog via `--interactive`,
   or script; `--plan`) into the question to ask and parsing the answer: typed count (R28 risky run,
-  R29), yes/no default No (R30). Typestate `ConfirmedPlan`. Tests: the terminal and script cases of
-  R34 ("Yes/no questions", "Scripts"), with a wrong or empty number at each typed count. Also:
-  symbolic links resolved before each folder is judged (all kinds of sensitive folder, not only
-  shares); several folders (total, overlaps counted once). The dialogs themselves come with the
-  menus (5.2).
-- [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, removal of partial files,
-  stays inside the folder (`..`, symbolic links), free-space check, re-check of originals. First
-  decide the questions "Before 1.7" in `docs/design.md`. Folder snapshot test helper (R34)
-  introduced here and used from now on.
+  R29), yes/no default No (R30). Typestate `ConfirmedPlan`. Tests: the cases of R34 "Risky run at
+  the terminal", "Yes/no questions", "Scripts", "Counting" and "Several folders", and the answers of
+  "Writing and undo" (empty answer, `n`, wrong number) at the count of documents. The dialogs
+  themselves come with the menus (5.2).
+- [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, the two-step replace of cache
+  files and the manifest (temporary file, then rename), removal of partial files, stays inside the
+  folder (`..`, symbolic links), free-space check, re-check of originals. First decide the questions
+  "Before 1.7" in `docs/design.md`. Folder snapshot test helper (R34) introduced here and used from
+  now on.
 
 ## Phase 2: opening envelopes (thin slice)
 - [ ] 2.1 `ber` reader: definite and indefinite lengths, limits on depth and size, checked
