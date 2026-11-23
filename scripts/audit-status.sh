@@ -76,8 +76,8 @@ fi
 section "Rust"
 # The pinned version (rust-toolchain.toml) is moved by hand; say when a newer stable exists.
 # rustup check needs a "stable" toolchain installed; its lines (rustup 1.29: "up to date: X",
-# "update available: X -> Y"; up to 1.28: "Up to date : X") are read for the first stable host.
-pinned=$(sed -n "s/^channel[[:space:]]*=[[:space:]]*[\"']\([^\"']*\)[\"'].*/\1/p" rust-toolchain.toml 2>/dev/null)
+# "update available: X -> Y"; older releases: "Up to date : X") are read for the first stable host.
+pinned=$(sed -n "s/^[[:space:]]*channel[[:space:]]*=[[:space:]]*[\"']\([^\"']*\)[\"'].*/\1/p" rust-toolchain.toml 2>/dev/null | head -n 1)
 latest=$(rustup check 2>/dev/null </dev/null | sed -n \
     -e 's/^stable-.* -> \([0-9][0-9.]*\).*/\1/p' \
     -e 's/^stable-.* [Uu]p to date *: *\([0-9][0-9.]*\).*/\1/p' | head -n 1)
