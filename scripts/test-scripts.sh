@@ -36,6 +36,8 @@ expect_reason() {
 # Report-mode tests never call the real gh (network, user account): default gh says "not logged in".
 unset GH_REPO GH_HOST GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN
 mkdir -p "$work/nogh"; printf '#!/bin/sh\necho "$*" >> "%s/gh-stub.log"\nexit 1\n' "$work" > "$work/nogh/gh"; chmod +x "$work/nogh/gh"
+# The same for rustup: the report's "Rust" section must not reach the network in the tests.
+printf '#!/bin/sh\necho "$*" >> "%s/rustup-stub.log"\nexit 1\n' "$work" > "$work/nogh/rustup"; chmod +x "$work/nogh/rustup"
 PATH="$work/nogh:$PATH"
 
 new_repo() {
@@ -358,6 +360,26 @@ PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTE
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "== GitHub"; expect "GitHub section ran (limit far away)" 0 $?
 fake_gh ""
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTERACTION LIMIT NOT ACTIVE"; expect "limit missing" 0 $?
+# The report says when a newer stable Rust exists than the pinned one (rust-toolchain.toml).
+new_repo
+printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
+mkdir -p "$work/rustupshim"
+rustup_says() { printf '#!/bin/sh\n[ "$1" = check ] || exit 1\n%s\n' "$1" > "$work/rustupshim/rustup"; chmod +x "$work/rustupshim/rustup"; }
+rustup_says "echo 'stable-x86_64-unknown-linux-gnu - update available: 1.100.0 (a 2026-11-09) -> 1.101.0 (b 2026-12-21)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "NEWER RUST STABLE: 1.101.0 (pinned: 1.100.0); see rust-toolchain.toml"; expect "report: newer Rust stable shown" 0 $?
+rustup_says "echo 'stable-x86_64-unknown-linux-gnu - up to date: 1.100.0 (a 2026-11-09)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: pinned Rust is the latest stable" 0 $?
+rustup_says "echo 'stable-x86_64-unknown-linux-gnu - up to date: 1.99.0 (a 2026-10-01)'"
+out=$(PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1)
+printf '%s\n' "$out" | grep -q "NEWER RUST";            expect "report: an older installed stable is not newer" 1 $?
+printf '%s\n' "$out" | grep -qx "pinned Rust 1.100.0; latest stable reported by rustup: 1.99.0"; expect "report: pinned ahead of the stable said" 0 $?
+rm -f rust-toolchain.toml
+rustup_says "echo 'stable-x86_64-unknown-linux-gnu - up to date: 1.100.0 (a 2026-11-09)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust version not found in rust-toolchain.toml"; expect "report: missing pin said" 0 $?
+grep -q "^check" "$work/rustup-stub.log";               expect "the test stub stands in for the real rustup" 0 $?
+printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
+rustup_says "exit 1"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "Rust release not checked (rustup check failed or no stable toolchain)"; expect "report: rustup check failing is said" 0 $?
 # The report says when an audit is due (5 commits since the last one), and not before.
 new_repo
 commit a; commit b; commit c; commit d

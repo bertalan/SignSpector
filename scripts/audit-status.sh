@@ -73,6 +73,24 @@ else
 fi
 [ "$since" -ge "$AUDIT_EVERY" ] && echo "AUDIT DUE"
 
+section "Rust"
+# The pinned version (rust-toolchain.toml) is moved by hand; say when a newer stable exists.
+pinned=$(sed -n 's/^channel *= *"\([0-9.]*\)".*/\1/p' rust-toolchain.toml 2>/dev/null)
+latest=$(rustup check 2>/dev/null </dev/null | sed -n \
+    -e 's/^stable-.* -> \([0-9][0-9.]*\).*/\1/p' \
+    -e 's/^stable-.* up to date: \([0-9][0-9.]*\).*/\1/p' | head -n 1)
+if [ -z "$pinned" ]; then
+    echo "pinned Rust version not found in rust-toolchain.toml"
+elif [ -z "$latest" ]; then
+    echo "Rust release not checked (rustup check failed or no stable toolchain)"
+elif [ "$latest" = "$pinned" ]; then
+    echo "pinned Rust $pinned is the latest stable"
+elif [ "$(printf '%s\n%s\n' "$pinned" "$latest" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)" = "$latest" ]; then
+    echo "NEWER RUST STABLE: $latest (pinned: $pinned); see rust-toolchain.toml"
+else
+    echo "pinned Rust $pinned; latest stable reported by rustup: $latest"
+fi
+
 section "Unfinished local work"
 dirty=$(git status --porcelain)
 [ -n "$dirty" ] && { echo "uncommitted changes:"; printf '%s\n' "$dirty"; } || echo "working tree clean"
