@@ -3,17 +3,16 @@
 SignSpector checks signed and time-stamped files (`.p7m`, `.p7s`, `.tsd`, `.m7m`) in bulk. It
 verifies CAdES signatures and time stamps against the European trusted lists (Italy, Romania,
 France and every other EU/EEA country). It writes an accessible HTML report and, on request,
-extracts the signed documents safely. It runs on Windows, macOS and Linux.
+extracts the signed documents safely. It is built for Windows, macOS and Linux.
 
 > Status: early development. Nothing is usable yet. We build the project step by step, test
 > first. The [roadmap](docs/roadmap.md) shows what is done and what comes next.
 
 ## What does it do?
 
-Point SignSpector at a folder. It finds every signed or time-stamped file there, verifies it,
-and writes a report. Offices receive and archive such files every day: CAdES `.p7m`, detached
-`.p7s`, time-stamped `.tsd` and `.m7m`, often nested several layers deep. Opening them one by
-one is slow and tells little about the signatures.
+It saves opening signed files one by one. Offices receive and archive CAdES `.p7m`, detached
+`.p7s` and time-stamped `.tsd` and `.m7m` files, often nested several layers deep. Opening
+them one by one is slow and tells little about the signatures.
 
 For each folder, SignSpector:
 
@@ -23,8 +22,9 @@ For each folder, SignSpector:
 - verifies each signature (RSA, RSA-PSS, ECDSA; SHA-1/2) and the signer's certificate
   (validity, key usage, qualified status);
 - follows the chain up to a CA of the national trusted list of the certifier's country. It
-  reaches that list through the [EU List of Trusted Lists](https://ec.europa.eu/tools/lotl/eu-lotl.xml)
-  and chooses it from the signatures found;
+  reaches that list through the
+  [EU List of Trusted Lists](https://ec.europa.eu/tools/lotl/eu-lotl.xml) and chooses it
+  automatically from the signatures found;
 - checks whether the certificate was revoked, from data in the signature or the CA's
   revocation list: not one query per signature;
 - verifies countersignatures and RFC 3161 time stamps;
@@ -39,15 +39,17 @@ No. Signed documents are often the only official copy, so SignSpector is built s
 cannot damage them:
 
 - Without an explicit `extract`, it writes nothing except the report.
-- After you choose a folder, it only counts the files and asks before analysing them.
+- After you choose a folder, it only counts the signed files (envelopes) and asks before
+  analysing them.
 - Writing needs a second confirmation on the complete write plan: you type the number of
   documents to write.
-- A risky folder (a drive root, the home folder, more than 10,000 files) gets a stronger
-  warning, and you type the number of files.
+- A risky folder gets a stronger warning, and you type the number of envelopes. Risky folders
+  are: the root of a drive or volume, the home folder, Desktop, Documents, system folders,
+  network share roots, and any folder with more than 10,000 envelopes.
 - From the context menu, the same confirmations appear in a window.
-- In scripts, only these run: the analysis of an ordinary folder and its report, and `--plan`
-  (for `extract`, on an ordinary folder). Extracting, undoing and uninstalling need a person to
-  confirm.
+- In scripts, only these run: `check` on an ordinary folder, `check --plan`, `extract --plan`
+  on an ordinary folder, and the `--plan` lists of `undo`, the menu commands and `uninstall`.
+  Everything else stops and says that a person must confirm.
 - Originals are read-only. They are never modified, moved or renamed.
 - Nothing is ever overwritten. Every file is created with an exclusive "create new" operation,
   so the operating system itself refuses to overwrite. A name clash becomes `x (1).pdf`.
@@ -60,9 +62,9 @@ cannot damage them:
 
 ## Is it accessible?
 
-Yes, by requirement. The targets are EN 301 549, the standard referenced by the Italian
-accessibility law (Legge 4/2004) and the AgID guidelines, and WCAG 2.2 level AA for the HTML
-report:
+Yes, by requirement. The target is EN 301 549, the standard referenced by the Italian
+accessibility law (Legge 4/2004) and the AgID guidelines. The HTML report also targets WCAG 2.2
+level AA:
 
 - no information conveyed by colour or symbols alone;
 - `NO_COLOR`, `--no-color` and a `--plain` mode for screen readers;
@@ -75,7 +77,7 @@ The operating system's language, or the one chosen with `--lang`. The report use
 language, or another one chosen with `--report-lang`. English and Italian come first. More
 languages can be added without code changes.
 
-## Which platforms does it run on?
+## Which platforms will it run on?
 
 Windows, macOS and Linux, with one self-contained executable per platform. It is written in
 pure Rust: no OpenSSL, no runtime to install.
@@ -105,7 +107,7 @@ Every command that changes something shows its plan first and acts only after yo
 - `extract` asks you to type the number of documents it will write.
 - `undo`, `install-menu`, `uninstall-menu` and `uninstall` ask a yes/no question. The default
   is No.
-- In scripts they refuse. `--plan` shows the plan and stops.
+- In scripts, these commands refuse. `--plan` shows the plan and stops.
 - From the context menu, the same confirmations appear in a window, with the focus on Cancel.
 
 There is no `--apply`, `--yes` or `--expect`.
@@ -125,8 +127,8 @@ targets from macOS (mingw-w64, zig, cargo-zigbuild).
 ## How is it developed?
 
 - Test first: every behaviour starts as a failing test.
-- Every step is reviewed by a second AI model, different from the one that wrote the code, so
-  that the review is not anchored on the author's reasoning.
+- A second AI model reviews every step. It is not the model that wrote the code, so its review
+  is not anchored on the author's reasoning.
 - Every five commits, a coherence audit checks requirements, tests, code and documentation
   against each other. It verifies that every reference exists, and it surfaces unfinished work.
 - This repository is public, so test data is synthetic only. Real signed documents contain

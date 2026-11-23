@@ -24,7 +24,8 @@ No exception for "infrastructure".
 4. **Proof**: every PR description quotes the red output (the failing test run) and the green
    one. Rules that protect (scripts under `scripts/`, safety code) are also checked by breaking
    each rule on a copy and seeing at least one test fail; a rule nobody's test notices gets a
-   test.
+   test. One exception, decided by the owner: the "Rust" section of `audit-status.sh` (see
+   `docs/roadmap.md`, 0.5).
 5. **Independent review**: a **newly started** `fable-reviewer` agent (different model) for
    every review, briefed only with the scope and where the requirements are: never resumed,
    never given my conclusions or earlier findings. Fix its findings or explain to the user why

@@ -458,6 +458,10 @@ PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned
 # A pin with an empty part is not x.y.z.
 printf '[toolchain]\nchannel = "1.100."\n' > rust-toolchain.toml
 PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100. is not x.y.z; see rust-toolchain.toml"; expect "report: pin with an empty part said" 0 $?
+printf '[toolchain]\nchannel = "1..0"\n' > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1..0 is not x.y.z; see rust-toolchain.toml"; expect "report: pin with an empty middle part said" 0 $?
+printf '[toolchain]\nchannel = ".100.0"\n' > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust .100.0 is not x.y.z; see rust-toolchain.toml"; expect "report: pin with an empty first part said" 0 $?
 # A pin with a fourth number is not x.y.z.
 printf '[toolchain]\nchannel = "1.100.0.1"\n' > rust-toolchain.toml
 PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0.1 is not x.y.z; see rust-toolchain.toml"; expect "report: four-part pin said" 0 $?
