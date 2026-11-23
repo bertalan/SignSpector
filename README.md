@@ -70,9 +70,10 @@ cannot damage them:
 - Originals are read-only. They are never modified, moved or renamed.
 - Nothing is ever overwritten, not even an earlier report. Every file is created with an
   exclusive "create new" operation, so the operating system itself refuses to overwrite. A
-  document, report or JSON file whose name is taken becomes `x (1).pdf`. A menu entry that is not
-  SignSpector's is reported and left alone. Only the tool's own cache and its manifest (the
-  list of what it installed) are replaced, through a new file, never through a symbolic link.
+  document, report or JSON file whose name is taken gets the next free name, for example
+  `x (1).pdf`. A menu entry that is not SignSpector's is reported and left alone. The only files
+  ever replaced are the tool's own cache and its list of what it installed; the full rule is R31
+  in [docs/design.md](docs/design.md).
 - Extracted documents are never written outside the chosen folder. File names taken from the
   signed files are made valid on Windows, macOS and Linux at once: no forbidden characters, no
   reserved names, no clashes that differ only in letter case or Unicode form.

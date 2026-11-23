@@ -32,11 +32,9 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    `unwrap`/`expect`/indexing on untrusted data outside tests); no PowerShell; no OpenSSL or C
    dependencies. Confirmation and write safety (R28–R34 in `docs/design.md`) is a fixed point of
    every review: look for any path that processes without the first confirmation, writes a
-   document without a `ConfirmedPlan`, opens any file for writing without `create_new` (the
-   report and menu items too; only the cache files, under names the tool derives, and the install
-   manifest are exempt, R31), replaces a file in the cache under a name it does not derive,
-   follows a symbolic link in the cache or at the manifest, replaces a name there that is not a
-   regular file, can write a document outside the
+   document without a `ConfirmedPlan`, breaks any part of R31 (a file opened without
+   `create_new`, a file replaced in place, a file replaced other than a cache file or the manifest,
+   a symbolic link followed, a non-regular file replaced), can write a document outside the
    selected folder, lets `--plan` write or download anything, treats a non-terminal input as a
    yes, confirms anything from a script (only `check` on an ordinary folder, `check --plan`,
    `extract --plan` on an ordinary folder, and the `--plan` lists of `undo`, the menus and

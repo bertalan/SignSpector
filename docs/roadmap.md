@@ -14,7 +14,8 @@ The order follows two ideas:
 
 ## Phase 0: groundwork
 - [x] 0.1 First commit and push to `main` (after review of the file list). From then on: one
-  branch and one draft PR per step, coherence audit every 5 commits, merge by local fast-forward (`CLAUDE.md`).
+  branch and one draft PR per step, coherence audit every 5 commits, merge by local fast-forward
+  (`CLAUDE.md`).
 - [x] 0.2 GitHub Actions CI (`.github/workflows/ci.yml`) on Windows, macOS, Linux, on the
   shipped targets (windows-gnu, linux-musl, macOS arm64 + x86_64 build): fmt, clippy, nextest,
   doctests, release build, cargo deny (also weekly), tests of the rule scripts on all three
@@ -47,8 +48,8 @@ The order follows two ideas:
   - `--no-report` (R19);
   - foreign menu items (R41).
 
-  The questions they opened are listed as *To decide* in `docs/design.md`, each with the
-  roadmap step that needs the answer (3.5, 4.4, 5.1, 5.2, 5.3).
+  The questions they opened are listed in "What is still open?" in `docs/design.md`, each with the
+  roadmap step that needs the answer (1.4, 1.5, 1.7, 3.5, 3.6, 3.9, 4.2, 4.4, 5.1, 5.2, 5.3).
 - [ ] 0.5 Remaining gaps in the rule-script tests, found by the reviews of PR #1, PR #2 and
   PR #3 and accepted as known limits for now (each needs a test before the code changes):
   - `check-public.sh`: failures of `git show`, `ls-tree`, `diff-tree` are not each tested;
@@ -105,7 +106,8 @@ The order follows two ideas:
   `Relazione.pdf.p7m` -> `Relazione.pdf`, nested `.pdf.p7m.tsd`, uppercase extensions.
 - [ ] 1.4 **i18n skeleton** (R27): pick the mechanism (Fluent vs `rust-i18n`, decided with the
   user), English + Italian, `--lang`, OS language detection. Needed before any message below.
-- [ ] 1.5 **Walk and count** (first decide the selected hidden folder, *To decide* after R2)
+  First decide the questions "Before 1.4" in `docs/design.md`.
+- [ ] 1.5 **Walk and count** (first decide the questions "Before 1.5" in `docs/design.md`)
   (R1b, R2, R19, R28): one or more folders, a row per folder and the total; regular files only,
   symbolic links met during the walk not followed (a selected one is resolved) and hidden folders
   skipped (both listed in the report), unreadable folders listed; two counts (files to process,
@@ -122,8 +124,9 @@ The order follows two ideas:
   resolved before the risky-folder check (all path-based kinds of risky folder, not only shares);
   several folders (total, overlaps counted once). The dialogs themselves come with the menus (5.2).
 - [ ] 1.7 **Safe writer** (R31): `create_new`, next free name on race, removal of partial files,
-  stays inside the folder (`..`, symbolic links), free-space check, re-check of originals.
-  Folder snapshot test helper (R34) introduced here and used from now on.
+  stays inside the folder (`..`, symbolic links), free-space check, re-check of originals. First
+  decide the question "Before 1.7" in `docs/design.md`. Folder snapshot test helper (R34)
+  introduced here and used from now on.
 
 ## Phase 2: opening envelopes (thin slice)
 - [ ] 2.1 `ber` reader: definite and indefinite lengths, limits on depth and size, checked
@@ -144,40 +147,41 @@ The order follows two ideas:
 - [ ] 3.4 `tsl`: LOTL and national lists, signatures verified, embedded LOTL + Italian list,
   service history (R44, R48).
 - [ ] 3.5 Choice of lists from the certifiers' countries, download, cache, `--trust-lists`,
-  `--offline` (R45–R47). First decide the Windows cache folder and how tests move it (*To
-  decide* after R42 in `docs/design.md`).
-- [ ] 3.6 Chain building against the TSL and the system store (R10).
+  `--offline` (R45–R47). First decide the questions "Before 3.5" in `docs/design.md`.
+- [ ] 3.6 Chain building against the TSL and the system store (R10). First decide the question
+  "Before 3.6" in `docs/design.md`.
 - [ ] 3.7 Countersignatures (R11); `tsp`: RFC 3161, `.tsd`, `.m7m` (R5, R12); detached `.p7s` (R6).
   A time stamp is a proved time (R9) only if it verifies per R12 (chain to a trusted-list
   TSA); negative test: a forged or untrusted time stamp changes no verdict. Which time stamp
   counts when there are several.
 - [ ] 3.8 Content sniffing for names without a usable extension (R18).
-- [ ] 3.9 Revocation (R49): decide partitioned CRLs (*To decide* after R42); define the case of a
-  revocation time equal to the time stamp; data embedded in the signature, CRL per CA with cache,
-  one check per certificate, "revocation not checked" offline. Negative tests: revoked before and
-  after the time stamp, revoked with no time stamp (cannot be determined, never invalid), stale
-  or forged embedded data, forged or oversized CRL, CRL older than the reference time, expired
-  certificate no longer listed, distribution point outside `http`/`https`. Also to define with
-  the tests: revocation reasons (`removeFromCRL`, `keyCompromise`); an embedded CRL older than
-  the reference time when the CA's CRL cannot be fetched ("revocation not checked").
+- [ ] 3.9 Revocation (R49): decide the question "Before 3.9" in `docs/design.md`; define the case
+  of a revocation time equal to the time stamp; data embedded in the signature, CRL per CA with
+  cache, one check per certificate, "revocation not checked" offline. Negative tests: revoked
+  before and after the time stamp, revoked with no time stamp (cannot be determined, never
+  invalid), stale or forged embedded data, forged or oversized CRL, CRL older than the reference
+  time, expired certificate no longer listed, distribution point outside `http`/`https`. Also to
+  define with the tests: revocation reasons (`removeFromCRL`, `keyCompromise`); an embedded CRL
+  older than the reference time when the CA's CRL cannot be fetched ("revocation not checked").
 
 ## Phase 4: output
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).
-- [ ] 4.2 Accessible HTML report, WCAG 2.2 AA (R14, R36), checker in CI (R39).
+- [ ] 4.2 Accessible HTML report, WCAG 2.2 AA (R14, R36), checker in CI (R39). First decide the
+  question "Before 4.2" in `docs/design.md`.
 - [ ] 4.3 Full `--json` (R15); parallel processing with stable output order (R23).
-- [ ] 4.4 Command line and translated help, interactive end of run (R19, R20, R37). First
-  decide `--open`, `--threads` and `extract --no-report` (*To decide* after R19).
+- [ ] 4.4 Command line and translated help, interactive end of run (R19, R20, R37). First decide
+  `--open`, `--threads` and `extract --no-report` (questions "Before 4.4" in `docs/design.md`).
 
 ## Phase 5: system integration
 - [ ] 5.1 Install manifest (R41). First decide how `create_new` applies to registry keys and
-  `.workflow` folders (*To decide* after R42).
+  `.workflow` folders and the other questions "Before 5.1" in `docs/design.md`.
 - [ ] 5.2 Context menu per OS (R21, R38) with the confirmation dialogs (R30): decide what the
   shorter dialog summary must still show (unreadable folders, alternative names, "existing files
   modified: 0", a way to see the full list; the list for `undo`, menus and `uninstall`; the
-  count of files of any kind, *To decide* in R30), with
+  count of files of any kind, question "Before 5.2" in `docs/design.md`), with
   R34 tests; Windows "Installed apps" entry (R42).
 - [ ] 5.3 `uninstall` (R40–R43). First decide what happens to a file in the cache folder that
-  the tool did not write (*To decide* after R42 in `docs/design.md`).
+  the tool did not write (questions "Before 5.3" in `docs/design.md`).
 
 ## Phase 6: release
 - [ ] 6.1 Builds for all targets; `.deb`, `.rpm`, `.tar.gz` (R24, R25); one self-contained
