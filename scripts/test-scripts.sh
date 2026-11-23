@@ -438,9 +438,29 @@ PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned
 # A duplicate key (invalid TOML) still gives one line, from the first key.
 printf '[toolchain]\nchannel = "1.99.0"\nchannel = "1.100.0"\n' > rust-toolchain.toml
 PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "NEWER RUST STABLE: 1.100.0 (pinned: 1.99.0); see rust-toolchain.toml"; expect "report: first of two channel keys read" 0 $?
-# Without the file, the report says so and shows no sed error.
+# Without the file, the "Rust" section is its heading and one line: no sed error text.
 rm -f rust-toolchain.toml
-PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -q "^sed"; expect "report: no sed error without the file" 1 $?
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | sed -n '/^== Rust$/,/^== /p' > "$work/rust-section.txt"
+printf '== Rust\npinned Rust version not found in rust-toolchain.toml\n\n== Unfinished local work\n' | cmp -s - "$work/rust-section.txt"; expect "report: Rust section is one line without the file" 0 $?
+# White space around "=" is free in TOML: none, or a tab after it.
+rustup_says "echo 'stable-x86_64-unknown-linux-gnu - up to date: 1.100.0 (a 2026-11-09)'"
+printf '[toolchain]\nchannel="1.100.0"\n' > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: no spaces around = read" 0 $?
+printf '[toolchain]\nchannel =\t"1.100.0"\n' > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: tab after = read" 0 $?
+# The value ends at its closing quote, even when a comment after it holds the other quote.
+printf "[toolchain]\nchannel = '1.100.0' # don't move\n" > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: apostrophe in a trailing comment" 0 $?
+# A pin with a fourth number is not x.y.z.
+printf '[toolchain]\nchannel = "1.100.0.1"\n' > rust-toolchain.toml
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0.1 is not x.y.z; see rust-toolchain.toml"; expect "report: four-part pin said" 0 $?
+printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
+# With two stable hosts at different versions, the first line is read.
+rustup_says "printf '%s\\n' 'stable-aarch64-apple-darwin - up to date: 1.100.0 (a 2026-11-09)' 'stable-x86_64-apple-darwin - update available: 1.100.0 (a 2026-11-09) -> 1.101.0 (b 2026-12-21)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: first of two stable hosts read" 0 $?
+# A toolchain whose name only contains "stable-" (a custom one) is not the stable channel.
+rustup_says "printf '%s\\n' 'my-stable-x86_64-unknown-linux-gnu - up to date: 1.50.0 (a 2025-01-01)' 'my-stable-x86_64-unknown-linux-gnu - update available: 1.50.0 (a 2025-01-01) -> 1.51.0 (b 2025-02-01)' 'stable-x86_64-unknown-linux-gnu - up to date: 1.100.0 (a 2026-11-09)'"
+PATH="$work/rustupshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -qx "pinned Rust 1.100.0 is the latest stable"; expect "report: custom toolchain named *stable- skipped" 0 $?
 printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
 # The report says when an audit is due (5 commits since the last one), and not before.
 new_repo
