@@ -3,8 +3,8 @@
 Status: draft, completed with the owner step by step. Open points are listed at the end, under
 "What is still open?", each with the roadmap step that needs the answer.
 
-Each rule is written once, in the requirement named in brackets. Other places point to it
-instead of repeating it.
+Each rule is written once, in one requirement. Other places name that requirement in brackets
+(R31) instead of repeating the rule.
 
 ## What is SignSpector for?
 
@@ -47,13 +47,13 @@ saves the signed documents beside the originals, ready to open.
   PKCS#1 v1.5, RSA-PSS, ECDSA P-256/P-384/P-521; SHA-1/256/384/512).
 - R9. The signer's certificate: validity at the reference time, key usage (non-repudiation),
   qualified and QSCD flags.
-  - The **reference time** is a proved time only: the signature's time stamp, or the time stamp
+  - The reference time is a proved time only: the signature's time stamp, or the time stamp
     of a `.tsd` or `.m7m` that contains the file (R5, R12).
   - The signing-time attribute is written by the signer and proves nothing. Without a time
     stamp, the reference time is the time of the check, and the report shows the claimed time
     marked "claimed, not proved".
   - R48 and R49 use the same reference time.
-- R10. The chain must reach a CA of a **European trusted list** (R44–R48): the national list of
+- R10. The chain must reach a CA of a European trusted list (R44–R48): the national list of
   the certifier's country, reached through the EU List of Trusted Lists. Optionally it may reach
   the system trust store, labelled "recognised by the system" (translated per R27).
 - R11. Countersignatures.
@@ -89,8 +89,8 @@ saves the signed documents beside the originals, ready to open.
 
 ### How is it used?
 - R19. **Command line.** Commands: `check <dir>...` (default), `extract <dir>...`,
-  `undo <report>`, `install-menu`, `uninstall-menu`, `uninstall`. **There is no `--apply`,
-  `--yes` or `--expect`.**
+  `undo <report>`, `install-menu`, `uninstall-menu`, `uninstall`. There is no `--apply`,
+  `--yes` or `--expect`.
   - Every command that changes files or the system shows the exact plan first and acts only
     after a person confirms. How a person confirms, at a terminal, in a dialog or not at all
     from a script, is R30. The one exception: `check` in an ordinary run from a script writes
@@ -98,7 +98,7 @@ saves the signed documents beside the originals, ready to open.
   - A number is typed only for files found in a folder: the files to process in a risky run
     (R28) and the documents to write (R29). `undo`, `install-menu`, `uninstall-menu` and
     `uninstall` change only what the tool itself made, and ask a yes/no question (R30).
-  - **Several folders.** `check` and `extract` take one or more folders (several can be
+  - Several folders. `check` and `extract` take one or more folders (several can be
     selected in the file manager). They are counted and confirmed together:
     - one summary with a row per folder (path, number of files to process, number of files of
       any kind) and the totals, and one question for all. The number typed is the total;
@@ -110,12 +110,12 @@ saves the signed documents beside the originals, ready to open.
       outer folder. The summary says so, and its envelopes go in the outer folder's report;
     - a selected folder that is a symbolic link is resolved, then counted and judged like any
       other folder (R28).
-  - **`--interactive`** says that a person is there even without a terminal: questions come in
+  - `--interactive` says that a person is there even without a terminal: questions come in
     native dialogs (R30) and the run ends with the interactive end of run (R20). The
     context-menu entries and the Windows uninstall entry (R42) pass it. With a terminal, the
     questions stay in the terminal and R20 still applies. If no dialog can be shown (no
     desktop session), `--interactive` refuses with exit code 2, like a script.
-  - **`--plan`** shows what the command would do and stops before doing it. It writes nothing,
+  - `--plan` shows what the command would do and stops before doing it. It writes nothing,
     not even the report or the cache, and downloads nothing: it uses the embedded lists and
     those already in the cache.
     - `check --plan` only counts (R28; no envelope is opened) and prints the summary. It asks
@@ -178,8 +178,8 @@ script. R31 says how every file is created and which files may ever be replaced.
   - A risky run gets a stronger warning, and the user must type the number of files to process. A
     run is risky when one chosen folder is a sensitive folder: the root of a drive or volume, the
     user's home, Desktop, Documents, a system folder (`C:\Windows`, `Program Files`, `/System`,
-    `/usr`, `/etc`...) or a network share root. It is also risky when the folders hold **more than
-    10,000 files of any kind** in all, subfolders included (owner's decision, 2026-11-23). A run
+    `/usr`, `/etc`...) or a network share root. It is also risky when the folders hold more than
+    10,000 files of any kind in all, subfolders included (owner's decision, 2026-11-23). A run
     that is not risky is an ordinary run. "Risky" and "ordinary" always describe the whole run,
     never one folder.
   - The 10,000 count covers the regular files of the folders the walk visits (R2). Files in
@@ -241,7 +241,7 @@ script. R31 says how every file is created and which files may ever be replaced.
   - Free disk space is checked before starting. Ctrl+C finishes the current file, stops, and the
     report records what was done.
 - R32. **Portable file names.** Names taken from envelopes (and the `(n)` variants) must be
-  valid on **Windows, macOS and Linux at the same time**, and on FAT32 and exFAT, whatever
+  valid on Windows, macOS and Linux at the same time, and on FAT32 and exFAT, whatever
   system the tool runs on (archives move between systems):
   - removed or replaced: `/` `\` `:` `*` `?` `"` `<` `>` `|`, NUL and control characters
     U+0000–U+001F and U+007F; trailing dots and spaces; leading spaces;
@@ -252,7 +252,7 @@ script. R31 says how every file is created and which files may ever be replaced.
   - invalid UTF-8 or unpaired surrogates are replaced; names are stored in Unicode NFC;
   - length: at most 255 UTF-8 bytes and 255 UTF-16 units per component, cut without breaking
     a character or the extension;
-  - collisions are checked **case-insensitively and normalization-insensitively** (NTFS and the
+  - collisions are checked case-insensitively and normalization-insensitively (NTFS and the
     APFS default are case-insensitive; APFS treats NFC and NFD as the same name), so two
     documents never compete for names that the file system sees as equal;
   - the original name, when changed, is shown in the report.
@@ -266,11 +266,14 @@ script. R31 says how every file is created and which files may ever be replaced.
   before and after every end-to-end test: originals identical, nothing changed but the
   confirmed plan.
   - Writing and undo (R29, R31, R32, R33): at the count of documents (R29), an empty answer,
-    `y`, `n` or a wrong number writes nothing; at the `undo` question, an empty answer or `n`
-    removes nothing; a file appearing between plan and write; names with `..`, reserved names,
-    forbidden characters, NFC/NFD and case collisions, over-long names; a symbolic link pointing
-    outside; disk full (simulated); `undo` with a modified file; `undo` on a report that records
-    no document.
+    `y`, `n` or a wrong number writes nothing. At the `undo` question, an empty answer or `n`
+    removes nothing. Also tested:
+    - a file appearing between plan and write;
+    - names with `..`, reserved names, forbidden characters, NFC/NFD and case collisions,
+      over-long names;
+    - a symbolic link pointing outside;
+    - disk full (simulated);
+    - `undo` with a modified file, and `undo` on a report that records no document.
   - Risky run at the terminal (R28, R30): an empty answer, `y`, `n` or a wrong number starts
     no analysis.
   - Scripts (R30): every changing command, `check` and `extract --plan` in a risky run, and
@@ -307,19 +310,24 @@ script. R31 says how every file is created and which files may ever be replaced.
     in hidden folders, behind symbolic links met during the walk or in unreadable folders are not
     counted; a selected folder that is a symbolic link is resolved and counted; overlaps count
     once.
-  - Several folders (R19): the total is typed; one sensitive folder makes the whole run risky; all
-    folders empty stop the run; overlaps (also by letter case, symbolic link, trailing slash)
-    are counted once; one report per selected folder that is not inside another; a symbolic
-    link to each kind of sensitive folder makes the run risky (R28).
+  - Several folders (R19, R28): the total is typed. One sensitive folder makes the whole run
+    risky. All folders empty stop the run. Overlaps (also by letter case, symbolic link,
+    trailing slash) are counted once. There is one report per selected folder that is not inside
+    another. Each kind of sensitive folder makes the run risky, selected directly or through a
+    symbolic link (owner's decision, 2026-11-24).
   - Time (R9): a back-dated signing-time attribute changes no verdict; without a time stamp the
     report says "claimed, not proved".
   - Yes/no questions (R30): Enter alone and `n` cancel, `y` on a pipe is refused, a number is
     not a yes.
-  - Dialogs (R30, R38): when a number is required only the right one confirms; yes/no dialogs
-    default to Cancel; the focus starts on Cancel; Enter alone and closing the window cancel; a
-    wrong number does not confirm; every selected folder with its count, the total and the operation
-    are shown; a fake dialog helper placed first in `PATH` is not used; a folder name with quotes or
-    script code is shown as text, never run.
+  - Dialogs (R30, R38):
+    - when a number is required, only the right one confirms;
+    - a wrong number does not confirm;
+    - yes/no dialogs default to Cancel;
+    - in every dialog the focus starts on Cancel;
+    - Enter alone and closing the window cancel;
+    - every selected folder with its count, the total and the operation are shown;
+    - a fake dialog helper placed first in `PATH` is not used;
+    - a folder name with quotes or script code is shown as text, never run.
 
   How are confirmed runs tested without a bypass? The public confirmation has two constructors
   only, terminal and dialog, which take no input source: they open the terminal or the dialog
@@ -334,7 +342,7 @@ script. R31 says how every file is created and which files may ever be replaced.
   flag that confirms.
 
 ### Which trusted lists does it use?
-Signatures may come from any country on the EU **List of Trusted Lists** (LOTL,
+Signatures may come from any country on the EU List of Trusted Lists (LOTL,
 `https://ec.europa.eu/tools/lotl/eu-lotl.xml`, signed by the European Commission): Italy,
 Romania, France and the others. The LOTL points to each national trusted list and names the
 certificates that sign it. Checked on 2026-11-22: LOTL no. 398, 43 pointers (EU-27, Iceland,
@@ -409,10 +417,10 @@ Liechtenstein, Norway, United Kingdom).
 ### Who must be able to use it, and how?
 Legal frame (Italy and EU): Legge 4/2004 ("Legge Stanca", as amended by D.Lgs. 106/2018) and
 the AgID guidelines on the accessibility of IT tools. They refer to the harmonised standard
-**EN 301 549** (ch. 11 software, ch. 12 documentation and support, ch. 9 web content = WCAG).
+EN 301 549 (ch. 11 software, ch. 12 documentation and support, ch. 9 web content = WCAG).
 The European Accessibility Act (Directive 2019/882, D.Lgs. 82/2022) probably does not cover
-this tool, but meeting EN 301 549 covers it too. Targets: **EN 301 549** for the program and
-**WCAG 2.2 level AA** for the HTML report and the user guide. Whoever deploys the tool in a
+this tool, but meeting EN 301 549 covers it too. Targets: EN 301 549 for the program and
+WCAG 2.2 level AA for the HTML report and the user guide. Whoever deploys the tool in a
 public administration checks the applicable obligations (for example an accessibility
 statement).
 
@@ -427,7 +435,7 @@ statement).
     a second. `--plain` (also `SIGNSPECTOR_PLAIN=1`) gives line-by-line output with a progress
     line at most every few seconds and a final summary.
   - Prompts: the full question on one line, with the possible answers and the default spelled
-    out in words; keyboard only; **no time limits** on any prompt.
+    out in words; keyboard only; no time limits on any prompt.
   - Messages in plain language. Every error says what happened, which file, and what the user
     can do.
 - R36. **HTML report (WCAG 2.2 AA).**
@@ -470,7 +478,7 @@ statement).
   - If the manifest is lost, our items are recognised by an explicit SignSpector marker, never
     by guessing.
   - Each item is created as R31 says (registry keys and `.workflow` folders: still open,
-    question "Before 5.1"). An item is **foreign** when it is not in the manifest and
+    question "Before 5.1"). An item is foreign when it is not in the manifest and
     has no SignSpector marker. When a foreign item has the same name, `install-menu` reports it
     and leaves it, and it never enters the manifest, so `uninstall` never removes it (owner's
     decision, 2026-11-23).
@@ -495,9 +503,10 @@ statement).
 - R43. **User data is never removed**: originals, extracted documents and reports stay. At the
   end the tool lists what it left in place on purpose and where the executable is.
 
-## How is the code organised? (proposal)
+## How is the code organised?
 
 A library crate with one module per concern; the executable only parses arguments and prints.
+This is a proposal.
 
 | Module | Role | Candidate crates |
 |---|---|---|
@@ -553,8 +562,10 @@ confirm that antivirus, SmartScreen and AppLocker accept a mingw-built executabl
 
 ## What is still open?
 
-The owner closed requirement changes in roadmap step 0.4 (2026-11-23). Each question below is
-answered before the roadmap step named in its heading; that step points back here.
+The owner closed requirement changes in roadmap step 0.4 on 2026-11-23. Decisions on
+requirements taken after that date are listed in the same step, each with its date. Each
+question below is answered before the roadmap step named in its heading; that step points back
+here.
 
 ### Before 1.4 (translations)
 - Translation mechanism (for example Fluent `.ftl` files embedded in the executable, or

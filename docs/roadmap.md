@@ -2,10 +2,13 @@
 
 ## How does a step get done?
 
-Each step is test-driven: red, green, refactor. A new `fable-reviewer` agent reviews it, then it
-is committed. A step is done when its tests are green on all three systems in CI and its PR is
-merged. Mark the step done here (`[x]`) in the PR that completes it; the coherence audit checks
-that the mark is true. Requirements (R…) are in `docs/design.md`.
+Each step is test-driven: red, green, refactor. A new `fable-reviewer` agent reviews the changes
+of each commit before they are committed; the audit report is the one exception (`CLAUDE.md`). A
+step is done when its tests are green on all three systems in CI and its PR is merged. Each step
+writes the tests of R34 for the commands and modules it introduces, as soon as they can be
+tested. R34 is the only list of these tests; the review of each step checks the step against it
+(owner's decision, 2026-11-24). Mark the step done here (`[x]`) in the PR that completes it; the
+coherence audit checks that the mark is true. Requirements (R…) are in `docs/design.md`.
 
 ## Why this order?
 
@@ -46,14 +49,14 @@ in the script tests.
   simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only. Private keys are never committed:
   they are generated at test time or kept in `target/`.
 - [ ] 0.4 Writing guide (`docs/writing.md`). Texts answer the reader's questions, with the
-  answer first and short sentences. Code and commands stay verbatim. There are no machine-made
+  answer first and short sentences. Code and commands stay verbatim. Texts use no machine-made
   patterns (after Wikipedia's "Signs of AI writing"). Rewrite README, design, roadmap,
   `CLAUDE.md` and the agent prompts with it. Also in this step:
   - a comment in `rust-toolchain.toml`: targets and R25, how to update the pinned version;
   - a "Rust" section in the session report (`scripts/audit-status.sh`) that names a newer stable
     Rust when one exists;
-  - owner's decisions on requirements, taken in the reviews of this step (2026-11-23) and
-    recorded in `docs/design.md`:
+  - owner's decisions on requirements, taken in the reviews of this step (2026-11-23 unless
+    dated) and recorded in `docs/design.md`:
     - what `check` writes (R16);
     - risky runs counted on files of any kind (R28);
     - reports never replaced, and the second report (R16, R20, R31, R33);
@@ -62,7 +65,9 @@ in the script tests.
     - the cache (R47);
     - no saved preference (R27);
     - `--no-report` (R14, R16);
-    - foreign menu items (R41).
+    - foreign menu items (R41);
+    - R34 also tests each kind of sensitive folder selected directly (R28), decided on
+      2026-11-24.
 
   The questions these decisions opened are in "What is still open?" in `docs/design.md`. Each
   names the roadmap step that needs the answer: 1.4, 1.5, 1.6, 1.7, 3.1, 3.2, 3.5, 3.6, 3.7,
@@ -83,12 +88,17 @@ in the script tests.
     - "never asks" is checked on the script's text (a word list) and with input on a pipe, never
       at a real terminal;
     - the check "still merged into main" (with full ref names) just before a branch is deleted
-      has no test. It guards a race.
+      has no test. It guards a race;
+    - no test fixes the choice that a branch just created at `main` is removed (audit 0003, F6).
   - `audit-status.sh`, unfinished-work section:
-    - uncommitted changes, stashes and the unpushed / not pulled counts have no test. These have
-      one: the "AUDIT DUE" and "RED CHECKS" lines, the current branch name, unmerged local and
-      remote branches, a missing `main` or `origin/main`, the `origin/HEAD` filter and "no tags
-      or other refs";
+    - uncommitted changes, stashes and the unpushed / not pulled counts have no test;
+    - these have one:
+      - the "AUDIT DUE" and "RED CHECKS" lines;
+      - the current branch name;
+      - unmerged local and remote branches;
+      - a missing `main` or `origin/main`;
+      - the `origin/HEAD` filter;
+      - "no tags or other refs";
     - the "RED CHECKS" test covers the printed line and its absence, not which checks are
       selected as red (the `gh` stub returns the formatted line);
     - only `FAILURE` counts as red today, not cancelled or timed-out jobs nor commit statuses:
@@ -106,9 +116,11 @@ in the script tests.
     - known limit: `rustup check` has no time limit. It runs only in report mode, after the hook
       gates, so no commit or push waits on it;
     - three rules are correct today, but breaking them on a copy leaves all tests green (review
-      of 40e2d4c): unescaping the first dot of the x.y.z check (`1x100.0` would then pass);
-      accepting only a single digit for the major and patch numbers (`10.0.0` would then be "not
-      x.y.z"); letting the captured rustup version start with a dot.
+      of 40e2d4c):
+      - unescaping the first dot of the x.y.z check (`1x100.0` would then pass);
+      - accepting only a single digit for the major and patch numbers (`10.0.0` would then be
+        "not x.y.z");
+      - letting the captured rustup version start with a dot.
   - From the targeted review of the third-round fixes:
     - the first push to a new remote scans the whole history and stops on the accepted exception
       `cd3620d` (`CLAUDE.md`). Encode the exception if a second remote is ever added;
@@ -116,6 +128,11 @@ in the script tests.
     - `core.commentChar` other than `#`: `git commit -v` is refused (fails closed);
     - untested: `cleanup.sh` `--no-merged` with a detached HEAD at an unmerged commit; a refused
       push and a crashing hook both exit 1.
+  - Review trace (review of the closing changes of audit 0010, 2026-11-24): nothing ties an
+    APPROVED verdict to the content of the commit that follows. A change made between the
+    verdict and the commit cannot be seen later. Proposal for the owner to decide: the reviewer
+    reports `git write-tree` of its staged copy, and the auditor compares it with
+    `git rev-parse <commit>^{tree}`.
 
 ## Phase 1: how do we write files safely, before any cryptography?
 
@@ -124,10 +141,17 @@ With pure functions for names and confirmation, and a writer that never overwrit
 - [x] 1.0 Envelope names (`is_envelope`, R1a): delivered with the project setup (0.1).
 - [ ] 1.1 Portable names (`names` module, R32):
   `portable_name(raw) -> PortableName { name, changed }`.
-  - Tests, one per rule: forbidden characters, control characters, trailing dot and space,
-    reserved Windows names (any case, with extension, superscript digits), leading `-` and `.`,
-    `.`/`..`, invalid UTF-8, NFC, the 255-byte/255-unit limit without breaking a character or
-    the extension, an empty result giving the fallback name.
+  - Tests, one per rule:
+    - forbidden characters;
+    - control characters;
+    - trailing dot and space;
+    - reserved Windows names (any case, with extension, superscript digits);
+    - leading `-` and `.`;
+    - `.` and `..`;
+    - invalid UTF-8;
+    - NFC;
+    - the 255-byte/255-unit limit, without breaking a character or the extension;
+    - an empty result, which gives the fallback name.
   - Property tests (`proptest`): the output is always valid on all three systems, and idempotent
     (`portable(portable(x)) == portable(x)`).
 - [ ] 1.2 Collision key and free name (R17, R32): `collision_key` ignores case and
@@ -148,11 +172,6 @@ With pure functions for names and confirmation, and a writer that never overwrit
   - Detection of sensitive folders (drive roots, home, Desktop, Documents, system folders,
     network share roots) and of a risky run: a sensitive folder, or more than 10,000 files of
     any kind over all the folders, subfolders included.
-  - Tests from R34 "Counting": 10,000 against 10,001, also as a total over several folders;
-    files not counted; a selected folder that is a symbolic link; overlaps.
-  - Tests from R34 "Several folders": overlaps; a symbolic link to each kind of sensitive
-    folder.
-  - Test for R28: each kind of sensitive folder selected directly.
 - [ ] 1.6 Confirmation logic (R28–R30). First decide the questions "Before 1.6" in
   `docs/design.md`.
   - Pure functions turn the counts, the folder, the way the run started (terminal, dialog via
@@ -160,13 +179,6 @@ With pure functions for names and confirmation, and a writer that never overwrit
     answer.
   - The question is a typed count (R28 risky run, R29) or a yes/no question with default No
     (R30). Typestate `ConfirmedPlan`.
-  - Tests: the R34 items "Risky run at the terminal", "Yes/no questions" and "Scripts".
-  - Tests: the answers of R34 "Writing and undo" at the count of documents.
-  - Tests from R34 "Counting": both counts in each row and in the totals of the terminal
-    summary; the reason for a risky run; the number typed is the files to process, also when the
-    run is risky only by the 10,000 limit.
-  - Tests from R34 "Several folders": the typed total; one sensitive folder makes the whole run
-    risky; all folders empty stop the run.
   - The dialogs themselves come with the menus (5.2).
 - [ ] 1.7 Safe writer (R31). First decide the questions "Before 1.7" in `docs/design.md`.
   - `create_new`, the next free name on a race, removal of partial files.
@@ -186,9 +198,8 @@ With a BER reader, a CMS parser and one thin run of the whole flow.
 - [ ] 2.3 End-to-end slice: `check` and `extract` on simple fixtures through the real flow.
   - Minimal console output with `--plain` and `--no-color` (R35); minimal JSON (R15).
   - Written documents recorded in the report with SHA-256, and `undo` (R33).
-  - Tests from R34 "Several folders": one report per selected folder that is not inside another.
-  - Tests from R34 "Writing and undo": the `undo` cases (an empty answer or `n` removes nothing;
-    a modified file; a report that records no document).
+  - The first end-to-end tests in `tests/*.rs` use `assert_cmd` and `predicates`, declared in
+    `Cargo.toml` since 0.1 (audit 0001, F12).
 
 ## Phase 3: how do we verify signatures and time stamps?
 
@@ -215,10 +226,14 @@ One layer at a time: cryptography, certificates, trusted lists, chains, time sta
 - [ ] 3.9 Revocation (R49). First decide the questions "Before 3.9" in `docs/design.md`.
   - Data embedded in the signature, a CRL per CA with cache, one check per certificate,
     "revocation not checked" offline.
-  - Negative tests: revoked before and after the time stamp; revoked with no time stamp (cannot
-    be determined, never invalid); stale or forged embedded data; a forged or oversized CRL; a
-    CRL older than the reference time; an expired certificate no longer listed; a distribution
-    point outside `http`/`https`.
+  - Negative tests:
+    - revoked before and after the time stamp;
+    - revoked with no time stamp (cannot be determined, never invalid);
+    - stale or forged embedded data;
+    - a forged or oversized CRL;
+    - a CRL older than the reference time;
+    - an expired certificate no longer listed;
+    - a distribution point outside `http`/`https`.
   - Also: an embedded CRL older than the reference time when the CA's CRL cannot be fetched
     ("revocation not checked").
 
@@ -241,10 +256,9 @@ remove it.
 
 - [ ] 5.1 Install manifest (R41). First decide how `create_new` applies to registry keys and
   `.workflow` folders, and the other questions "Before 5.1" in `docs/design.md`.
-- [ ] 5.2 Context menu per OS (R21, R38) with the confirmation dialogs (R30) and their R34
-  tests; Windows "Installed apps" entry (R42). First decide the questions "Before 5.2" in
-  `docs/design.md`: Enter in a number field, what the shorter dialog summary must show, and the
-  other questions.
+- [ ] 5.2 Context menu per OS (R21, R38) with the confirmation dialogs (R30); Windows "Installed
+  apps" entry (R42). First decide the questions "Before 5.2" in `docs/design.md`: Enter in a
+  number field, what the shorter dialog summary must show, and the other questions.
 - [ ] 5.3 `uninstall` (R40–R43). First decide what happens to a file in the cache folder that
   the tool did not write (questions "Before 5.3" in `docs/design.md`).
 
@@ -257,4 +271,4 @@ As one self-contained executable per platform, tested on the company PC before `
 - [ ] 6.2 Test on the company Windows PC (antivirus, SmartScreen, AppLocker) with the real
   corpus.
 - [ ] 6.3 Manual accessibility checks, `docs/accessibility.md` (R39); user guide (R37).
-- [ ] 6.4 `1.0.0` when ready to replace the old tool.
+- [ ] 6.4 `1.0.0` when ready to replace the old tool. Before it, every case of R34 has a test.

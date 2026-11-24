@@ -79,9 +79,13 @@ Yes, seven:
   with screen readers (R35): words, not symbols.
 - Texts without headings (commit messages, comments, the tool's strings) keep the rest: answer
   first, short sentences, nothing to cut.
-- Numbered lists and fixed formats keep their labels and layout. Examples: requirements
-  `R44.`, roadmap steps `3.4`, the reviewer's `VERDICT:` line, the audit report skeleton, the
-  front matter of agent prompts. The text inside them follows the guide.
+- Numbered lists and fixed formats keep their labels and layout. The text inside them follows
+  the guide. Examples:
+  - requirements `R44.` and roadmap steps `3.4`;
+  - the reviewer's `VERDICT:` line and the audit report skeleton;
+  - the front matter of agent prompts;
+  - headings such as `### Before 1.5 (walk and count)` in "What is still open?" in
+    `docs/design.md`, which roadmap steps point to.
 - Audit reports in `docs/audits/` are records: they are never rewritten.
 
 ## Who checks?

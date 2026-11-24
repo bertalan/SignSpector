@@ -162,6 +162,6 @@ Requirements and design are in [docs/design.md](docs/design.md), the order of wo
 [docs/roadmap.md](docs/roadmap.md), contributor rules in [CLAUDE.md](CLAUDE.md). Every text
 follows the writing guide, [docs/writing.md](docs/writing.md).
 
-## License
+## Which licence applies?
 
 [MIT](LICENSE)

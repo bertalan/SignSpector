@@ -27,16 +27,42 @@ the CI workflow. There is no exception for "infrastructure".
    rule on a copy and seeing at least one test fail. A rule that no test notices gets a test.
    One exception, decided by the owner: in the "Rust" section of `audit-status.sh`, a breakage
    that shows no bug is listed, not tested (`docs/roadmap.md`, 0.5).
-5. Independent review: a newly started `fable-reviewer` agent (different model) for every
-   review. Brief it only with the scope and where the requirements are. Never resume it, and
-   never give it my conclusions or earlier findings. Fix its findings, or explain to the user
-   why not. Post every verdict as a comment on the pull request: APPROVED or CHANGES NEEDED, the
-   findings in short, how each was closed. The approval then leaves a trace an audit can check;
-   the PR description alone is not enough. The comment is a summary written for the public, with
-   repository-relative paths, never the pasted report (reports carry local paths).
+5. Independent review, by a newly started `fable-reviewer` agent for every review: a different
+   model, of equal or higher capability than the author's. Never resume the reviewer. The brief
+   holds only:
+   - the scope and where the requirements are;
+   - the planned commit message, which the reviewer checks as a claim, not a fact;
+   - the red and green runs, when no PR exists yet;
+   - any owner's decision the changes apply, quoted.
+
+   Never give the reviewer other conclusions of the author or earlier findings. The owner
+   decided the brief and these rules on 2026-11-24:
+   - It reviews the uncommitted changes, before the commit. After CHANGES NEEDED, the fixed
+     changes get a new review.
+   - Commit and push only when the checks are complete. The review must be APPROVED. When a
+     coherence audit is due, it runs first, and each of its findings must be closed.
+   - A finding of a review or an audit is closed in one of three ways:
+     - fixed and reviewed;
+     - written into the roadmap step that will fix it;
+     - declared wrong by the owner, with the reason in a PR comment.
+   - The audit report is committed alone first, without a `fable-reviewer` review. It is pushed
+     with the commit that closes its findings, or alone when no commit is needed.
+   - Minor rounds have a limit. A round that is APPROVED with only minor points is a minor
+     round. After the third minor round on the same changes, the minor points left move to the
+     next PR, and no new round runs for them. Its verdict comment lists them as moved. The first
+     commit of the next PR fixes them or writes them into the roadmap step that will fix them.
+   - Some points never move: bugs, missing tests, and points on personal data, confirmation or
+     writing files (R28–R34). They are fixed and reviewed.
+
+   Post every verdict as a comment on the pull request, as soon as the PR exists: APPROVED or
+   CHANGES NEEDED, the findings in short, how each was closed. After the commit, a comment names
+   the commit that holds the approved changes. The approval then leaves a trace an audit can
+   check; the PR description alone is not enough. The comment is a summary written for the
+   public, with repository-relative paths, never the pasted report (reports carry local paths).
    `check-public.sh` does not scan PR comments: save the comment to a file and run
    `sh scripts/check-public.sh --message <file>` before posting.
-6. Commit only when the user asks. The hooks (`.githooks/`) do this:
+6. Commit only when the user asks, and only when the checks of step 5 are complete. The hooks
+   (`.githooks/`) do this:
    - pre-commit runs the public-repository check, the audit cadence gate, the script tests when
      scripts or hooks change, fmt, clippy and tests;
    - commit-msg scans the message;
@@ -53,8 +79,8 @@ Unit tests sit beside the code (`#[cfg(test)]`). End-to-end tests of the executa
 
 ## How do we keep long work from drifting?
 
-Long work across sessions drifts: docs claim things the code does not do, references point to
-functions or options that never existed, work is left half-done. These rules work against it.
+With the six rules below. Long work across sessions drifts: docs claim things the code does not
+do, references point to functions or options that never existed, work is left half-done.
 
 - Session start: run `sh scripts/audit-status.sh` and tell the user what it shows. Unfinished
   work comes first: uncommitted changes, stashes, unpushed commits, unmerged branches, open or
@@ -63,18 +89,19 @@ functions or options that never existed, work is left half-done. These rules wor
   (`step/1.1-portable-names`), pushed early as a draft PR. Mark it ready only when CI is green
   on all four jobs (read in the job list, never assumed from a pending run) and `fable-reviewer`
   approved, with its verdict posted on the PR. Merge it into `main` locally by fast-forward:
-  `git switch main && git merge --ff-only step/x && git push`. That keeps the commits CI
-  checked, a linear history and the pre-push hook. The GitHub merge button is not used: it
-  rewrites commits. One step is open at a time. A session never ends with a draft PR without a
-  comment saying its state and next step. Abandoned work is closed with the reason, never left
-  open.
-- Every 5 commits, a coherence audit by the `coherence-auditor` agent (Fable, fresh context,
-  read-only). It checks requirements against tests and code, the existence of every concrete
-  reference, the docs against each other, unfinished work, project rules and health. Its report
-  is saved as `docs/audits/NNNN-YYYY-MM-DD.md` and committed alone (`audit: NNNN`). The hooks
-  enforce the cadence: pre-commit refuses a 6th commit without an audit, pre-push refuses to
-  push past it. The gate is a reminder, not a proof: any added report satisfies it. The review
-  of the report is what counts.
+  `git switch main && git merge --ff-only step/x && git push`. The merged commits are the same
+  ones CI checked, history stays linear and the pre-push hook runs. The GitHub merge button is
+  not used: it rewrites commits. One step is open at a time. A session never ends with a draft
+  PR without a comment saying its state and next step. Abandoned work is closed with the reason,
+  never left open.
+- Every 5 commits, a coherence audit by the `coherence-auditor` agent (Fable, a different model
+  of equal or higher capability than the author's, fresh context, read-only). It checks
+  requirements, tests and code against each other, the existence of every concrete reference,
+  the docs against each other, unfinished work, project rules and health. Its report is saved as
+  `docs/audits/NNNN-YYYY-MM-DD.md` and committed alone (`audit: NNNN`). The hooks enforce the
+  cadence: pre-commit refuses a 6th commit without an audit, pre-push refuses to push past it.
+  The gate is a reminder, not a proof: any added report satisfies it. Checking the report's
+  findings is what counts.
 - Findings are verified before acting, because the auditor can be wrong too. Each finding
   carries evidence (`file:line` or command output). Check it, then fix it in a normal TDD cycle.
   When a doc and the code disagree on what the tool should do, ask the user which one is right.
@@ -97,8 +124,9 @@ functions or options that never existed, work is left half-done. These rules wor
 
 ## What may never reach the public repository?
 
-`github.com/bertalan/SignSpector` is public. Everything committed is published, and it stays in
-the history even if deleted later. Before every commit and push:
+Anything that could carry personal or sensitive data. `github.com/bertalan/SignSpector` is
+public: everything committed is published, and it stays in the history even if deleted later.
+Before every commit and push:
 
 - Never commit real signed documents or anything extracted from them. Never commit names, codici
   fiscali, email addresses, phone numbers, company or office names, hostnames, IPs, credentials,
@@ -139,6 +167,9 @@ the history even if deleted later. Before every commit and push:
 
 ## Which rules hold everywhere?
 
+These rules hold in every change. They cover texts and language, confirmation and writing
+files, accessibility, uninstall, malformed input, PowerShell and dependencies.
+
 - Every text follows `docs/writing.md`: docs, comments, commit messages, PR texts, agent
   prompts, the tool's strings. Texts answer the reader's questions, answer first, in short
   sentences, with code and commands verbatim.
@@ -161,9 +192,10 @@ the history even if deleted later. Before every commit and push:
   with answers in words (R30, R35). From the context menu the same confirmations come in a
   native dialog, focus on Cancel. From a script they refuse (R30). `--plan` shows the plan and
   stops.
-- These rules are for the tool. The developer script `scripts/cleanup.sh` is the one exception:
-  it removes only junk and merged branches, without asking (see above). Never ask the developer
-  to type numbers in chat: the typed count is a rule of the tool, not of the conversation.
+- The confirmation rules are for the tool. The developer script `scripts/cleanup.sh` is the one
+  exception: it removes only junk and merged branches, without asking (see above). Never ask the
+  developer to type numbers in chat: the typed count is a rule of the tool, not of the
+  conversation.
 - Originals are only read, never modified, moved or renamed. Existing files are never
   overwritten: if "x.pdf" exists with other content, the new file is "x (1).pdf".
 - Never process right after a person chooses a folder. First count and ask for confirmation
@@ -173,7 +205,8 @@ the history even if deleted later. Before every commit and push:
   scripts).
 - How every file is written, and the only files ever replaced, is R31 in `docs/design.md`: read
   it before touching any write path. File names are valid on Windows, macOS and Linux at once
-  (R32). Any change here needs the tests of R34.
+  (R32). Any change to counting, confirmation, write paths or file names, or to anything else
+  R34 covers, needs the tests R34 lists.
 - Accessibility is a requirement, not a polish step (EN 301 549; WCAG 2.2 AA for the report;
   R35–R39). Never convey information by colour or symbols alone. Honour `NO_COLOR`, `--no-color`
   and `--plain`. No spinners or rapid line rewriting, no time limits on prompts. Console text is
