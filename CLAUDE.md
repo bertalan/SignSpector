@@ -37,8 +37,8 @@ the CI workflow. There is no exception for "infrastructure".
 
    Never give the reviewer other conclusions of the author or earlier findings. The owner
    decided the brief and these rules on 2026-11-24:
-   - It reviews the uncommitted changes, before the commit. After CHANGES NEEDED, the fixed
-     changes get a new review.
+   - The reviewer reviews the uncommitted changes, before the commit. After CHANGES NEEDED, the
+     fixed changes get a new review.
    - Commit and push only when the checks are complete. The review must be APPROVED. When a
      coherence audit is due, it runs first, and each of its findings must be closed.
    - A finding of a review or an audit is closed in one of three ways:
@@ -48,11 +48,15 @@ the CI workflow. There is no exception for "infrastructure".
    - The audit report is committed alone first, without a `fable-reviewer` review. It is pushed
      with the commit that closes its findings, or alone when no commit is needed.
    - Minor rounds have a limit. A round that is APPROVED with only minor points is a minor
-     round. After the third minor round on the same changes, the minor points left move to the
-     next PR, and no new round runs for them. Its verdict comment lists them as moved. The first
-     commit of the next PR fixes them or writes them into the roadmap step that will fix them.
-   - Some points never move: bugs, missing tests, and points on personal data, confirmation or
-     writing files (R28–R34). They are fixed and reviewed.
+     round. The count is of the minor rounds before one commit. A CHANGES NEEDED round in
+     between does not restart it; the next commit starts a new count. After the third minor
+     round, the minor points left move to the next PR. Those of the third round move too. No
+     new round runs for them. The verdict comment of that round lists them as moved. The
+     first commit of the next PR fixes them or writes them into the roadmap step that will fix
+     them. A point on the message of a commit already pushed is closed by a note in the message
+     of the next commit; history is not rewritten.
+   - Some points never move: bugs, missing tests, and points on personal data, or on
+     confirmation or writing files (R28–R34). They are fixed and reviewed before the commit.
 
    Post every verdict as a comment on the pull request, as soon as the PR exists: APPROVED or
    CHANGES NEEDED, the findings in short, how each was closed. After the commit, a comment names

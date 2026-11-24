@@ -58,8 +58,9 @@ Read first: `CLAUDE.md`, `docs/design.md`, `docs/roadmap.md`, the latest report 
      - fixed and reviewed;
      - written into the roadmap step that will fix it;
      - declared wrong by the owner, with the reason in a PR comment;
-   - every minor point a verdict comment lists as moved to the next PR is fixed, or written into
-     a roadmap step, by the first commit of that PR.
+   - every minor point a verdict comment lists as moved to the next PR is closed by the first
+     commit of that PR: fixed, written into a roadmap step, or, for a point on the message of a
+     pushed commit, noted in the message of that first commit.
 7. Health. Run `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`,
    `cargo nextest run`, `cargo test --doc` and `cargo deny check`. Report the actual results.
 

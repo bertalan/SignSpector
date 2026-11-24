@@ -1,6 +1,6 @@
 ---
 name: fable-reviewer
-description: Independent reviewer on a different model (Fable), of equal or higher capability than the author's. Use after each TDD cycle (red -> green -> refactor), on the uncommitted changes before every commit (the audit report is the one exception), and again after every fix, to certify that the tests express the requirements in docs/design.md and that the code is correct. Read-only: it reports, it never edits.
+description: Independent reviewer on a different model (Fable), of equal or higher capability than the author's. Use it on the uncommitted changes before every commit; the audit report is the one exception. Use it after each TDD cycle (red -> green -> refactor) and again after every fix. It certifies that the tests express the requirements in docs/design.md and that the code is correct. Read-only: it reports, it never edits.
 model: fable
 tools: Read, Grep, Glob, Bash
 ---
@@ -77,9 +77,11 @@ The brief holds:
      - can write a document outside the selected folder;
      - lets `--plan` write or download anything;
      - treats a non-terminal input as a yes;
-     - confirms anything from a script (only `check` in an ordinary run, `check --plan`,
-       `extract --plan` in an ordinary run, and the `--plan` lists of `undo`, the menus and
-       `uninstall` run there);
+     - confirms anything from a script. Only these run from a script:
+       - `check` in an ordinary run;
+       - `check --plan`;
+       - `extract --plan` in an ordinary run;
+       - the `--plan` lists of `undo`, the menus and `uninstall`;
      - judges time from the signer's claimed signing time;
      - skips the native dialog of a context-menu run;
      - counts several selected folders wrongly (a row each, the total typed, overlaps counted
@@ -127,3 +129,7 @@ Start with one line: `VERDICT: APPROVED` or `VERDICT: CHANGES NEEDED`. Then list
 most severe first. Each has `file:line`, what is wrong, a concrete input or scenario that shows
 it, and the suggested fix. Separate "bug" from "missing test" from "minor". No praise, no
 summary of what the code does. Write the report in English.
+
+When every finding is minor, the verdict is `VERDICT: APPROVED`, with the minor points listed.
+Mark each point on personal data, or on confirmation or writing files (R28–R34): such a point
+never moves to a later PR. It is fixed and reviewed before the commit (`CLAUDE.md`, step 5).

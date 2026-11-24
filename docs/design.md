@@ -67,7 +67,7 @@ saves the signed documents beside the originals, ready to open.
   only. With `--report <file>`, one file for the whole run instead. `--no-report` skips it;
   R16 says when it does not apply.
 - R15. With `--json <file>`, a JSON file with the same information, for scripts.
-- R16. **What each command writes.**
+- R16. What each command writes.
   - `check` (the default) writes no document. It writes only the HTML report (R14), the JSON
     file (R15) and the tool's own cache of trusted lists and CRLs (R47).
   - `extract` writes the signed documents beside the originals (`Relazione.pdf.p7m` ->
@@ -88,7 +88,7 @@ saves the signed documents beside the originals, ready to open.
 - R32 has the rules for valid names.
 
 ### How is it used?
-- R19. **Command line.** Commands: `check <dir>...` (default), `extract <dir>...`,
+- R19. Command line. Commands: `check <dir>...` (default), `extract <dir>...`,
   `undo <report>`, `install-menu`, `uninstall-menu`, `uninstall`. There is no `--apply`,
   `--yes` or `--expect`.
   - Every command that changes files or the system shows the exact plan first and acts only
@@ -128,7 +128,7 @@ saves the signed documents beside the originals, ready to open.
     `--threads`, `--offline`, `--trust-lists <auto|all|codes>`, `--trust-list <file>`,
     `--lang <code>`, `--interactive`, `--plain`, `--no-color`, `--plan`. Help is translated
     (R27).
-- R20. **Interactive end of run** (double-click on Windows, context menu, `--interactive`).
+- R20. Interactive end of run (double-click on Windows, context menu, `--interactive`).
   After the analysis, the tool offers to view the report or to extract. An extraction goes
   through the write plan and its confirmation (R29) and reuses the analysis already done.
   - The first report is never rewritten. The extraction writes a second report beside it (next
@@ -169,7 +169,7 @@ No document is written without a second, separate confirmation on the full write
 There is never an implicit yes: R30 says how each kind of run confirms, and what runs from a
 script. R31 says how every file is created and which files may ever be replaced.
 
-- R28. **Confirm before analysing.** After the folders are chosen, the tool only counts (no
+- R28. Confirm before analysing. After the folders are chosen, the tool only counts (no
   envelope is opened) and asks a yes/no question (R30).
   - The question shows: folder, number of files to process (the envelopes, R1a), number of
     files of any kind, total size, number of subfolders, unreadable folders that will be
@@ -186,12 +186,12 @@ script. R31 says how every file is created and which files may ever be replaced.
     hidden folders, behind symbolic links met during the walk, or in unreadable folders are not
     counted. A file in overlapping folders counts once.
   - Each kind of sensitive folder is judged on the path after resolving symbolic links.
-- R29. **Confirm before writing.** An extraction first builds the complete write plan and shows
+- R29. Confirm before writing. An extraction first builds the complete write plan and shows
   it: new documents, documents already present with identical content (not rewritten),
   documents saved under an alternative name `x (1).pdf`, and "existing files modified: 0"
   (always zero, shown as a guarantee). The full list can be viewed. To proceed, the user types
   the number of documents to write (language-neutral, cannot be confirmed by a stray key).
-- R30. **Three ways to confirm, never an implicit yes.**
+- R30. Three ways to confirm, never an implicit yes.
   - Terminal (`std::io::IsTerminal` on input and output): questions in the console (R19, R28,
     R29). "Terminal" means both input and output are a terminal. With output redirected
     (`| tee log`, `> file`) the run counts as a script. Yes/no questions default to No, and
@@ -216,7 +216,7 @@ script. R31 says how every file is created and which files may ever be replaced.
     not a confirmation. Only these run: `check` in an ordinary run, `check --plan` (also in a
     risky run), `extract --plan` in an ordinary run, and `--plan` of `undo`, the menus and
     `uninstall` (a list).
-- R31. **Never overwrite, never write outside.** This is the one place for these rules.
+- R31. Never overwrite, never write outside. This is the one place for these rules.
   - In code, writing a document requires a `ConfirmedPlan` that only the confirmation step can
     build (typestate): a path that writes without confirmation does not compile. Originals are
     held in a read-only `Original` type that write functions do not accept.
@@ -240,7 +240,7 @@ script. R31 says how every file is created and which files may ever be replaced.
     resolving `..` and symbolic links.
   - Free disk space is checked before starting. Ctrl+C finishes the current file, stops, and the
     report records what was done.
-- R32. **Portable file names.** Names taken from envelopes (and the `(n)` variants) must be
+- R32. Portable file names. Names taken from envelopes (and the `(n)` variants) must be
   valid on Windows, macOS and Linux at the same time, and on FAT32 and exFAT, whatever
   system the tool runs on (archives move between systems):
   - removed or replaced: `/` `\` `:` `*` `?` `"` `<` `>` `|`, NUL and control characters
@@ -256,13 +256,13 @@ script. R31 says how every file is created and which files may ever be replaced.
     APFS default are case-insensitive; APFS treats NFC and NFD as the same name), so two
     documents never compete for names that the file system sees as equal;
   - the original name, when changed, is shown in the report.
-- R33. **Undo.** The report written by an extraction records every document written, with its
+- R33. Undo. The report written by an extraction records every document written, with its
   SHA-256 (R16, R20). `signspector undo <report>` removes only files written by SignSpector
   whose content still matches that hash. Changed or missing files are listed and left alone;
   originals are never touched. It shows what it would remove and removes it after a yes/no
   question (R30); never from a script. On a report that records no document it removes
   nothing and says so.
-- R34. **Proof by tests.** A shared test helper snapshots the whole folder (paths and SHA-256)
+- R34. Proof by tests. A shared test helper snapshots the whole folder (paths and SHA-256)
   before and after every end-to-end test: originals identical, nothing changed but the
   confirmed plan.
   - Writing and undo (R29, R31, R32, R33): at the count of documents (R29), an empty answer,
@@ -348,7 +348,7 @@ Romania, France and the others. The LOTL points to each national trusted list an
 certificates that sign it. Checked on 2026-11-22: LOTL no. 398, 43 pointers (EU-27, Iceland,
 Liechtenstein, Norway, United Kingdom).
 
-- R44. **Chain of trust.** The executable embeds the LOTL and the Commission's LOTL signing
+- R44. Chain of trust. The executable embeds the LOTL and the Commission's LOTL signing
   certificates (published in the Official Journal of the EU).
   - The LOTL is used only if it verifies against the embedded Commission certificates.
   - A national list is used only if its XAdES signature verifies against the certificates the
@@ -358,15 +358,15 @@ Liechtenstein, Norway, United Kingdom).
     network the tool refreshes them into its cache (R47).
   - XAdES needs XML canonicalisation (exclusive C14N) and XML signature verification. No mature
     pure-Rust library exists, so we write it here, test first, as carefully as the BER reader.
-- R45. **Automatic choice.** The analysis collects the country of every certifier found in the
+- R45. Automatic choice. The analysis collects the country of every certifier found in the
   files (`C=` of the issuing CA) and loads only those lists: from the cache if still valid,
   otherwise downloaded. The write plan (R29) and the report name them, for example "signatures
   from 3 countries: Italy, Romania, France; lists: Italy and France up to date, Romania
   downloaded now".
-- R46. **Settable.** `--trust-lists auto` (default), `all` or `it,ro,fr`. `--trust-list <file>`
+- R46. Settable. `--trust-lists auto` (default), `all` or `it,ro,fr`. `--trust-list <file>`
   loads a list by hand. `--offline` uses only the embedded copies and the cache. A missing list
   is reported as such ("list of Romania not available offline"), never as an invalid signature.
-- R47. **Cache.** This is the one place for the cache rules.
+- R47. Cache. This is the one place for the cache rules.
   - Lists, and the CRLs of R49, are cached in the SignSpector cache folder and refreshed when
     their own `NextUpdate` date passes. A cached list that verifies (R44) takes precedence over
     the embedded copy. Removing the cache is R40.
@@ -378,12 +378,12 @@ Liechtenstein, Norway, United Kingdom).
     taken from the input.
   - It never replaces another file found in that folder. A cache file is replaced only as R31
     says: a new file, a rename, no symbolic link.
-- R48. **Verdicts.** Qualified status is checked at the reference time (R9) using the service
+- R48. Verdicts. Qualified status is checked at the reference time (R9) using the service
   history in the list: a service withdrawn later still validates an earlier signature. A
   certifier on no list is reported as "not on a European trusted list", distinct from "invalid
   signature". Any country listed in the official LOTL is accepted, the United Kingdom included.
   The report names every list used (country, sequence number, issue date).
-- R49. **Revocation without a query per signature.** Network traffic grows with the number of
+- R49. Revocation without a query per signature. Network traffic grows with the number of
   certificates, never with the number of files. There is one result per certificate: the same
   certificate in a thousand files is checked once. A CRL is fetched at most once per CA per
   run (partitioned CRLs: question "Before 3.9").
@@ -424,7 +424,7 @@ WCAG 2.2 level AA for the HTML report and the user guide. Whoever deploys the to
 public administration checks the applicable obligations (for example an accessibility
 statement).
 
-- R35. **Console.**
+- R35. Console.
   - Information is never conveyed by colour or symbols alone. Every status is a word ("OK",
     "Warning", "Error" in the user's language); colours only reinforce it, with sufficient
     contrast on both light and dark terminals, never red/green as the only difference. Colours
@@ -438,7 +438,7 @@ statement).
     out in words; keyboard only; no time limits on any prompt.
   - Messages in plain language. Every error says what happened, which file, and what the user
     can do.
-- R36. **HTML report (WCAG 2.2 AA).**
+- R36. HTML report (WCAG 2.2 AA).
   - `lang` set to the report language; a meaningful `<title>`; landmarks (`header`, `main`,
     `nav`) and a "skip to content" link; headings in order, no level skipped.
   - Real tables with `<caption>` and `<th scope>`. Status is shown as text (with an optional
@@ -449,29 +449,29 @@ statement).
     data tables, which scroll on their own).
   - Fully keyboard operable (`<details>` and `<summary>` for expandable parts), visible focus,
     no keyboard traps; works without JavaScript; descriptive link texts; prints readably.
-- R37. **Documentation and help** (EN 301 549 ch. 12): `--help` and the user guide are plain text
+- R37. Documentation and help (EN 301 549 ch. 12): `--help` and the user guide are plain text
   or HTML (no scanned or untagged PDF), translated, and include a section on the accessibility
   features (`--plain`, `--no-color`, keyboard use, screen readers).
-- R38. **Context menu and dialogs**: only native OS menus and native dialogs, which inherit the
+- R38. Context menu and dialogs: only native OS menus and native dialogs, which inherit the
   OS accessibility (screen readers, keyboard), with clear labels in the user's language. The
   dialogs ask the confirmations of R30 for runs started from the context menu. No custom-drawn
   GUI, no PowerShell. Helper programs that show a dialog are run from fixed system paths
   (`/usr/bin/osascript`, `/usr/bin/zenity`...), never found through `PATH`. Folder names reach
   them as arguments, never spliced into script source or markup.
-- R39. **Verification.** Automated: unit tests on the HTML structure (lang, headings, table
+- R39. Verification. Automated: unit tests on the HTML structure (lang, headings, table
   headers, no colour-only status), an accessibility checker on sample reports in CI (for
   example `axe-core` or `pa11y`), and console tests with `NO_COLOR` and `--plain`. Manual
   before each release: NVDA on Windows, VoiceOver on macOS, Orca on Linux, keyboard only, 200%
   zoom, Windows high contrast. Results are recorded in `docs/accessibility.md`.
 
 ### How is it uninstalled?
-- R40. **`signspector uninstall`** removes everything SignSpector added to the system, and only
+- R40. `signspector uninstall` removes everything SignSpector added to the system, and only
   that: context menu entries, the Windows "Installed apps" entry (R42), the trust-list and CRL
   cache, and the install manifest (R41). SignSpector saves no preferences and keeps no log
   files; the record of written documents is in the report (R33). As every command that changes
   something (R19), it shows the exact list of what it would remove and removes it after a
   yes/no question; never from a script (R30); accessible like the rest (R35).
-- R41. **Only what we installed.**
+- R41. Only what we installed.
   - `install-menu` records every item it creates (path or registry key, plus a hash of the
     content) in a manifest in the SignSpector config folder. `uninstall` removes only manifest
     items that still match; it reports changed or foreign items and leaves them.
@@ -487,7 +487,7 @@ statement).
     Running `install-menu` twice is harmless.
   - `install-menu` and `uninstall-menu` are the only commands that replace the manifest (R31);
     `uninstall` removes it (R40).
-- R42. **Per platform.**
+- R42. Per platform.
   - Windows: per-user, no admin. Registry keys under `HKCU`, plus an uninstall entry in
     `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SignSpector`, so the user finds
     it in Settings -> Apps. Its `UninstallString` runs
@@ -500,7 +500,7 @@ statement).
     manifest in `~/.config/signspector`. `.deb` and `.rpm` remove only system files they
     installed; the per-user items are removed by `signspector uninstall` (the package's removal
     message says so).
-- R43. **User data is never removed**: originals, extracted documents and reports stay. At the
+- R43. User data is never removed: originals, extracted documents and reports stay. At the
   end the tool lists what it left in place on purpose and where the executable is.
 
 ## How is the code organised?

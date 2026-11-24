@@ -4,12 +4,12 @@
 
 Each step is test-driven: red, green, refactor. A new `fable-reviewer` agent reviews the changes
 of each commit before they are committed; the audit report is the one exception (`CLAUDE.md`). A
-step is done when the review of its last changes is APPROVED and CI is green on all four jobs.
-Only then is its PR merged (owner's decision, 2026-11-24). Each step writes the tests of R34 for
-the commands and modules it introduces, as soon as they can be tested. R34 is the only list of
-these tests; the review of each step checks the step against it (owner's decision, 2026-11-24).
-Mark the step done here (`[x]`) in the PR that completes it; the coherence audit checks that the
-mark is true. Requirements (R…) are in `docs/design.md`.
+step is done when the review of its last changes is APPROVED and CI is green on all four jobs on
+its last commit. Only then is its PR merged (owner's decision, 2026-11-24). Each step writes the
+tests of R34 for the commands and modules it introduces, as soon as they can be tested. R34 is
+the only list of these tests; the review of each step checks the step against it (owner's
+decision, 2026-11-24). Mark the step done here (`[x]`) in the PR that completes it; the
+coherence audit checks that the mark is true. Requirements (R…) are in `docs/design.md`.
 
 ## Why this order?
 
@@ -75,7 +75,8 @@ in the script tests.
   3.9, 4.2, 4.4, 5.1, 5.2, 5.3.
 - [ ] 0.5 Remaining gaps in the rule-script tests. The reviews of PR #1, PR #2 and PR #3 found
   them, and they are accepted as known limits for now. Each needs a test before the code
-  changes.
+  changes, except the last item. That one, the review trace, is an open point on the review
+  process, for the owner to decide.
   - `check-public.sh`:
     - failures of `git show`, `ls-tree` and `diff-tree` are not each tested;
     - names of people, phone numbers, IPs, base64 content and branch names are not detected
