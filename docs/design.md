@@ -195,10 +195,11 @@ script. R31 says how every file is created and which files may ever be replaced.
   - Terminal (`std::io::IsTerminal` on input and output): questions in the console (R19, R28,
     R29). "Terminal" means both input and output are a terminal. With output redirected
     (`| tee log`, `> file`) the run counts as a script. Yes/no questions default to No, and
-    Enter alone cancels. A typed number confirms only if it is the right one (owner's decision,
-    2026-11-23). Any other answer (a wrong number, `y`, `n`, Enter alone) never confirms. This
-    holds for the files to process of a risky run (R28) and for the documents to write (R29).
-    The answers and the default are written out in words in the user's language (R35, R27).
+    Enter alone cancels. A typed number confirms only if it is the right one. Any other answer
+    (a wrong number, `y`, `n`, Enter alone) never confirms. This holds for the files to process
+    of a risky run (R28) and for the documents to write (R29). The owner decided both rules on
+    2026-11-23. The answers and the default are written out in words in the user's language
+    (R35, R27).
   - Context menu (no terminal, started with `--interactive`): the same confirmations, with the
     same number to type and the same default, in a native dialog (R38), with a shorter summary
     than the console.
@@ -264,12 +265,12 @@ script. R31 says how every file is created and which files may ever be replaced.
 - R34. **Proof by tests.** A shared test helper snapshots the whole folder (paths and SHA-256)
   before and after every end-to-end test: originals identical, nothing changed but the
   confirmed plan.
-  - Writing and undo (R29, R31, R32, R33): at the count of documents (R29), an empty answer, `y`,
-    `n` or a wrong number writes nothing; at the `undo` question, an empty answer or `n` removes
-    nothing; a file appearing between plan and write; names with `..`, reserved names, forbidden
-    characters, NFC/NFD and case collisions, over-long names; a symbolic link pointing outside;
-    disk full (simulated); `undo` with a modified file; `undo` on a report that records no
-    document.
+  - Writing and undo (R29, R31, R32, R33): at the count of documents (R29), an empty answer,
+    `y`, `n` or a wrong number writes nothing; at the `undo` question, an empty answer or `n`
+    removes nothing; a file appearing between plan and write; names with `..`, reserved names,
+    forbidden characters, NFC/NFD and case collisions, over-long names; a symbolic link pointing
+    outside; disk full (simulated); `undo` with a modified file; `undo` on a report that records
+    no document.
   - Risky run at the terminal (R28, R30): an empty answer, `y`, `n` or a wrong number starts
     no analysis.
   - Scripts (R30): every changing command, `check` and `extract --plan` in a risky run, and
@@ -575,7 +576,7 @@ answered before the roadmap step named in its heading; that step points back her
   only for scripts.
 - When is a typed number the right one? R29 calls it language-neutral. Does it accept the
   separators of the user's language (`12.345`, `12,345`), leading zeros, spaces around it (R27,
-  questions "Before 1.4")? The answer holds for the dialog text field too (R30, "Before 5.2").
+  questions "Before 1.4")? Is the answer the same for the dialog text field (R30, "Before 5.2")?
 
 ### Before 1.7 (safe writer) and the first pseudo-terminal test
 - Pseudo-terminal tests (R34) need a pty crate as a dev-dependency, accepted by `deny.toml`:
