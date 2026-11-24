@@ -4,11 +4,12 @@
 
 Each step is test-driven: red, green, refactor. A new `fable-reviewer` agent reviews the changes
 of each commit before they are committed; the audit report is the one exception (`CLAUDE.md`). A
-step is done when its tests are green on all three systems in CI and its PR is merged. Each step
-writes the tests of R34 for the commands and modules it introduces, as soon as they can be
-tested. R34 is the only list of these tests; the review of each step checks the step against it
-(owner's decision, 2026-11-24). Mark the step done here (`[x]`) in the PR that completes it; the
-coherence audit checks that the mark is true. Requirements (R…) are in `docs/design.md`.
+step is done when the review of its last changes is APPROVED and CI is green on all four jobs.
+Only then is its PR merged (owner's decision, 2026-11-24). Each step writes the tests of R34 for
+the commands and modules it introduces, as soon as they can be tested. R34 is the only list of
+these tests; the review of each step checks the step against it (owner's decision, 2026-11-24).
+Mark the step done here (`[x]`) in the PR that completes it; the coherence audit checks that the
+mark is true. Requirements (R…) are in `docs/design.md`.
 
 ## Why this order?
 
@@ -48,7 +49,7 @@ in the script tests.
 - [ ] 0.3 Fixture generator `scripts/make-fixtures.sh` (Homebrew `openssl@3`): test CA, signers,
   simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only. Private keys are never committed:
   they are generated at test time or kept in `target/`.
-- [ ] 0.4 Writing guide (`docs/writing.md`). Texts answer the reader's questions, with the
+- [x] 0.4 Writing guide (`docs/writing.md`). Texts answer the reader's questions, with the
   answer first and short sentences. Code and commands stay verbatim. Texts use no machine-made
   patterns (after Wikipedia's "Signs of AI writing"). Rewrite README, design, roadmap,
   `CLAUDE.md` and the agent prompts with it. Also in this step:
