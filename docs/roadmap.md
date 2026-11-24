@@ -75,8 +75,7 @@ in the script tests.
   3.9, 4.2, 4.4, 5.1, 5.2, 5.3.
 - [ ] 0.5 Remaining gaps in the rule-script tests. The reviews of PR #1, PR #2 and PR #3 found
   them, and they are accepted as known limits for now. Each needs a test before the code
-  changes, except the last item. That one, the review trace, is an open point on the review
-  process, for the owner to decide.
+  changes, except where an item says otherwise.
   - `check-public.sh`:
     - failures of `git show`, `ls-tree` and `diff-tree` are not each tested;
     - names of people, phone numbers, IPs, base64 content and branch names are not detected
@@ -130,11 +129,6 @@ in the script tests.
     - `core.commentChar` other than `#`: `git commit -v` is refused (fails closed);
     - untested: `cleanup.sh` `--no-merged` with a detached HEAD at an unmerged commit; a refused
       push and a crashing hook both exit 1.
-  - Review trace (review of the closing changes of audit 0010, 2026-11-24): nothing ties an
-    APPROVED verdict to the content of the commit that follows. A change made between the
-    verdict and the commit cannot be seen later. Proposal for the owner to decide: the reviewer
-    reports `git write-tree` of its staged copy, and the auditor compares it with
-    `git rev-parse <commit>^{tree}`.
 
 ## Phase 1: how do we write files safely, before any cryptography?
 

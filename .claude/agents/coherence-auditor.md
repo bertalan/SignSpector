@@ -54,13 +54,17 @@ Read first: `CLAUDE.md`, `docs/design.md`, `docs/roadmap.md`, the latest report 
    - every commit after 79025cd (audit 0010) follows an APPROVED verdict that a comment ties to
      it. Earlier commits predate the rule. The one exception is an audit report: a commit that
      adds only one file under `docs/audits/` (check with `git show --stat`);
-   - every finding of the previous audit and of the reviews is closed in one of three ways:
+   - for every such commit from 2852907 on, the tree its last APPROVED verdict comment quotes
+     equals `git rev-parse <commit>^{tree}`. When that comment quotes a subject line, it equals
+     `git log -1 --format=%s <commit>`;
+   - every finding of the previous audit and of the reviews is closed in one of these ways:
      - fixed and reviewed;
      - written into the roadmap step that will fix it;
      - declared wrong by the owner, with the reason in a PR comment;
-   - every minor point a verdict comment lists as moved to the next PR is closed by the first
-     commit of that PR: fixed, written into a roadmap step, or, for a point on the message of a
-     pushed commit, noted in the message of that first commit.
+     - for a point on the message of a pushed commit, a note in the message of a later commit;
+   - every minor point a verdict comment lists as moved is closed, in one of the ways above, by
+     the commit it moved to. That is the next commit of the same PR, or the first commit of the
+     next PR.
 7. Health. Run `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`,
    `cargo nextest run`, `cargo test --doc` and `cargo deny check`. Report the actual results.
 

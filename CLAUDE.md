@@ -41,22 +41,30 @@ the CI workflow. There is no exception for "infrastructure".
      fixed changes get a new review.
    - Commit and push only when the checks are complete. The review must be APPROVED. When a
      coherence audit is due, it runs first, and each of its findings must be closed.
-   - A finding of a review or an audit is closed in one of three ways:
+   - A finding of a review or an audit is closed in one of these ways:
      - fixed and reviewed;
      - written into the roadmap step that will fix it;
-     - declared wrong by the owner, with the reason in a PR comment.
+     - declared wrong by the owner, with the reason in a PR comment;
+     - for a point on the message of a commit already pushed, a note in the message of a later
+       commit. History is not rewritten.
    - The audit report is committed alone first, without a `fable-reviewer` review. It is pushed
      with the commit that closes its findings, or alone when no commit is needed.
    - Minor rounds have a limit. A round that is APPROVED with only minor points is a minor
      round. The count is of the minor rounds before one commit. A CHANGES NEEDED round in
      between does not restart it; the next commit starts a new count. After the third minor
-     round, the minor points left move to the next PR. Those of the third round move too. No
-     new round runs for them. The verdict comment of that round lists them as moved. The
-     first commit of the next PR fixes them or writes them into the roadmap step that will fix
-     them. A point on the message of a commit already pushed is closed by a note in the message
-     of the next commit; history is not rewritten.
+     round, the minor points left move on. Those of the third round move too. No new round runs
+     for them. They move to the next commit of the same PR when more commits are planned in it
+     (owner's decision, 2026-11-24). Otherwise they move to the first commit of the next PR. The
+     verdict comment of that round lists them as moved. The commit they move to fixes them or
+     writes them into the roadmap step that will fix them. For a point on the message of a
+     pushed commit, that commit carries the note.
    - Some points never move: bugs, missing tests, and points on personal data, or on
      confirmation or writing files (R28–R34). They are fixed and reviewed before the commit.
+   - The review leaves a trace of what it approved. The reviewer reports the tree of its
+     staged copy (`git write-tree`). The verdict comment quotes it, with the subject line of the
+     reviewed commit message. After the commit, `git rev-parse HEAD^{tree}` must give the same
+     tree. If it does not, nothing is pushed: the commit is undone locally and the changes get
+     a new review. The comment that names the commit quotes the tree too.
 
    Post every verdict as a comment on the pull request, as soon as the PR exists: APPROVED or
    CHANGES NEEDED, the findings in short, how each was closed. After the commit, a comment names

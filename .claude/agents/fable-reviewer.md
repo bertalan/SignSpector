@@ -103,9 +103,12 @@ The brief holds:
 6. Nothing reaches the public repository that could carry personal or sensitive data (see the
    section "What may never reach the public repository?" of `CLAUDE.md`). No mode of the public
    check reads the working tree: `--staged` reads the index, and you must not touch the
-   repository's index. Copy the repository to the scratchpad (without `target/`, `tests/corpus/`
-   and `tests/out/`), run `git add -A` in the copy, then `sh scripts/check-public.sh --staged`
-   there. Check the planned commit message with `sh scripts/check-public.sh --message <file>`.
+   repository's index. Copy the repository to the scratchpad (without `target/`, `tests/corpus/`,
+   `tests/out/` and `.claude/worktrees/`), run `git add -A` in the copy, then
+   `sh scripts/check-public.sh --staged` there. Check the planned commit message with
+   `sh scripts/check-public.sh --message <file>`.
+   In the same copy, run `git write-tree` and report the tree: it ties your verdict to the
+   commit (`CLAUDE.md`, step 5).
 
 ## How is TDD proved?
 
@@ -125,10 +128,11 @@ fails. Report every rule whose breakage no test notices.
 
 ## What does the report look like?
 
-Start with one line: `VERDICT: APPROVED` or `VERDICT: CHANGES NEEDED`. Then list the findings,
-most severe first. Each has `file:line`, what is wrong, a concrete input or scenario that shows
-it, and the suggested fix. Separate "bug" from "missing test" from "minor". No praise, no
-summary of what the code does. Write the report in English.
+Start with one line: `VERDICT: APPROVED` or `VERDICT: CHANGES NEEDED`. The next line gives the
+tree of the reviewed copy: `TREE: <hash>`. Then list the findings, most severe first. Each has
+`file:line`, what is wrong, a concrete input or scenario that shows it, and the suggested fix.
+Separate "bug" from "missing test" from "minor". No praise, no summary of what the code does.
+Write the report in English.
 
 When every finding is minor, the verdict is `VERDICT: APPROVED`, with the minor points listed.
 Mark each point on personal data, or on confirmation or writing files (R28–R34): such a point

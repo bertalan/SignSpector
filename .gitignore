@@ -8,5 +8,6 @@
 
 .DS_Store
 
-# Claude Code personal settings
+# Claude Code personal settings, and worktrees of agents working in parallel
 /.claude/settings.local.json
+/.claude/worktrees/
