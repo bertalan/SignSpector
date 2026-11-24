@@ -7,7 +7,7 @@ set -e
 # The repository is public: no personal data, keys or unexpected files (allowlist + content scan).
 sh "$(git rev-parse --show-toplevel)/scripts/check-public.sh" --staged
 
-# Coherence audit every 5 commits (CLAUDE.md, "Coherence audits and unfinished work").
+# Coherence audit every 5 commits (CLAUDE.md, "How do we keep long work from drifting?").
 sh "$(git rev-parse --show-toplevel)/scripts/audit-status.sh" --gate-commit
 
 # Changes to the rules themselves: run their tests.

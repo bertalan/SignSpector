@@ -1,5 +1,6 @@
 #!/bin/sh
-# Removes local leftovers after a coherence audit (CLAUDE.md, "Coherence audits").
+# Removes local leftovers after a coherence audit (CLAUDE.md, "How do we keep long work from
+# drifting?").
 #   scripts/cleanup.sh         removes the local leftovers listed below and says what it removed
 #   scripts/cleanup.sh --plan  lists what it would remove and removes nothing (session report)
 # No question is asked: only unambiguous junk files and branches already merged into main

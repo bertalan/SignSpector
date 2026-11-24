@@ -3,7 +3,7 @@
 These rules apply to every text in this repository. That means docs, agent prompts, comments,
 commit messages, PR texts, the user guide and the strings the tool shows. Everything is in
 English; only the tool's interface (its strings and the user guide) is translated (see
-"Language" in `CLAUDE.md`).
+"Which rules hold everywhere?" in `CLAUDE.md`).
 
 ## Who reads our texts?
 

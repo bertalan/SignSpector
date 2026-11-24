@@ -19,6 +19,9 @@ Two ideas set it:
 
 ## Phase 0: what must be in place before the code?
 
+The repository, CI, the writing guide and the fixture generator, plus a list of the known gaps
+in the script tests.
+
 - [x] 0.1 First commit and push to `main`, after a review of the file list. From then on: one
   branch and one draft PR per step, a coherence audit every 5 commits, merges by local
   fast-forward (`CLAUDE.md`).
@@ -42,10 +45,10 @@ Two ideas set it:
 - [ ] 0.3 Fixture generator `scripts/make-fixtures.sh` (Homebrew `openssl@3`): test CA, signers,
   simple `.p7m`/`.p7s`, `.tsd`. Synthetic identities only. Private keys are never committed:
   they are generated at test time or kept in `target/`.
-- [ ] 0.4 Writing guide (`docs/writing.md`): texts answer the reader's questions, answer first,
-  in short sentences, with code and commands verbatim and without machine-made patterns (after
-  Wikipedia's "Signs of AI writing"). README, design, roadmap, `CLAUDE.md` and the agent prompts
-  are rewritten with it. Also in this step:
+- [ ] 0.4 Writing guide (`docs/writing.md`). Texts answer the reader's questions, with the
+  answer first and short sentences. Code and commands stay verbatim. There are no machine-made
+  patterns (after Wikipedia's "Signs of AI writing"). Rewrite README, design, roadmap,
+  `CLAUDE.md` and the agent prompts with it. Also in this step:
   - a comment in `rust-toolchain.toml`: targets and R25, how to update the pinned version;
   - a "Rust" section in the session report (`scripts/audit-status.sh`) that names a newer stable
     Rust when one exists;
@@ -116,8 +119,10 @@ Two ideas set it:
 
 ## Phase 1: how do we write files safely, before any cryptography?
 
-- [x] 1.0 R1a, envelope names (`is_envelope`): delivered with the project setup (0.1).
-- [ ] 1.1 R32, portable names (`names` module):
+With pure functions for names and confirmation, and a writer that never overwrites.
+
+- [x] 1.0 Envelope names (`is_envelope`, R1a): delivered with the project setup (0.1).
+- [ ] 1.1 Portable names (`names` module, R32):
   `portable_name(raw) -> PortableName { name, changed }`.
   - Tests, one per rule: forbidden characters, control characters, trailing dot and space,
     reserved Windows names (any case, with extension, superscript digits), leading `-` and `.`,
@@ -146,7 +151,8 @@ Two ideas set it:
   - Tests from R34 "Counting": 10,000 against 10,001, also as a total over several folders;
     files not counted; a selected folder that is a symbolic link; overlaps.
   - Tests from R34 "Several folders": overlaps; a symbolic link to each kind of sensitive
-    folder. Also each kind of sensitive folder selected directly.
+    folder.
+  - Test for R28: each kind of sensitive folder selected directly.
 - [ ] 1.6 Confirmation logic (R28–R30). First decide the questions "Before 1.6" in
   `docs/design.md`.
   - Pure functions turn the counts, the folder, the way the run started (terminal, dialog via
@@ -171,6 +177,8 @@ Two ideas set it:
 
 ## Phase 2: how do we open envelopes end to end?
 
+With a BER reader, a CMS parser and one thin run of the whole flow.
+
 - [ ] 2.1 `ber` reader: definite and indefinite lengths, limits on depth and size, checked
   arithmetic; fuzz target.
 - [ ] 2.2 `cms` SignedData parsing: encapsulated content, certificates, signer infos (no
@@ -183,6 +191,8 @@ Two ideas set it:
     a modified file; a report that records no document).
 
 ## Phase 3: how do we verify signatures and time stamps?
+
+One layer at a time: cryptography, certificates, trusted lists, chains, time stamps, revocation.
 
 - [ ] 3.1 `crypto`: digests, RSA PKCS#1 v1.5, RSA-PSS, ECDSA P-256/P-384/P-521 (R8). First
   decide the question "Before 3.1" in `docs/design.md`.
@@ -214,6 +224,8 @@ Two ideas set it:
 
 ## Phase 4: what does the user see?
 
+A console summary, an accessible HTML report, JSON and a translated command line.
+
 - [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).
 - [ ] 4.2 Accessible HTML report, WCAG 2.2 AA (R14, R36), checker in CI (R39). First decide the
   questions "Before 4.2" in `docs/design.md`.
@@ -223,6 +235,9 @@ Two ideas set it:
   4.4" in `docs/design.md`).
 
 ## Phase 5: how does it fit into the system?
+
+Through a context menu with native dialogs, recorded in a manifest so that `uninstall` can
+remove it.
 
 - [ ] 5.1 Install manifest (R41). First decide how `create_new` applies to registry keys and
   `.workflow` folders, and the other questions "Before 5.1" in `docs/design.md`.
@@ -234,6 +249,8 @@ Two ideas set it:
   the tool did not write (questions "Before 5.3" in `docs/design.md`).
 
 ## Phase 6: how do we release it?
+
+As one self-contained executable per platform, tested on the company PC before `1.0.0`.
 
 - [ ] 6.1 Builds for all targets; `.deb`, `.rpm`, `.tar.gz` (R24, R25); one self-contained
   executable per platform, pure Rust (R22, enforced by `cargo deny`); version tag (R26).

@@ -197,9 +197,9 @@ script. R31 says how every file is created and which files may ever be replaced.
     (`| tee log`, `> file`) the run counts as a script. Yes/no questions default to No, and
     Enter alone cancels. A typed number confirms only if it is the right one. Any other answer
     (a wrong number, `y`, `n`, Enter alone) never confirms. This holds for the files to process
-    of a risky run (R28) and for the documents to write (R29). The owner decided both rules on
-    2026-11-23. The answers and the default are written out in words in the user's language
-    (R35, R27).
+    of a risky run (R28) and for the documents to write (R29). The owner decided on 2026-11-23
+    that only the right number confirms and that any other answer never confirms. The answers
+    and the default are written out in words in the user's language (R35, R27).
   - Context menu (no terminal, started with `--interactive`): the same confirmations, with the
     same number to type and the same default, in a native dialog (R38), with a shorter summary
     than the console.

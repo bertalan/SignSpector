@@ -51,9 +51,9 @@ Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
    `NO_COLOR`/`--plain` honoured, no prompt time limits, semantic and keyboard-operable HTML
    with sufficient contrast; anything installed is recorded for `uninstall`, which removes
    only what SignSpector installed and never user data.
-6. **Public repository**: nothing that could carry personal or sensitive data (see the
-   "Public repository" section of `CLAUDE.md`); run `sh scripts/check-public.sh --staged`
-   when changes are staged.
+6. **Public repository**: nothing that could carry personal or sensitive data (see the section
+   "What may never reach the public repository?" of `CLAUDE.md`); run
+   `sh scripts/check-public.sh --staged` when changes are staged.
 
 ## Proof of TDD
 

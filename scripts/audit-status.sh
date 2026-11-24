@@ -6,8 +6,9 @@
 #                                              (pre-push with the pushed commit; CI with the PR head)
 # Every commit not reachable from the last audit counts, also those brought in by a merge.
 # Exit 2 when git cannot answer: never a silent pass.
-# An audit is a non-merge commit that only adds files under docs/audits/ (see CLAUDE.md, "Coherence
-# audits"); a commit mixing a report with other changes, or deleting one, does not count.
+# An audit is a non-merge commit that only adds files under docs/audits/ (see CLAUDE.md, "How do
+# we keep long work from drifting?"); a commit mixing a report with other changes, or deleting
+# one, does not count.
 set -u
 AUDIT_EVERY=5
 
