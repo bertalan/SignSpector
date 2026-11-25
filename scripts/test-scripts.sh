@@ -1035,16 +1035,49 @@ out=$(PATH="$work/badfind:$PATH" sh scripts/audit-status.sh 2>/dev/null)
 [ "$(report_section "Markers in code" "$out")" = "src/open.rs:1:// TODO open
 some files not read (find or grep failed)" ]
 expect "markers: a failing find is said" 0 $?
-# A root that is a symbolic link is not followed, since it could lead into the corpus, and the
-# search says it did not read it. Git Bash on Windows may copy instead of linking; there the
-# test is skipped, and only there.
+# A root that is a symbolic link is not followed, since it could lead into the corpus. The
+# search says so on a line of its own, not as a failure of find or grep, and still reads the
+# other root. Git Bash on Windows may copy instead of linking; there the test is skipped, and
+# only there.
 new_repo
 mkdir -p real; printf '// TODO behind a link\n' > real/a.rs
 ln -s real src 2>/dev/null
 if [ -L src ]; then
     out=$(sh scripts/audit-status.sh 2>/dev/null)
-    [ "$(report_section "Markers in code" "$out")" = "markers not read (find or grep failed)" ]
+    [ "$(report_section "Markers in code" "$out")" = "src: symbolic link, not searched" ]
     expect "markers: a root that is a link is said" 0 $?
+    mkdir -p tests; printf 'fn b() {}\n' > tests/b.rs
+    out=$(sh scripts/audit-status.sh 2>/dev/null)
+    [ "$(report_section "Markers in code" "$out")" = "src: symbolic link, not searched
+none" ]
+    expect "markers: a link root beside a clean root" 0 $?
+    printf '// TODO beside the link\n' > tests/b.rs
+    out=$(sh scripts/audit-status.sh 2>/dev/null)
+    [ "$(report_section "Markers in code" "$out")" = "src: symbolic link, not searched
+tests/b.rs:1:// TODO beside the link" ]
+    expect "markers: a link root beside a real root" 0 $?
+    # A link root and a failing grep: the failure is still said, never "none".
+    printf 'fn b() {}\n' > tests/b.rs
+    printf '#!/bin/sh\ncase "$*" in *TODO*FIXME*) exit 2 ;; esac\nexec "%s" "$@"\n' "$real_grep" \
+        > "$work/badgrep/grep"
+    out=$(PATH="$work/badgrep:$PATH" sh scripts/audit-status.sh 2>/dev/null)
+    [ "$(report_section "Markers in code" "$out")" = "src: symbolic link, not searched
+markers not read (find or grep failed)" ]
+    expect "markers: a link root and a failing grep" 0 $?
+    printf '// TODO before a failure\n' > tests/b.rs
+    printf '#!/bin/sh\ncase "$*" in *TODO*FIXME*) "%s" "$@"; exit 2 ;; esac\nexec "%s" "$@"\n' \
+        "$real_grep" "$real_grep" > "$work/badgrep/grep"
+    out=$(PATH="$work/badgrep:$PATH" sh scripts/audit-status.sh 2>/dev/null)
+    [ "$(report_section "Markers in code" "$out")" = "src: symbolic link, not searched
+tests/b.rs:1:// TODO before a failure
+some files not read (find or grep failed)" ]
+    expect "markers: a link root, a marker and a failing grep" 0 $?
+    # Both roots as links: both are named, and "none" is not said.
+    rm -rf tests; mkdir -p real2; ln -s real2 tests
+    out=$(sh scripts/audit-status.sh 2>/dev/null)
+    [ "$(report_section "Markers in code" "$out")" = "src: symbolic link, not searched
+tests: symbolic link, not searched" ]
+    expect "markers: two link roots both named" 0 $?
 elif pwd -W >/dev/null 2>&1; then
     echo "skipped on Windows: ln -s made no symbolic link"
 else

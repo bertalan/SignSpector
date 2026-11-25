@@ -144,13 +144,15 @@ section "Markers in code"
 # Any case: on macOS and Windows tests/Corpus is tests/corpus (find -ipath is not POSIX).
 # Only the roots that exist are searched. grep exits 1 when a file has no marker: only an exit
 # above 1, or a failing find, means the search could not run.
-# A root that is a symbolic link is not followed, since it could lead into the corpus: it counts
-# as not read.
+# A root that is a symbolic link is not followed, since it could lead into the corpus. The
+# report names it on a line of its own, before the markers.
 roots=""
+links=""
 markers_ok=yes
 for d in src tests; do
     if [ -L "$d" ]; then
-        markers_ok=no
+        links="$links$d: symbolic link, not searched
+"
     elif [ -e "$d" ]; then
         roots="$roots $d"
     fi
@@ -165,13 +167,15 @@ if [ -n "$roots" ]; then
 else
     markers=""
 fi
-# Markers found before a failure are still listed, then the failure is said.
+# Markers found before a failure are still listed, then the failure is said. The report does not
+# say "none" when the only roots are symbolic links.
+[ -n "$links" ] && printf '%s' "$links"
 if [ -n "$markers" ]; then
     printf '%s\n' "$markers"
     [ "$markers_ok" = yes ] || echo "some files not read (find or grep failed)"
 elif [ "$markers_ok" = no ]; then
     echo "markers not read (find or grep failed)"
-else
+elif [ -n "$roots" ] || [ -z "$links" ]; then
     echo "none"
 fi
 

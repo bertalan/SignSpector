@@ -133,11 +133,14 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
 - [ ] 0.6 Way of working: the four changes the owner adopted on 2026-11-25, after one point
   closed first.
   - Closed first, test first: the marker search of `audit-status.sh` says when `find` or `grep`
-    fails, never "none". Markers found before the failure are still listed. A root that is a
-    symbolic link is not followed and counts as not read. Printing "none" there had been a known
-    limit of 0.5. The review of the commit that closes audit 0011 added it there, after the owner
-    marked that step done. One limit remains: the report does not say which file or folder
-    could not be read.
+    fails, never "none". Markers found before the failure are still listed. The report names a
+    root that is a symbolic link on a line of its own and does not follow it. Printing "none"
+    when `find` or `grep` fails had been a known limit of 0.5. The review of the commit that
+    closes audit 0011 added it there, after the owner marked that step done. Two limits remain:
+    - when `find` or `grep` fails, the report does not say which file or folder could not be
+      read;
+    - a symbolic link inside a searched root is not followed, and the report skips it without a
+      line.
   - "Done when" for every step: a list of checks that prove the step is done. The PR
     description maps each item to its evidence: a test, a commit or a file. The reviewer and
     the auditor check that list. The open steps get theirs in this step.
