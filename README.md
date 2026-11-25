@@ -74,8 +74,9 @@ cannot damage them:
   ever replaced are the tool's own cache and its list of what it installed; the full rule is R31
   in [docs/design.md](docs/design.md).
 - Extracted documents are never written outside the chosen folder. File names taken from the
-  signed files are made valid on Windows, macOS and Linux at once: no forbidden characters, no
-  reserved names, no clashes that differ only in letter case or Unicode form.
+  signed files are made valid on Windows, macOS and Linux at once. They hold no forbidden
+  characters and no reserved names. A new name never differs from another name in its folder
+  only in letter case or Unicode form.
 - Every extracted document is recorded in the report with its SHA-256. An extraction never
   rewrites an earlier report: it writes a new one. `signspector undo` removes only the files
   that are still identical to what SignSpector wrote.

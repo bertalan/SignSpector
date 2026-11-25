@@ -23,8 +23,8 @@ Two ideas set it:
 
 ## Phase 0: what must be in place before the code?
 
-The repository, CI, the writing guide and the fixture generator, a list of the known gaps in the
-script tests, and the changes to the way of working adopted on 2026-11-25.
+The repository, CI, the writing guide and the fixture generator. Then a list of the known gaps
+in the script tests, and the changes to the way of working adopted on 2026-11-25.
 
 - [x] 0.1 First commit and push to `main`, after a review of the file list. From then on: one
   branch and one draft PR per step, a coherence audit every 5 commits, merges by local
@@ -141,6 +141,12 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
       read;
     - a symbolic link inside a searched root is not followed, and the report skips it without a
       line.
+
+    One limit of its tests: on Windows, 8 checks of the marker search may be skipped. That
+    happens when Git Bash's `ln -s` makes a copy instead of a link. They are the test of links
+    into the corpus (2 checks) and the six linked-root tests (6 checks). Those rules are then
+    tested on macOS and Linux only. `test-scripts.sh` prints "skipped on Windows" but does not
+    count the skips, so they show only as a lower total (audit 0012, F1).
   - "Done when" for every step: a list of checks that prove the step is done. The PR
     description maps each item to its evidence: a test, a commit or a file. The reviewer and
     the auditor check that list. The open steps get theirs in this step.
@@ -156,6 +162,19 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
     API limit is not used up. The first lessons come from audit 0011:
     - post each review verdict on the PR when its round ends, not together with the commit (F4);
     - give the owner's decisions in English in PR texts and comments (F5).
+  - Questions for the owner from audit 0012; this step decides them:
+    - F1: must the linked-root and corpus-link tests also run on Windows, for example with a
+      `find` stand-in? Must `test-scripts.sh` count its skips, as `test-cleanup.sh` does?
+    - F2: a missing test moved as a minor point from a0fba6d to the next commit, and two
+      behaviour fixes counted as minor rounds. Must `CLAUDE.md` say what separates a missing
+      test from "one more assertion"? Or must any behaviour fix get CHANGES NEEDED?
+    - F3: the delegation of 2026-11-25 says "choose the solution that serves the goal and is
+      coherent with earlier choices". Only the message of 72b89f3 and a PR #4 comment record it.
+      Does it stand as a rule, with its limits written in `CLAUDE.md`? Or did it apply to audit
+      0011 only?
+    - Note of audit 0012, not a finding: four of the five commits in its range exist mainly to
+      close minor points moved from the commit before. The owner may weigh it when this step
+      sets the size of a PR.
 
 ## Phase 1: how do we write files safely, before any cryptography?
 
