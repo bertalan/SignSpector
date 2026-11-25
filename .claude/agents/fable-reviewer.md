@@ -136,4 +136,4 @@ Write the report in English.
 
 When every finding is minor, the verdict is `VERDICT: APPROVED`, with the minor points listed.
 Mark each point on personal data, or on confirmation or writing files (R28–R34): such a point
-never moves to a later PR. It is fixed and reviewed before the commit (`CLAUDE.md`, step 5).
+never moves. It is fixed and reviewed before the commit (`CLAUDE.md`, step 5).

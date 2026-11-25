@@ -97,17 +97,18 @@ With the six rules below. Long work across sessions drifts: docs claim things th
 do, references point to functions or options that never existed, work is left half-done.
 
 - Session start: run `sh scripts/audit-status.sh` and tell the user what it shows. Unfinished
-  work comes first: uncommitted changes, stashes, unpushed commits, unmerged branches, open or
-  draft PRs, red CI. Finish it, or close it with a written reason, before starting anything new.
+  work comes first. Finish it, or close it with a written reason, before starting anything new.
+  Unfinished work is: uncommitted changes, stashes, unpushed commits, unmerged branches, open or
+  draft PRs, red CI.
 - Branches and PRs (after the first push): one branch per roadmap step
-  (`step/1.1-portable-names`), pushed early as a draft PR. Mark it ready only when CI is green
-  on all four jobs (read in the job list, never assumed from a pending run) and `fable-reviewer`
-  approved, with its verdict posted on the PR. Merge it into `main` locally by fast-forward:
-  `git switch main && git merge --ff-only step/x && git push`. The merged commits are the same
-  ones CI checked, history stays linear and the pre-push hook runs. The GitHub merge button is
-  not used: it rewrites commits. One step is open at a time. A session never ends with a draft
-  PR without a comment saying its state and next step. Abandoned work is closed with the reason,
-  never left open.
+  (`step/1.1-portable-names`), pushed early as a draft PR. Mark it ready only when two things
+  hold. CI is green on all four jobs, read in the job list, never assumed from a pending run.
+  `fable-reviewer` approved, with its verdict posted on the PR. Merge it into `main` locally by
+  fast-forward: `git switch main && git merge --ff-only step/x && git push`. The merged commits
+  are the same ones CI checked, history stays linear and the pre-push hook runs. The GitHub merge
+  button is not used: it rewrites commits. One step is open at a time. A session never ends with
+  a draft PR without a comment saying its state and next step. Abandoned work is closed with the
+  reason, never left open.
 - Every 5 commits, a coherence audit by the `coherence-auditor` agent (Fable, a different model
   of equal or higher capability than the author's, fresh context, read-only). It checks
   requirements, tests and code against each other, the existence of every concrete reference,
@@ -129,9 +130,11 @@ do, references point to functions or options that never existed, work is left ha
   - Agents that work in parallel each get a git worktree under `.claude/worktrees/` (ignored by
     git). They never commit there; the main session takes their changes as a patch. When the
     changes are committed, the main session removes the worktree and its branch, locally.
-    First it compares `git -C <worktree> diff HEAD` and
-    `git -C <worktree> status --porcelain --untracked-files=all` with the patch it took: a change
-    made after the patch is taken again or reported, never lost. Then
+    First it compares the worktree with the patch it took, with these two commands:
+    - `git -C <worktree> diff HEAD`;
+    - `git -C <worktree> status --porcelain --untracked-files=all`.
+
+    A change made after the patch is taken again or reported, never lost. Then
     `git worktree remove --force` and `git branch -D`. `--force` is needed because the worktree
     still has uncommitted files.
   - Ignored folders are never touched. `tests/corpus/`, `tests/out/` and `target/` are protected

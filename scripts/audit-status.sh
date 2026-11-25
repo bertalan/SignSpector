@@ -139,7 +139,13 @@ elif git remote | grep -qx origin; then
 fi
 
 section "Markers in code"
-markers=$(grep -rnE 'TODO|FIXME|XXX|todo!\(|unimplemented!\(|#\[ignore' src tests 2>/dev/null | grep -v '^tests/fixtures/' || true)
+# tests/corpus/ and tests/out/ hold real and extracted documents: their files are never read,
+# not only hidden from the output.
+# Any case: on macOS and Windows tests/Corpus is tests/corpus (find -ipath is not POSIX).
+markers=$(find src tests -path 'tests/[Cc][Oo][Rr][Pp][Uu][Ss]' -prune \
+    -o -path 'tests/[Oo][Uu][Tt]' -prune \
+    -o -path tests/fixtures -prune -o -type f \
+    -exec grep -nHE 'TODO|FIXME|XXX|todo!\(|unimplemented!\(|#\[ignore' {} + 2>/dev/null || true)
 [ -n "$markers" ] && printf '%s\n' "$markers" || echo "none"
 
 section "Leftovers (scripts/cleanup.sh --plan; run scripts/cleanup.sh to remove the local ones)"

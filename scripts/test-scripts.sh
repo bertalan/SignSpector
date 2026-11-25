@@ -899,5 +899,96 @@ git fetch -q origin
 report_section "Unfinished local work" "$(sh scripts/audit-status.sh 2>&1)" | grep -qx "branch main: 2 unpushed, 3 not pulled"; expect "report: not pulled commits counted" 0 $?
 rm -rf "$work/up.git" "$work/other"
 
+# Markers in code: src and tests are searched, tracked or not. The fixtures are skipped, and so
+# are tests/corpus/ and tests/out/, which hold real and extracted documents, even when
+# .gitignore lacks them (audit 0011, F1).
+new_repo
+mkdir -p src tests/fixtures tests/corpus tests/out
+printf '// TODO tracked marker\n' > src/lib.rs
+printf '// FIXME untracked marker\n' > tests/new.rs
+printf 'TODO fixture line\n' > tests/fixtures/f.txt
+printf 'TODO corpus line\n' > tests/corpus/c.txt
+printf 'XXX extracted line\n' > tests/out/o.txt
+# Binary files, as real signed documents are: a search that reads them prints their names.
+printf 'TODO\000corpus binary\n' > tests/corpus/b.p7m
+printf 'TODO\000extracted binary\n' > tests/out/b.pdf
+git add src/lib.rs && git commit -qm markers
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+report_section "Markers in code" "$out" | grep -q '^src/lib.rs:1:// TODO tracked marker$'
+expect "markers: a tracked file in src is listed" 0 $?
+report_section "Markers in code" "$out" | grep -q '^tests/new.rs:1:// FIXME untracked marker$'
+expect "markers: an untracked file in tests is listed" 0 $?
+expect_absent "markers: fixtures, corpus and output skipped" "Markers in code" \
+    'fixtures|corpus|tests/out|extracted' "$out"
+# Each marker word is listed.
+printf '// XXX word\ntodo!(a)\nunimplemented!(b)\n#[ignore]\n' > src/words.rs
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+for w in "src/words.rs:1:// XXX word" "src/words.rs:2:todo!(a)" "src/words.rs:3:unimplemented!(b)" \
+    "src/words.rs:4:#[ignore]"; do
+    report_section "Markers in code" "$out" | grep -qxF "$w"; expect "markers: listed: $w" 0 $?
+done
+# With a single file to search, the line still starts with the file name.
+rm -f src/lib.rs src/words.rs tests/new.rs
+printf '// XXX alone\n' > src/one.rs
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+report_section "Markers in code" "$out" | grep -qxF "src/one.rs:1:// XXX alone"
+expect "markers: a single file is named" 0 $?
+# The two folders are skipped whatever the case of their names: on macOS and Windows,
+# tests/CORPUS is tests/corpus. Every letter is in capitals here and in lower case in the test
+# above, so a pattern that drops either case of any letter fails. Only the capital folders exist
+# here, so the test also holds on Linux, where the names differ.
+new_repo
+mkdir -p src tests/CORPUS tests/OUT
+printf '// TODO kept\n' > src/lib.rs
+printf 'XXX cased corpus\n' > tests/CORPUS/c.txt
+printf 'TODO\000cased binary\n' > tests/OUT/o.pdf
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+report_section "Markers in code" "$out" | grep -qxF "src/lib.rs:1:// TODO kept"
+expect "markers: cased folders: the search ran" 0 $?
+expect_absent "markers: cased corpus and output skipped" "Markers in code" 'CORPUS|OUT|cased' "$out"
+# Symbolic links into the corpus are not followed: a link to a corpus file and a link to the
+# corpus folder print nothing. Git Bash on Windows may copy instead of linking; there the test
+# is skipped, and only there.
+new_repo
+mkdir -p src tests/corpus
+printf '// TODO kept\n' > src/lib.rs
+printf 'XXX linked corpus\n' > tests/corpus/c.txt
+ln -s corpus/c.txt tests/filelink.txt 2>/dev/null
+ln -s ../tests/corpus src/dirlink 2>/dev/null
+if [ -L tests/filelink.txt ] && [ -L src/dirlink ]; then
+    out=$(sh scripts/audit-status.sh 2>/dev/null)
+    report_section "Markers in code" "$out" | grep -qxF "src/lib.rs:1:// TODO kept"
+    expect "markers: links: the search ran" 0 $?
+    expect_absent "markers: links into the corpus not followed" "Markers in code" 'linked' "$out"
+elif pwd -W >/dev/null 2>&1; then
+    echo "skipped on Windows: ln -s made no symbolic link"
+else
+    expect "markers: symbolic links created" 0 1
+fi
+# The files of the two folders are never read, not only hidden from the output. A grep
+# stand-in logs every recursive option and every argument that names an existing file, then
+# runs the real grep. Grep reads a folder only when it searches recursively. Patterns, such as
+# the one cleanup.sh uses to protect these folders, name no file and are not logged.
+new_repo
+mkdir -p src tests/corpus tests/out tests/CORPUS "$work/grepshim"
+printf '// TODO kept\n' > src/lib.rs
+printf 'XXX corpus\n' > tests/corpus/c.txt
+printf 'XXX upper corpus\n' > tests/CORPUS/c.txt
+printf 'TODO\000out binary\n' > tests/out/o.pdf
+real_grep=$(command -v grep)
+rm -f "$work/grep.log"
+printf '#!/bin/sh\nfor a in "$@"; do\n  case "$a" in\n    --recursive|--dereference-recursive) echo "recursive: $a" ;;\n    --*) ;;\n    -*[rR]*) echo "recursive: $a" ;;\n  esac >> "%s/grep.log"\n  [ -f "$a" ] && echo "path: $a" >> "%s/grep.log"\ndone\nexec "%s" "$@"\n' \
+    "$work" "$work" "$real_grep" > "$work/grepshim/grep"
+chmod +x "$work/grepshim/grep"
+out=$(PATH="$work/grepshim:$PATH" sh scripts/audit-status.sh 2>/dev/null)
+grep -qx "path: src/lib.rs" "$work/grep.log"; expect "markers: grep stand-in was used" 0 $?
+grep -Eiq '^recursive: |tests/(corpus|out)' "$work/grep.log"
+expect "markers: no recursive grep and no corpus or output file given to grep" 1 $?
+# A repository with no marker says so.
+new_repo
+mkdir -p src; printf 'fn main() {}\n' > src/main.rs
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+[ "$(report_section "Markers in code" "$out")" = none ]; expect "markers: none said" 0 $?
+
 echo "scripts tests: $passed passed, $failed failed"
 [ "$failed" -eq 0 ]

@@ -76,7 +76,7 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
 - [x] 0.5 Remaining gaps in the rule-script tests. The reviews of PR #1, PR #2 and PR #3 found
   them. This step closed the ones below that are not listed as known limits. The owner marked
   the step done with these limits listed (2026-11-25). Each known limit needs a test before the
-  code it names changes.
+  code it names changes, except in the "Rust" section (below).
   - Closed in this step, test first:
     - `check-public.sh`: a failing `git show`, `ls-tree`, `diff-tree`, `cat-file`, `log`,
       `rev-list` or `diff` stops the check with exit 2. Two of them passed in silence before:
@@ -115,6 +115,8 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
     - a check name with a backslash is printed with the backslash doubled (`@tsv` escapes it);
     - `gh pr list` reads at most 30 open pull requests, its default;
     - the exit status of the `awk` that selects the red checks is not checked;
+    - the marker search prints "none" when `find` or `grep` cannot run. This limit was added
+      after the owner marked the step done, by the review of the commit that closes audit 0011;
     - "Rust" section: the owner decided (2026-11-23) that a breakage of this section that shows
       no bug is listed here, not tested. These are listed:
       - `rustup check` has no time limit. It runs only in report mode, after the hook gates;
@@ -137,12 +139,15 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
   - `scripts/merge-ready.sh`, test first. It waits until the four CI jobs are green on the
     exact head of the PR, and stops if the head moves. It also checks that the last verdict
     comment is APPROVED and quotes the tree of that head. The merge goes ahead only after it.
-  - Model by risk. Sonnet writes routine code: scripts, their tests, docs. Opus writes the code
-    for cryptography and for R28–R34. Reviews and audits stay on Fable. A PR holds about 400
-    changed lines; a bigger step is split into slices, and the PR says what is left.
+  - Model by risk. Sonnet writes routine code. Opus writes the code for cryptography and for
+    R28–R34. The rule scripts and the hooks protect, so this step decides whether they count as
+    routine code. Reviews and audits stay on Fable. A PR holds about 400 changed lines; a bigger
+    step is split into slices, and the PR says what is left.
   - `docs/lessons.md`: lessons learnt on the way of working, each with its date and what to do.
     Agents never watch CI themselves; only the main session does, so that GitHub's API limit is
-    not used up.
+    not used up. The first lessons come from audit 0011:
+    - post each review verdict on the PR when its round ends, not together with the commit (F4);
+    - give the owner's decisions in English in PR texts and comments (F5).
 
 ## Phase 1: how do we write files safely, before any cryptography?
 
@@ -179,9 +184,10 @@ With pure functions for names and confirmation, and a writer that never overwrit
     resolved), and hidden folders are skipped; both are listed in the report. Unreadable folders
     are listed.
   - Two counts (files to process, files of any kind), total size, subfolders.
-  - Detection of sensitive folders (drive roots, home, Desktop, Documents, system folders,
-    network share roots) and of a risky run: a sensitive folder, or more than 10,000 files of
-    any kind over all the folders, subfolders included.
+  - Detection of sensitive folders: drive roots, home, Desktop, Documents, system folders,
+    network share roots.
+  - Detection of a risky run: a sensitive folder, or more than 10,000 files of any kind over all
+    the folders, subfolders included.
 - [ ] 1.6 Confirmation logic (R28–R30). First decide the questions "Before 1.6" in
   `docs/design.md`.
   - Pure functions turn the counts, the folder, the way the run started (terminal, dialog via
