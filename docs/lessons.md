@@ -10,8 +10,9 @@ As soon as its round ends, one comment per round. When no pull request exists ye
 are posted one by one when it opens.
 
 - Date: 2026-11-25. Source: audit 0011, F4.
-- What went wrong: on PR #4 we posted the rounds of each of two commits, 39635f6 and 74cb34c, in
-  one comment, with the commit. An audit could then check only a summary, not each finding.
+- What went wrong: on PR #4 we did not post the verdicts round by round. For each of two
+  commits, 39635f6 and 74cb34c, one comment held all its rounds, posted with the commit. An audit
+  could then check only a summary, not each finding.
 
 ## In which language are the owner's words quoted on GitHub?
 

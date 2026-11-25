@@ -159,8 +159,9 @@ targets from macOS (mingw-w64, zig, cargo-zigbuild).
   pre-push) refuse it. After cloning, run `git config core.hooksPath .githooks`.
 
 Requirements and design are in [docs/design.md](docs/design.md), the order of work in
-[docs/roadmap.md](docs/roadmap.md), contributor rules in [CLAUDE.md](CLAUDE.md). Every text
-follows the writing guide, [docs/writing.md](docs/writing.md).
+[docs/roadmap.md](docs/roadmap.md). Contributor rules are in [CLAUDE.md](CLAUDE.md), lessons on
+the way of working in [docs/lessons.md](docs/lessons.md). Every text follows the writing guide,
+[docs/writing.md](docs/writing.md).
 
 ## Which licence applies?
 

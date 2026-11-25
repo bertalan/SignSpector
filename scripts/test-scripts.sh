@@ -1072,7 +1072,7 @@ markers not read (find or grep failed)" ]
 tests/b.rs:1:// TODO before a failure
 some files not read (find or grep failed)" ]
     expect "markers: a linked root, a marker and a failing grep" 0 $?
-    # Both roots as links: both are named, and "none" is not said.
+    # Both roots as symbolic links: both are named, and "none" is not said.
     rm -rf tests; mkdir -p real2; ln -s real2 tests
     out=$(sh scripts/audit-status.sh 2>/dev/null)
     [ "$(report_section "Markers in code" "$out")" = "src: symbolic link, not searched
