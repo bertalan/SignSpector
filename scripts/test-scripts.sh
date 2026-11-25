@@ -989,6 +989,67 @@ new_repo
 mkdir -p src; printf 'fn main() {}\n' > src/main.rs
 out=$(sh scripts/audit-status.sh 2>/dev/null)
 [ "$(report_section "Markers in code" "$out")" = none ]; expect "markers: none said" 0 $?
+# A grep that cannot run is said, never read as "no markers". The stand-in fails as grep does
+# on an error (exit 2); the other grep calls of the report keep the real grep.
+mkdir -p "$work/badgrep"
+printf '#!/bin/sh\ncase "$*" in *TODO*FIXME*) echo "grep: broken" >&2; exit 2 ;; esac\nexec "%s" "$@"\n' \
+    "$real_grep" > "$work/badgrep/grep"
+chmod +x "$work/badgrep/grep"
+out=$(PATH="$work/badgrep:$PATH" sh scripts/audit-status.sh 2>/dev/null)
+[ "$(report_section "Markers in code" "$out")" = "markers not read (find or grep failed)" ]
+expect "markers: a failing grep is said" 0 $?
+# Any exit above 1 is a failure, not only 2: a grep that is missing exits 127.
+printf '#!/bin/sh\ncase "$*" in *TODO*FIXME*) exit 127 ;; esac\nexec "%s" "$@"\n' "$real_grep" \
+    > "$work/badgrep/grep"
+out=$(PATH="$work/badgrep:$PATH" sh scripts/audit-status.sh 2>/dev/null)
+[ "$(report_section "Markers in code" "$out")" = "markers not read (find or grep failed)" ]
+expect "markers: a grep that exits 127 is said" 0 $?
+# Markers found before a failure are still listed, followed by the failure.
+printf '// TODO found\n' > src/main.rs
+printf '#!/bin/sh\ncase "$*" in *TODO*FIXME*) "%s" "$@"; exit 2 ;; esac\nexec "%s" "$@"\n' \
+    "$real_grep" "$real_grep" > "$work/badgrep/grep"
+out=$(PATH="$work/badgrep:$PATH" sh scripts/audit-status.sh 2>/dev/null)
+[ "$(report_section "Markers in code" "$out")" = "src/main.rs:1:// TODO found
+some files not read (find or grep failed)" ]
+expect "markers: found markers listed before a failure" 0 $?
+# A repository with neither src nor tests has nothing to search.
+new_repo
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+[ "$(report_section "Markers in code" "$out")" = none ]
+expect "markers: no src, no tests: none" 0 $?
+# A root that is a file, not a folder, is still searched.
+printf '// TODO in a file named src\n' > src
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+[ "$(report_section "Markers in code" "$out")" = "src:1:// TODO in a file named src" ]
+expect "markers: a root that is a file is searched" 0 $?
+rm -f src
+# A failure of find itself: the stand-in runs the real find, then exits 1, as find does when a
+# folder cannot be read. Markers found are listed, then the failure.
+new_repo
+mkdir -p src "$work/badfind"; printf '// TODO open\n' > src/open.rs
+real_find=$(command -v find)
+printf '#!/bin/sh\n"%s" "$@"\ncase "$*" in *TODO*FIXME*) exit 1 ;; esac\n' "$real_find" \
+    > "$work/badfind/find"
+chmod +x "$work/badfind/find"
+out=$(PATH="$work/badfind:$PATH" sh scripts/audit-status.sh 2>/dev/null)
+[ "$(report_section "Markers in code" "$out")" = "src/open.rs:1:// TODO open
+some files not read (find or grep failed)" ]
+expect "markers: a failing find is said" 0 $?
+# A root that is a symbolic link is not followed, since it could lead into the corpus, and the
+# search says it did not read it. Git Bash on Windows may copy instead of linking; there the
+# test is skipped, and only there.
+new_repo
+mkdir -p real; printf '// TODO behind a link\n' > real/a.rs
+ln -s real src 2>/dev/null
+if [ -L src ]; then
+    out=$(sh scripts/audit-status.sh 2>/dev/null)
+    [ "$(report_section "Markers in code" "$out")" = "markers not read (find or grep failed)" ]
+    expect "markers: a root that is a link is said" 0 $?
+elif pwd -W >/dev/null 2>&1; then
+    echo "skipped on Windows: ln -s made no symbolic link"
+else
+    expect "markers: symbolic link created" 0 1
+fi
 
 echo "scripts tests: $passed passed, $failed failed"
 [ "$failed" -eq 0 ]

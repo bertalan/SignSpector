@@ -115,8 +115,6 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
     - a check name with a backslash is printed with the backslash doubled (`@tsv` escapes it);
     - `gh pr list` reads at most 30 open pull requests, its default;
     - the exit status of the `awk` that selects the red checks is not checked;
-    - the marker search prints "none" when `find` or `grep` cannot run. This limit was added
-      after the owner marked the step done, by the review of the commit that closes audit 0011;
     - "Rust" section: the owner decided (2026-11-23) that a breakage of this section that shows
       no bug is listed here, not tested. These are listed:
       - `rustup check` has no time limit. It runs only in report mode, after the hook gates;
@@ -132,7 +130,14 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
       `cd3620d` (`CLAUDE.md`). Encode the exception if a second remote is ever added;
     - `core.commentChar` other than `#`: `git commit -v` is refused (fails closed).
 
-- [ ] 0.6 Way of working: the four changes the owner adopted on 2026-11-25.
+- [ ] 0.6 Way of working: the four changes the owner adopted on 2026-11-25, after one point
+  closed first.
+  - Closed first, test first: the marker search of `audit-status.sh` says when `find` or `grep`
+    fails, never "none". Markers found before the failure are still listed. A root that is a
+    symbolic link is not followed and counts as not read. Printing "none" there had been a known
+    limit of 0.5. The review of the commit that closes audit 0011 added it there, after the owner
+    marked that step done. One limit remains: the report does not say which file or folder
+    could not be read.
   - "Done when" for every step: a list of checks that prove the step is done. The PR
     description maps each item to its evidence: a test, a commit or a file. The reviewer and
     the auditor check that list. The open steps get theirs in this step.

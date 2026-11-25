@@ -27,7 +27,8 @@ the CI workflow. There is no exception for "infrastructure".
    rule on a copy and seeing at least one test fail. A rule that no test notices gets a test.
    One exception, decided by the owner: in the "Rust" section of `audit-status.sh`, a breakage
    that shows no bug is listed, not tested. The other known limits of the rule scripts are
-   listed in `docs/roadmap.md`, 0.5; the owner marked that step done with them listed.
+   listed in `docs/roadmap.md`, 0.5; the owner marked that step done with them listed. Limits
+   found later are listed in the step that finds them, from 0.6 on.
 5. Independent review, by a newly started `fable-reviewer` agent for every review: a different
    model, of equal or higher capability than the author's. Never resume the reviewer. The brief
    holds only:
@@ -101,14 +102,16 @@ do, references point to functions or options that never existed, work is left ha
   Unfinished work is: uncommitted changes, stashes, unpushed commits, unmerged branches, open or
   draft PRs, red CI.
 - Branches and PRs (after the first push): one branch per roadmap step
-  (`step/1.1-portable-names`), pushed early as a draft PR. Mark it ready only when two things
-  hold. CI is green on all four jobs, read in the job list, never assumed from a pending run.
-  `fable-reviewer` approved, with its verdict posted on the PR. Merge it into `main` locally by
-  fast-forward: `git switch main && git merge --ff-only step/x && git push`. The merged commits
-  are the same ones CI checked, history stays linear and the pre-push hook runs. The GitHub merge
-  button is not used: it rewrites commits. One step is open at a time. A session never ends with
-  a draft PR without a comment saying its state and next step. Abandoned work is closed with the
-  reason, never left open.
+  (`step/1.1-portable-names`), pushed early as a draft PR. Mark it ready only when both hold:
+  - CI is green on all four jobs, read in the job list, never assumed from a pending run;
+  - `fable-reviewer` approved, with its verdict posted on the PR.
+
+  Merge it into `main` locally by fast-forward:
+  `git switch main && git merge --ff-only step/x && git push`. The merged commits are the same
+  ones CI checked, history stays linear and the pre-push hook runs. The GitHub merge button is
+  not used: it rewrites commits. One step is open at a time. A session never ends with a draft
+  PR without a comment saying its state and next step. Abandoned work is closed with the reason,
+  never left open.
 - Every 5 commits, a coherence audit by the `coherence-auditor` agent (Fable, a different model
   of equal or higher capability than the author's, fresh context, read-only). It checks
   requirements, tests and code against each other, the existence of every concrete reference,
