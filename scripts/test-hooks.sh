@@ -76,6 +76,24 @@ new_repo
 git tag -a v0 -m "release by $leak"
 git push -q origin v0 >/dev/null 2>&1;                 expect "annotated tag message scanned" 1 $?
 
+# Nested annotated tags: the inner tag's message and tagger are published with the outer tag.
+new_repo
+git tag -a inner -m "clean inner"; git tag -a outer -m "clean outer" inner 2>/dev/null
+git push -q origin outer >/dev/null 2>&1;              expect "nested tags, all clean: push allowed" 0 $?
+new_repo
+git tag -a inner -m "release by $leak"; git tag -a outer -m "clean outer" inner 2>/dev/null
+sh scripts/check-public.sh --range tip outer >/dev/null 2>&1; expect "nested tags: inner message scanned" 1 $?
+git push -q origin outer >/dev/null 2>&1;              expect "nested tags: push with a leak in the inner tag refused" 1 $?
+# Three levels: the leak sits in the innermost tag, two tags below the one that is pushed.
+new_repo
+git tag -a t1 -m "clean t1"; git tag -a t2 -m "clean t2" t1 2>/dev/null; git tag -a t3 -m "clean t3" t2 2>/dev/null
+sh scripts/check-public.sh --range tip t3 >/dev/null 2>&1; expect "three nested tags, all clean: check passes" 0 $?
+git push -q origin t3 >/dev/null 2>&1;                 expect "three nested tags, all clean: push allowed" 0 $?
+new_repo
+git tag -a t1 -m "release by $leak"; git tag -a t2 -m "clean t2" t1 2>/dev/null; git tag -a t3 -m "clean t3" t2 2>/dev/null
+sh scripts/check-public.sh --range tip t3 >/dev/null 2>&1; expect "three nested tags: innermost message scanned" 1 $?
+git push -q origin t3 >/dev/null 2>&1;                 expect "three nested tags: push with a leak in the innermost tag refused" 1 $?
+
 new_repo
 git switch -q -c gone; git push -q origin gone >/dev/null 2>&1
 git push -q origin --delete gone >/dev/null 2>&1;      expect "branch deletion allowed" 0 $?
@@ -110,6 +128,66 @@ echo w > docs/w.md; git add docs
 printf 'fix\n# ------------------------ >8 ------------------------\n# Do not modify or remove the line above.\ncontact %s\n' "$leak" > "$work/msg"
 hook_commit -F "$work/msg";                            expect "two-line scissors block: commit-msg cuts it (known limit)" 0 $?
 git push -q origin main >/dev/null 2>&1;               expect "two-line scissors block: push refused" 1 $?
+
+# --- refusals and crashes ----------------------------------------------------------------------
+# Does a hook refuse when its check finds a problem, and when the check crashes? git reports
+# exit 1 for any hook failure, so each hook is also run directly: its own exit must be non-zero.
+refused() { # refused <description> <actual exit>: any non-zero exit is a refusal
+    if [ "$2" -ne 0 ]; then passed=$((passed + 1)); else
+        failed=$((failed + 1)); echo "FAIL: $1 (expected a non-zero exit, got 0)" >&2; fi
+}
+# Runs .githooks/pre-push as `git push origin main` would.
+pre_push() {
+    printf 'refs/heads/main %s refs/heads/main %s\n' "$(git rev-parse HEAD)" "$(git rev-parse origin/main)" \
+        | sh .githooks/pre-push origin "$work/origin.git" >/dev/null 2>&1
+}
+pre_commit() { PATH="$work/cargo-stub:$PATH" sh .githooks/pre-commit >/dev/null 2>&1; }
+remote_main() { git --git-dir="$work/origin.git" rev-parse main; }
+
+new_repo
+add_doc clean "nothing personal"
+pre_push;                                              expect "pre-push run directly: clean push allowed" 0 $?
+add_doc leak "$leak"
+pre_push;                                              refused "pre-push run directly: leak refused" $?
+
+new_repo
+add_doc clean "nothing personal"
+was=$(remote_main)
+rm scripts/check-public.sh
+pre_push;                                              refused "pre-push: check-public.sh missing refused" $?
+git push -q origin main >/dev/null 2>&1;               refused "pre-push: push without check-public.sh refused" $?
+[ "$(remote_main)" = "$was" ];                         expect "pre-push: nothing reached the remote without the check" 0 $?
+printf 'if then\n' > scripts/check-public.sh           # cannot run: syntax error
+pre_push;                                              refused "pre-push: check-public.sh that cannot run refused" $?
+git checkout -q -- scripts/check-public.sh
+printf 'if then\n' > scripts/audit-status.sh           # cannot run: syntax error
+pre_push;                                              refused "pre-push: audit-status.sh that cannot run refused" $?
+git checkout -q -- scripts/audit-status.sh
+rm scripts/audit-status.sh
+pre_push;                                              refused "pre-push: audit-status.sh missing refused" $?
+
+new_repo
+echo x > docs/x.md; git add docs
+pre_commit;                                            expect "pre-commit run directly: clean commit allowed" 0 $?
+rm scripts/check-public.sh
+pre_commit;                                            refused "pre-commit: check-public.sh missing refused" $?
+printf 'if then\n' > scripts/check-public.sh
+pre_commit;                                            refused "pre-commit: check-public.sh that cannot run refused" $?
+git checkout -q -- scripts/check-public.sh
+printf 'if then\n' > scripts/audit-status.sh           # cannot run: syntax error
+pre_commit;                                            refused "pre-commit: audit-status.sh that cannot run refused" $?
+git checkout -q -- scripts/audit-status.sh
+rm scripts/audit-status.sh
+pre_commit;                                            refused "pre-commit: audit-status.sh missing refused" $?
+git checkout -q -- scripts/audit-status.sh
+
+echo "clean message" > "$work/msg"
+sh .githooks/commit-msg "$work/msg" >/dev/null 2>&1;   expect "commit-msg run directly: clean message allowed" 0 $?
+rm scripts/check-public.sh
+sh .githooks/commit-msg "$work/msg" >/dev/null 2>&1;   refused "commit-msg: check-public.sh missing refused" $?
+printf 'if then\n' > scripts/check-public.sh
+sh .githooks/commit-msg "$work/msg" >/dev/null 2>&1;   refused "commit-msg: check-public.sh that cannot run refused" $?
+git checkout -q -- scripts/check-public.sh
 
 # --- pre-commit (cargo replaced by a stub: the rule steps are what is tested here) ---------
 new_repo

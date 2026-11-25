@@ -23,8 +23,8 @@ Two ideas set it:
 
 ## Phase 0: what must be in place before the code?
 
-The repository, CI, the writing guide and the fixture generator, plus a list of the known gaps
-in the script tests.
+The repository, CI, the writing guide and the fixture generator, a list of the known gaps in the
+script tests, and the changes to the way of working adopted on 2026-11-25.
 
 - [x] 0.1 First commit and push to `main`, after a review of the file list. From then on: one
   branch and one draft PR per step, a coherence audit every 5 commits, merges by local
@@ -73,62 +73,76 @@ in the script tests.
   The questions these decisions opened are in "What is still open?" in `docs/design.md`. Each
   names the roadmap step that needs the answer: 1.4, 1.5, 1.6, 1.7, 3.1, 3.2, 3.5, 3.6, 3.7,
   3.9, 4.2, 4.4, 5.1, 5.2, 5.3.
-- [ ] 0.5 Remaining gaps in the rule-script tests. The reviews of PR #1, PR #2 and PR #3 found
-  them, and they are accepted as known limits for now. Each needs a test before the code
-  changes, except where an item says otherwise.
-  - `check-public.sh`:
-    - failures of `git show`, `ls-tree` and `diff-tree` are not each tested;
-    - names of people, phone numbers, IPs, base64 content and branch names are not detected
-      (header "Known limits").
-  - `cleanup.sh`:
+- [x] 0.5 Remaining gaps in the rule-script tests. The reviews of PR #1, PR #2 and PR #3 found
+  them. This step closed the ones below that are not listed as known limits. The owner marked
+  the step done with these limits listed (2026-11-25). Each known limit needs a test before the
+  code it names changes.
+  - Closed in this step, test first:
+    - `check-public.sh`: a failing `git show`, `ls-tree`, `diff-tree`, `cat-file`, `log`,
+      `rev-list` or `diff` stops the check with exit 2. Two of them passed in silence before:
+      `rev-list --parents` on a merge commit and `cat-file -t` on a tag. Nested annotated tags
+      are scanned to the innermost one;
+    - hooks: a check that finds a problem, is missing or cannot run makes every hook refuse;
+    - `cleanup.sh`: the "still merged into main" check just before deletion, a branch created
+      at `main` (audit 0003, F6), a detached HEAD at an unmerged commit, checked skip counts;
+    - `audit-status.sh`, what counts as red: everything that is not green, and only the latest
+      attempt of each check (owner's decisions, 2026-11-24 and 2026-11-25). NEUTRAL and SKIPPED
+      are green, as in GitHub's branch protection: the report flags what would block a merge;
+    - `audit-status.sh`, other tests: uncommitted changes, stashes and the unpushed and
+      not-pulled counts now have tests. A test that checks a line is absent now fails when its
+      section prints nothing, except in the "Rust" section (below);
+    - `audit-status.sh`, failures said: a failing `gh` call prints "not read" for open pull
+      requests, their checks, the CI runs and the interaction limit. `core.hooksPath` may be the
+      absolute path of this repository's `.githooks`, in POSIX or drive-letter form.
+  - Known limits of `check-public.sh`: the list is in the header of the script, "Known limits"
+    (for example names of people, phone numbers and IPs are not detected).
+  - Known limits of `cleanup.sh`:
     - on Windows 5 checks are skipped: names with `\` cannot exist there, and a read-only folder
       does not stop `rm`. Those rules are tested on macOS and Linux only;
     - on Windows the double-quote check runs but does not exercise git's quoting;
-    - the numbers passed to `skip` are written by hand;
     - the GitHub section duplicates `audit-status.sh`;
     - "never asks" is checked on the script's text (a word list) and with input on a pipe, never
       at a real terminal;
-    - the check "still merged into main" (with full ref names) just before a branch is deleted
-      has no test. It guards a race;
-    - no test fixes the choice that a branch just created at `main` is removed (audit 0003, F6).
-  - `audit-status.sh`, unfinished-work section:
-    - uncommitted changes, stashes and the unpushed / not pulled counts have no test;
-    - these have one:
-      - the "AUDIT DUE" and "RED CHECKS" lines;
-      - the current branch name;
-      - unmerged local and remote branches;
-      - a missing `main` or `origin/main`;
-      - the `origin/HEAD` filter;
-      - "no tags or other refs";
-    - the "RED CHECKS" test covers the printed line and its absence, not which checks are
-      selected as red (the `gh` stub returns the formatted line);
-    - only `FAILURE` counts as red today, not cancelled or timed-out jobs nor commit statuses:
-      decide and test;
-    - the negative RED CHECKS case does not assert that the GitHub section ran, and its stub has
-      a dead first line;
-    - report-mode tests pass if the script prints nothing in that section.
-  - `audit-status.sh`, "Rust" section:
-    - five review rounds on PR #3. The reviews of 2557e7f and 1ac9d1d found minor bugs. All but
-      one were fixed in 1ac9d1d and c3f070e; the one left is the missing time limit on
-      `rustup check` (below);
-    - the reviews of c3f070e, 1363b18 and fb41029 found no bug, only breakages no test noticed.
-      The owner decided (2026-11-23) to stop the rounds there. A breakage of this section that
-      shows no bug is listed on the PR and here, not closed with another round;
-    - known limit: `rustup check` has no time limit. It runs only in report mode, after the hook
-      gates, so no commit or push waits on it;
-    - three rules are correct today, but breaking them on a copy leaves all tests green (review
-      of 40e2d4c):
-      - unescaping the first dot of the x.y.z check (`1x100.0` would then pass);
-      - accepting only a single digit for the major and patch numbers (`10.0.0` would then be
-        "not x.y.z");
-      - letting the captured rustup version start with a dot.
-  - From the targeted review of the third-round fixes:
+    - nothing checks that every `off_windows` block ends with `end_off_windows`;
+    - a commit that only a detached HEAD holds is not mentioned in any report. Nothing removes
+      it.
+  - Known limits of `audit-status.sh`:
+    - the `jq` projection inside the `gh` call is not tested: the stub returns its output;
+    - `gh` gives no event for a check. Two runs of the same workflow and job on one head count
+      as one check. Example: a green manual `workflow_dispatch` run hides a failed
+      `pull_request` run;
+    - start times are compared as strings, which holds for GitHub's whole-second times;
+    - a check name with a backslash is printed with the backslash doubled (`@tsv` escapes it);
+    - `gh pr list` reads at most 30 open pull requests, its default;
+    - the exit status of the `awk` that selects the red checks is not checked;
+    - "Rust" section: the owner decided (2026-11-23) that a breakage of this section that shows
+      no bug is listed here, not tested. These are listed:
+      - `rustup check` has no time limit. It runs only in report mode, after the hook gates;
+      - its negative tests pass on a section that prints nothing;
+      - three rules are correct today, but breaking them on a copy leaves all tests green
+        (review of 40e2d4c):
+        - unescaping the first dot of the x.y.z check (`1x100.0` would then pass);
+        - accepting only a single digit for the major and patch numbers (`10.0.0` would then
+          be "not x.y.z");
+        - letting the captured rustup version start with a dot.
+  - Known limits of the hooks:
     - the first push to a new remote scans the whole history and stops on the accepted exception
       `cd3620d` (`CLAUDE.md`). Encode the exception if a second remote is ever added;
-    - nested annotated tags: only the outer message is scanned;
-    - `core.commentChar` other than `#`: `git commit -v` is refused (fails closed);
-    - untested: `cleanup.sh` `--no-merged` with a detached HEAD at an unmerged commit; a refused
-      push and a crashing hook both exit 1.
+    - `core.commentChar` other than `#`: `git commit -v` is refused (fails closed).
+
+- [ ] 0.6 Way of working: the four changes the owner adopted on 2026-11-25.
+  - "Done when" for every step: a list of checks that prove the step is done. The PR
+    description maps each item to its evidence: a test, a commit or a file. The reviewer and
+    the auditor check that list. The open steps get theirs in this step.
+  - `scripts/merge-ready.sh`, test first. It waits until the four CI jobs are green on the
+    exact head of the PR, and stops if the head moves. It also checks that the last verdict
+    comment is APPROVED and quotes the tree of that head. The merge goes ahead only after it.
+  - Model by risk. Sonnet writes routine code: scripts, their tests, docs. Opus writes the code
+    for cryptography and for R28–R34. Reviews and audits stay on Fable. A PR holds about 400
+    changed lines; a bigger step is split into slices, and the PR says what is left.
+  - `docs/lessons.md`: lessons learnt on the way of working, each with its date and what to do.
+    Agents never watch CI themselves; only the main session does, so that GitHub's API limit is
+    not used up.
 
 ## Phase 1: how do we write files safely, before any cryptography?
 

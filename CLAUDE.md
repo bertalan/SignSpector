@@ -26,7 +26,8 @@ the CI workflow. There is no exception for "infrastructure".
    Rules that protect (scripts under `scripts/`, safety code) are also checked by breaking each
    rule on a copy and seeing at least one test fail. A rule that no test notices gets a test.
    One exception, decided by the owner: in the "Rust" section of `audit-status.sh`, a breakage
-   that shows no bug is listed, not tested (`docs/roadmap.md`, 0.5).
+   that shows no bug is listed, not tested. The other known limits of the rule scripts are
+   listed in `docs/roadmap.md`, 0.5; the owner marked that step done with them listed.
 5. Independent review, by a newly started `fable-reviewer` agent for every review: a different
    model, of equal or higher capability than the author's. Never resume the reviewer. The brief
    holds only:
@@ -53,18 +54,19 @@ the CI workflow. There is no exception for "infrastructure".
      round. The count is of the minor rounds before one commit. A CHANGES NEEDED round in
      between does not restart it; the next commit starts a new count. After the third minor
      round, the minor points left move on. Those of the third round move too. No new round runs
-     for them. They move to the next commit of the same PR when more commits are planned in it
-     (owner's decision, 2026-11-24). Otherwise they move to the first commit of the next PR. The
-     verdict comment of that round lists them as moved. The commit they move to fixes them or
-     writes them into the roadmap step that will fix them. For a point on the message of a
-     pushed commit, that commit carries the note.
+     for them. They move to the next commit of the same PR when the author plans more commits
+     in it (owner's decision, 2026-11-24). Otherwise they move to the first commit of the next
+     PR. The verdict comment of that round lists them as moved. The commit they move to fixes
+     them or writes them into the roadmap step that will fix them. For a point on the message
+     of a pushed commit, that commit carries the note.
    - Some points never move: bugs, missing tests, and points on personal data, or on
      confirmation or writing files (R28–R34). They are fixed and reviewed before the commit.
    - The review leaves a trace of what it approved. The reviewer reports the tree of its
      staged copy (`git write-tree`). The verdict comment quotes it, with the subject line of the
      reviewed commit message. After the commit, `git rev-parse HEAD^{tree}` must give the same
-     tree. If it does not, nothing is pushed: the commit is undone locally and the changes get
-     a new review. The comment that names the commit quotes the tree too.
+     tree. If it does not, nothing is pushed. Undo the commit with `git reset --soft HEAD~1`,
+     which keeps the changes, and send them to a new review. The comment that names the commit
+     quotes the tree too.
 
    Post every verdict as a comment on the pull request, as soon as the PR exists: APPROVED or
    CHANGES NEEDED, the findings in short, how each was closed. After the commit, a comment names
@@ -124,6 +126,14 @@ do, references point to functions or options that never existed, work is left ha
   only lists them. The main session runs the removing form after an audit; agents (auditor,
   reviewer) run only `sh scripts/cleanup.sh --plan`.
   - Worktrees, backups (`*.bak`), editor files and other untracked files are only listed.
+  - Agents that work in parallel each get a git worktree under `.claude/worktrees/` (ignored by
+    git). They never commit there; the main session takes their changes as a patch. When the
+    changes are committed, the main session removes the worktree and its branch, locally.
+    First it compares `git -C <worktree> diff HEAD` and
+    `git -C <worktree> status --porcelain --untracked-files=all` with the patch it took: a change
+    made after the patch is taken again or reported, never lost. Then
+    `git worktree remove --force` and `git branch -D`. `--force` is needed because the worktree
+    still has uncommitted files.
   - Ignored folders are never touched. `tests/corpus/`, `tests/out/` and `target/` are protected
     even if `.gitignore` lacks them.
   - Deletion happens only locally, from the development environment, never on GitHub. Merged

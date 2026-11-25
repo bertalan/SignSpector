@@ -33,6 +33,23 @@ expect_reason() {
         failed=$((failed + 1)); echo "FAIL: $desc (exit $r, expected 1 with \"$reason\"; got: $err)" >&2; fi
 }
 
+# report_section <heading start> <report>: the non-blank lines of the first report section whose
+# heading starts with "== <heading start>", without the heading.
+report_section() {
+    printf '%s\n' "$2" | awk -v h="== $1" '
+        on && /^== / { exit }
+        on && NF { print }
+        index($0, h) == 1 { on = 1 }'
+}
+
+# expect_absent <description> <heading start> <extended regex> <report>: the section has at
+# least one line, and no line matches. A section that prints nothing is a failure, never a pass.
+expect_absent() {
+    lines=$(report_section "$2" "$4")
+    if [ -n "$lines" ] && ! printf '%s\n' "$lines" | grep -Eq -- "$3"; then passed=$((passed + 1)); else
+        failed=$((failed + 1)); echo "FAIL: $1 (section \"$2\" is empty or has \"$3\")" >&2; fi
+}
+
 # Report-mode tests never call the real gh (network, user account): default gh says "not logged in".
 unset GH_REPO GH_HOST GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN
 mkdir -p "$work/nogh"; printf '#!/bin/sh\necho "$*" >> "%s/gh-stub.log"\nexit 1\n' "$work" > "$work/nogh/gh"; chmod +x "$work/nogh/gh"
@@ -340,8 +357,55 @@ git reset -q; rm -rf docs
 new_repo
 sh scripts/audit-status.sh 2>/dev/null | grep -q "HOOKS NOT ENABLED"; expect "warning without hooks" 0 $?
 git config core.hooksPath .githooks
-sh scripts/audit-status.sh 2>/dev/null | grep -q "HOOKS NOT ENABLED"; expect "no warning with hooks" 1 $?
-sh scripts/audit-status.sh 2>/dev/null | grep -q "== Audit cadence"; expect "report ran (hooks enabled)" 0 $?
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+printf '%s\n' "$out" | grep -q "HOOKS NOT ENABLED"; expect "no warning with hooks" 1 $?
+printf '%s\n' "$out" | grep -qx "== Audit cadence"; expect "report printed with hooks enabled" 0 $?
+# The hooks path may also be the absolute path of this repository's own .githooks folder.
+mkdir -p .githooks other
+git config core.hooksPath "$(pwd)/.githooks"
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+printf '%s\n' "$out" | grep -q "HOOKS NOT ENABLED"; expect "no warning with the absolute path of .githooks" 1 $?
+printf '%s\n' "$out" | grep -qx "== Audit cadence"; expect "report printed with the absolute path of .githooks" 0 $?
+# The same folder under another spelling counts: compared by identity, not by path text (Windows
+# gives short 8.3 names such as RUNNER~1; a case-insensitive file system gives other letter case).
+# Only a case-insensitive file system lets this test make the spelling differ.
+if [ .githooks -ef .GITHOOKS ]; then
+    git config core.hooksPath "$(pwd)/.GITHOOKS"
+    out=$(sh scripts/audit-status.sh 2>/dev/null)
+    printf '%s\n' "$out" | grep -q "HOOKS NOT ENABLED"; expect "no warning with another spelling of the same folder" 1 $?
+    printf '%s\n' "$out" | grep -qx "== Audit cadence"; expect "report printed with another spelling of the same folder" 0 $?
+fi
+mkdir -p "$work/elsewhere/.githooks"
+git config core.hooksPath "$work/elsewhere/.githooks"
+sh scripts/audit-status.sh 2>/dev/null | grep -q "HOOKS NOT ENABLED"; expect "warning with a .githooks folder elsewhere" 0 $?
+git config core.hooksPath "$(pwd)/other"
+sh scripts/audit-status.sh 2>/dev/null | grep -q "HOOKS NOT ENABLED"; expect "warning with another folder of this repository" 0 $?
+rmdir .githooks
+git config core.hooksPath "$(pwd)/.githooks"
+sh scripts/audit-status.sh 2>/dev/null | grep -q "HOOKS NOT ENABLED"; expect "warning with an absolute path to a missing .githooks" 0 $?
+# A drive-letter path (git config stores C:/... in Git Bash) counts as absolute: it reaches the
+# resolve step. On Windows, pwd -W gives this folder in that form. Elsewhere a symlink named
+# "C:" in the current folder lets the resolve step succeed; such a name cannot exist on Windows.
+mkdir .githooks
+if dl=$(pwd -W 2>/dev/null) && [ -n "$dl" ]; then
+    dl_hooks="$dl/.githooks"; dl_back=$(printf '%s\n' "$dl_hooks" | tr '/' '\\'); dl_other="$dl/other"
+else
+    ln -s . "C:"; ln -s .githooks 'C:\.githooks'; dl_links=yes
+    dl_hooks="C:/.githooks"; dl_back='C:\.githooks'; dl_other="C:/other"
+fi
+git config core.hooksPath "$dl_hooks"
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+printf '%s\n' "$out" | grep -q "HOOKS NOT ENABLED"; expect "no warning with a drive-letter path of .githooks" 1 $?
+printf '%s\n' "$out" | grep -qx "== Audit cadence"; expect "report printed with a drive-letter path of .githooks" 0 $?
+git config core.hooksPath "$dl_back"
+out=$(sh scripts/audit-status.sh 2>/dev/null)
+printf '%s\n' "$out" | grep -q "HOOKS NOT ENABLED"; expect "no warning with a drive-letter path, backslash" 1 $?
+printf '%s\n' "$out" | grep -qx "== Audit cadence"; expect "report printed with a drive-letter path, backslash" 0 $?
+git config core.hooksPath "$dl_other"
+sh scripts/audit-status.sh 2>/dev/null | grep -q "HOOKS NOT ENABLED"; expect "warning with a drive-letter path of another folder" 0 $?
+[ "${dl_links:-}" = yes ] && rm -f "C:" 'C:\.githooks'
+rmdir .githooks
+git config core.hooksPath .githooks
 
 # The session report warns before the limit on who can open PRs and issues expires.
 new_repo
@@ -354,12 +418,22 @@ fake_gh() { # fake_gh <expires_at or empty>
 soon=$(date -u -v+10d +%Y-%m-%d 2>/dev/null || date -u -d '+10 days' +%Y-%m-%d)
 far=$(date -u -v+100d +%Y-%m-%d 2>/dev/null || date -u -d '+100 days' +%Y-%m-%d)
 fake_gh "${soon}T00:00:00Z"
-PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTERACTION LIMIT EXPIRES"; expect "limit expiring within 30 days" 0 $?
+# The warning names the date only, not the full time stamp.
+PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null |
+    grep -q "^INTERACTION LIMIT EXPIRES on $soon: "
+expect "limit expiring within 30 days" 0 $?
 fake_gh "${far}T00:00:00Z"
-PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTERACTION LIMIT"; expect "limit far away: no warning" 1 $?
-PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "== GitHub"; expect "GitHub section ran (limit far away)" 0 $?
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null)
+expect_absent "limit far away: no warning" GitHub "INTERACTION LIMIT" "$out"
+report_section GitHub "$out" | grep -qx "no open pull requests"; expect "GitHub section ran (limit far away)" 0 $?
 fake_gh ""
 PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null | grep -q "INTERACTION LIMIT NOT ACTIVE"; expect "limit missing" 0 $?
+# A failing gh api (network, API limit) is said, never read as a missing limit.
+printf '#!/bin/sh\ncase "$*" in\n  "auth status"*) exit 0 ;;\n  *nameWithOwner*) echo owner/repo ;;\n  *interaction-limits*) exit 1 ;;\n  *) exit 0 ;;\nesac\n' > "$work/ghshim/gh"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>/dev/null)
+report_section GitHub "$out" | grep -qx "interaction limit not read (gh api failed)"
+expect "limit: a failing gh api is said" 0 $?
+expect_absent "limit: a failing gh api is not a missing limit" GitHub "INTERACTION LIMIT NOT ACTIVE" "$out"
 # The report says when a newer stable Rust exists than the pinned one (rust-toolchain.toml).
 new_repo
 printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
@@ -485,16 +559,10 @@ printf '[toolchain]\nchannel = "1.100.0"\n' > rust-toolchain.toml
 # The report says when an audit is due (5 commits since the last one), and not before.
 new_repo
 commit a; commit b; commit c; commit d
-sh scripts/audit-status.sh 2>&1 | grep -qx "AUDIT DUE";  expect "report: 4 commits, no AUDIT DUE" 1 $?
+expect_absent "report: 4 commits, no AUDIT DUE" "Audit cadence" "^AUDIT DUE$" "$(sh scripts/audit-status.sh 2>&1)"
 commit e
 sh scripts/audit-status.sh 2>&1 | grep -qx "AUDIT DUE";  expect "report: 5 commits, AUDIT DUE" 0 $?
-# Red checks on an open pull request are reported (this line is what must stop new work).
-printf '#!/bin/sh\ncase "$*" in\n  "auth status"*) exit 0 ;;\n  *statusCheckRollup*) echo "#2 failing: Test (x86_64-pc-windows-gnu)" ;;\n  *) exit 0 ;;\nesac\n' > "$work/ghshim/gh"
-chmod +x "$work/ghshim/gh"
-out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
-printf '%s\n' "$out" | grep -A1 "^RED CHECKS on open pull requests:" | grep -qx "#2 failing: Test (x86_64-pc-windows-gnu)"; expect "report: red checks on a PR shown" 0 $?
-printf '#!/bin/sh\n[ "$1 $2" = "auth status" ] && exit 0\nexit 0\n' > "$work/ghshim/gh"; chmod +x "$work/ghshim/gh"
-PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1 | grep -q "RED CHECKS"; expect "report: no red checks, no RED CHECKS line" 1 $?
+# Red checks on open pull requests: see the section "step 0.5" at the end.
 # A tag called "main" does not hide unmerged branches or garble branch names in the report.
 new_repo
 git switch -q -c feat && echo f > f.txt && git add f.txt && git commit -qm feat && git tag main feat && git tag feat
@@ -504,15 +572,15 @@ out=$(sh scripts/audit-status.sh 2>&1)
 printf '%s\n' "$out" | grep -A1 "local branches not merged into main:" | grep -qx "  feat"; expect "report: tag main does not hide unmerged branches" 0 $?
 printf '%s\n' "$out" | grep -q "^branch feat:";       expect "report: current branch named without heads/" 0 $?
 printf '%s\n' "$out" | grep -A3 "remote branches not merged into main:" | grep -qx "  origin/feat"; expect "report: unmerged remote branch listed" 0 $?
-printf '%s\n' "$out" | grep -Eq "^  origin/(HEAD|main)$"; expect "report: no origin/HEAD or origin/main line" 1 $?
-printf '%s\n' "$out" | grep -q "refs/";               expect "report: only branches listed, no tags or other refs" 1 $?
+expect_absent "report: no origin/HEAD or origin/main line" "Unfinished local work" "^  origin/(HEAD|main)$" "$out"
+expect_absent "report: only branches listed, no tags or other refs" "Unfinished local work" "refs/" "$out"
 # Without origin/main the remote list says it cannot check, instead of staying silent.
 git update-ref -d refs/remotes/origin/main
 sh scripts/audit-status.sh 2>&1 | grep -q "no origin/main: unmerged remote branches not checked"; expect "report: missing origin/main is said" 0 $?
 rm -rf "$work/origin.git"
 # With no origin remote there is nothing to say about remote branches.
 git remote remove origin
-sh scripts/audit-status.sh 2>&1 | grep -q "no origin/main";  expect "report: no origin remote, no origin/main line" 1 $?
+expect_absent "report: no origin remote, no origin/main line" "Unfinished local work" "no origin/main" "$(sh scripts/audit-status.sh 2>&1)"
 # Without a local branch main the report says it cannot check, instead of staying silent.
 git branch -q -m main trunk
 sh scripts/audit-status.sh 2>&1 | grep -q "no local branch main: unmerged local branches not checked"; expect "report: missing main is said" 0 $?
@@ -522,6 +590,314 @@ printf '#!/bin/sh\necho "prompt=${GH_PROMPT_DISABLED:-} stdin=$(cat)" >> "%s/gh-
 rm -f "$work/gh-ask.log"
 echo typed | PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh >/dev/null 2>&1
 [ -s "$work/gh-ask.log" ] && ! grep -vx "prompt=1 stdin=" "$work/gh-ask.log" | grep -q .; expect "report: gh never prompts or reads input" 0 $?
+
+# --- step 0.5: check-public.sh git failures ------------------------------------------------
+# What happens when git fails inside check-public.sh? It stops with exit 2 and names the failed
+# command, never a silent pass. A git wrapper on PATH fails for one subcommand only and runs
+# the real git for everything else.
+gf_git=$(command -v git)
+mkdir -p "$work/gf-shim"
+gf_fail() { # gf_fail <word>: the wrapper fails whenever one of its arguments is that word
+    printf '#!/bin/sh\nfor a in "$@"; do [ "$a" = %s ] && { echo "fatal: test failure" >&2; exit 128; }; done\nexec "%s" "$@"\n' \
+        "$1" "$gf_git" > "$work/gf-shim/git"
+    chmod +x "$work/gf-shim/git"
+}
+# gf_expect <description> <reason in stderr> <check-public.sh arguments...>: exit 2 for that reason.
+gf_expect() {
+    gf_desc=$1; gf_reason=$2; shift 2
+    gf_err=$(PATH="$work/gf-shim:$PATH" sh scripts/check-public.sh "$@" 2>&1 >/dev/null); gf_r=$?
+    if [ "$gf_r" -eq 2 ] && printf '%s\n' "$gf_err" | grep -q "$gf_reason"; then passed=$((passed + 1)); else
+        failed=$((failed + 1)); echo "FAIL: $gf_desc (exit $gf_r, expected 2 with \"$gf_reason\"; got: $gf_err)" >&2; fi
+}
+new_repo
+mkdir -p docs; echo a > docs/a.md; git add docs; git commit -qm a
+gf_base=$(git rev-parse HEAD~1)
+# Control: the wrapper itself runs git normally when the failing subcommand is not used.
+gf_fail no-such-subcommand
+PATH="$work/gf-shim:$PATH" sh scripts/check-public.sh --range "$gf_base" HEAD >/dev/null 2>&1
+expect "git failures: the wrapper alone passes a clean range" 0 $?
+gf_fail show
+echo b > docs/b.md; git add docs
+gf_expect "git show fails on a staged file"      "cannot check: cannot read :docs/b.md" --staged
+git reset -q; rm -f docs/b.md
+gf_expect "git show fails on a file of the range" "cannot check: cannot read $(git rev-parse HEAD):" --range "$gf_base" HEAD
+gf_fail ls-tree
+gf_expect "git ls-tree fails on the tip tree"     "cannot check: git ls-tree failed on HEAD" --range tip HEAD
+git switch -q -c gf-side; echo c > docs/c.md; git add docs; git commit -qm c
+git switch -q main; git merge -q --no-ff --no-edit gf-side
+gf_expect "git ls-tree fails on a merge commit"   "cannot check: git ls-tree failed on $(git rev-parse HEAD)" --range "$gf_base" HEAD
+gf_fail diff-tree
+gf_expect "git diff-tree fails on a commit"       "cannot check: git diff-tree failed on" --range "$gf_base" HEAD
+# A failing git rev-list --parents must stop the run, also for a merge commit (whose files are
+# listed from the whole tree): the count of parents is never taken from a failed command.
+gf_fail --parents
+gf_expect "git rev-list --parents fails on a merge commit" "cannot check: git rev-list failed on $(git rev-parse HEAD)" --range "$gf_base" HEAD
+gf_fail log
+gf_expect "git log fails on a commit"             "cannot check: git log failed on" --range "$gf_base" HEAD
+gf_fail "$gf_base..HEAD"
+gf_expect "git rev-list fails on a range"         "cannot check: git rev-list failed$" --range "$gf_base" HEAD
+gf_fail --not
+gf_expect "git rev-list fails on a remote range"  "cannot check: git rev-list failed$" --range remote:origin HEAD
+gf_fail diff
+gf_expect "git diff fails on the staged files"    "cannot check: git diff failed" --staged
+# Annotated tags, also nested: reading the type or the content of each tag can fail too.
+git tag -a gf-inner -m inner; git tag -a gf-outer -m outer gf-inner 2>/dev/null
+gf_fail no-such-subcommand
+PATH="$work/gf-shim:$PATH" sh scripts/check-public.sh --range tip gf-outer >/dev/null 2>&1
+expect "git failures: the wrapper alone passes nested tags" 0 $?
+gf_fail cat-file
+gf_expect "git cat-file fails on the type of a tag" "cannot check: cannot read object gf-outer" --range tip gf-outer
+gf_fail tag
+gf_expect "git cat-file fails on an outer tag"      "cannot check: cannot read tag gf-outer" --range tip gf-outer
+# The inner tag is reached by its id: the wrapper fails only for that id.
+gf_inner=$(git rev-parse gf-inner)
+gf_fail "$gf_inner"
+gf_expect "git cat-file fails on an inner tag"      "cannot check: cannot read object $gf_inner" --range tip gf-outer
+
+# --- step 0.5: audit-status.sh gaps ---------------------------------------------------------
+new_repo
+# gh_checks <file>: a logged-in gh with one open pull request. For the checks of the open pull
+# requests it returns the file, one line per check, as the script's own gh call returns them.
+# The fields are number, type, workflow, name, conclusion, state and start time, separated by
+# tabs. The script selects the red ones.
+gh_checks() {
+    printf '#!/bin/sh\ncase "$*" in\n  "auth status"*) exit 0 ;;\n  *statusCheckRollup*) cat "%s" ;;\n  *isDraft*) echo "#2 open step/x updated 2026-11-24: Test" ;;\n  *) exit 0 ;;\nesac\n' "$1" > "$work/ghshim/gh"
+    chmod +x "$work/ghshim/gh"
+}
+# Owner's decision of 2026-11-24: everything that is not green is red. The rule is an allowlist:
+# a check run is red when its conclusion is not empty and not SUCCESS, NEUTRAL or SKIPPED; a
+# commit status is red when its state is not empty and not SUCCESS, PENDING or EXPECTED. So
+# STALE, and any value GitHub adds later, is red. Running or pending ones (empty conclusion,
+# PENDING, EXPECTED) are not red yet. The values are compared whole.
+t='	'
+{
+    printf '2%sCheckRun%s%sLint%sFAILURE%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sBuild%sSUCCESS%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sTest (a)%sCANCELLED%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sTest (b)%sTIMED_OUT%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sDeploy%sACTION_REQUIRED%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sDocs%sSTARTUP_FAILURE%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sFmt%sNEUTRAL%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sFuzz%sSKIPPED%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sStill running%s%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/a%s%sERROR\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/b%s%sFAILURE\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/c%s%sPENDING\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/d%s%sSUCCESS\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/e%s%sEXPECTED\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sStale one%sSTALE%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sNew one%sWEIRD_NEW%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/s%s%sSTALE\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/w%s%sWEIRD_NEW\n' "$t" "$t" "$t" "$t" "$t"
+    printf '5%sCheckRun%s%sBuild%sSUCCESS%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '5%sCheckRun%s%sQueued%s%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '5%sStatusContext%s%sci/x%s%sPENDING\n' "$t" "$t" "$t" "$t" "$t"
+    printf '7%sStatusContext%s%sci/z%s%sERROR\n' "$t" "$t" "$t" "$t" "$t"
+} > "$work/checks-red.tsv"
+gh_checks "$work/checks-red.tsv"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | awk '/^RED CHECKS/ { on = 1; print; next } on && /^#/ { print; next } { on = 0 }' > "$work/red.txt"
+printf 'RED CHECKS on open pull requests:\n#2 failing: Lint, Test (a), Test (b), Deploy, Docs, ci/a, ci/b, Stale one, New one, ci/s, ci/w\n#7 failing: ci/z\n' | cmp -s - "$work/red.txt"; expect "report: red checks selected (not green, not pending)" 0 $?
+# Owner's decision of 2026-11-25: for each check of a pull request, only its latest attempt
+# counts. The latest is the one that started last; one not started yet (no start time, or
+# GitHub's zero time) is the latest. The lines are not in time order: the script must compare
+# the times. A check of the same name on another pull request does not count.
+{
+    printf '3%sCheckRun%s%sLint%sFAILURE%s%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sLint%sSUCCESS%s%s2026-11-24T11:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sTest%sFAILURE%s%s2026-11-24T12:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sTest%sSUCCESS%s%s2026-11-24T09:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sBuild%sFAILURE%s%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sBuild%s%s%s0001-01-01T00:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sDocs%sFAILURE%s%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sDocs%s%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sStatusContext%s%sci/a%s%sERROR%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sStatusContext%s%sci/a%s%sSUCCESS%s2026-11-24T11:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sStatusContext%s%sci/b%s%sSUCCESS%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sStatusContext%s%sci/b%s%sFAILURE%s2026-11-24T11:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sEq-a%sFAILURE%s%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sEq-a%sSUCCESS%s%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sEq-b%sSUCCESS%s%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sEq-b%sFAILURE%s%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sStatusContext%s%sci/g1%sFAILURE%sSUCCESS%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sG2%sSUCCESS%sERROR%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sG3%sSUCCESS_X%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sCheckRun%s%sG4%sXSUCCESS%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sStatusContext%s%sci/g5%s%sPENDINGISH%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '3%sStatusContext%s%sci/g6%s%sXEXPECTED%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '9%sCheckRun%sCI%sbuild%sFAILURE%s%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '9%sCheckRun%sDocs%sbuild%sSUCCESS%s%s2026-11-24T10:00:05Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '8%sCheckRun%s%sTest%sSUCCESS%s%s2026-11-24T13:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+} > "$work/checks-rerun.tsv"
+gh_checks "$work/checks-rerun.tsv"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | awk '/^RED CHECKS/ { on = 1; print; next } on && /^#/ { print; next } { on = 0 }' > "$work/red.txt"
+printf 'RED CHECKS on open pull requests:\n#3 failing: Test, ci/b, Eq-b, G3, G4, ci/g5, ci/g6\n#9 failing: CI / build\n' | cmp -s - "$work/red.txt"; expect "report: only the latest attempt of each check counts" 0 $?
+# Each type has its own green list: PENDING and EXPECTED are green only for a status, NEUTRAL and
+# SKIPPED only for a check run. A value from the other list is red.
+{
+    printf '2%sCheckRun%s%sCR-pending%sPENDING%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sCR-expected%sEXPECTED%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sst-neutral%s%sNEUTRAL%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sst-skipped%s%sSKIPPED%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+} > "$work/checks-lists.tsv"
+gh_checks "$work/checks-lists.tsv"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | awk '/^RED CHECKS/ { on = 1; print; next } on && /^#/ { print; next } { on = 0 }' > "$work/red.txt"
+printf 'RED CHECKS on open pull requests:\n#2 failing: CR-pending, CR-expected, st-neutral, st-skipped\n' | cmp -s - "$work/red.txt"; expect "report: each type has its own green list" 0 $?
+# A commit status and a check run that has no workflow have the same (empty) workflow: the type
+# is part of the key, so a green check run never hides a red status of the same name.
+{
+    printf '4%sCheckRun%s%sci%sSUCCESS%s%s2026-11-24T11:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '4%sStatusContext%s%sci%s%sFAILURE%s2026-11-24T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+} > "$work/checks-type.tsv"
+gh_checks "$work/checks-type.tsv"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | awk '/^RED CHECKS/ { on = 1; print; next } on && /^#/ { print; next } { on = 0 }' > "$work/red.txt"
+printf 'RED CHECKS on open pull requests:\n#4 failing: ci\n' | cmp -s - "$work/red.txt"; expect "report: a red status is not hidden by a green check run of the same name" 0 $?
+# A row of a type the script does not know is judged by the same rule: red when its conclusion
+# or its state is not empty and not a green value of either list (SUCCESS, NEUTRAL, SKIPPED,
+# PENDING, EXPECTED); not red when both are empty.
+{
+    printf '6%sOther%s%sunk/red1%sFAILURE%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '6%sOther%s%sunk/red2%s%sERROR\n' "$t" "$t" "$t" "$t" "$t"
+    printf '6%sOther%s%sunk/red3%sSUCCESS%sSTALE\n' "$t" "$t" "$t" "$t" "$t"
+    printf '6%sOther%s%sunk/ok1%s%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '6%sOther%s%sunk/ok2%sNEUTRAL%sEXPECTED\n' "$t" "$t" "$t" "$t" "$t"
+    printf '6%sOther%s%sunk/ok3%sPENDING%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '6%sOther%s%sunk/red4%sSUCCESS_X%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '6%sOther%s%sunk/red5%s%sXPENDING\n' "$t" "$t" "$t" "$t" "$t"
+    printf '6%sOther%s%sunk/red6%sSTALE%s\n' "$t" "$t" "$t" "$t" "$t"
+} > "$work/checks-unknown.tsv"
+gh_checks "$work/checks-unknown.tsv"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | awk '/^RED CHECKS/ { on = 1; print; next } on && /^#/ { print; next } { on = 0 }' > "$work/red.txt"
+printf 'RED CHECKS on open pull requests:\n#6 failing: unk/red1, unk/red2, unk/red3, unk/red4, unk/red5, unk/red6\n' | cmp -s - "$work/red.txt"; expect "report: a row of an unknown type is red unless green or empty" 0 $?
+# A failing gh pr list (network, API limit) is said, never silent.
+printf '#!/bin/sh\ncase "$*" in\n  "auth status"*) exit 0 ;;\n  *statusCheckRollup*) echo "API rate limit exceeded" >&2; exit 1 ;;\n  *isDraft*) echo "#2 open step/x updated 2026-11-24: Test" ;;\n  *) exit 0 ;;\nesac\n' > "$work/ghshim/gh"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | grep -qx "checks not read (gh pr list failed)"; expect "report: a failing gh pr list is said" 0 $?
+# A check that finished and has no start time is older than any check with a time; between
+# finished checks without a time, the later line wins. Only a check that is not started yet
+# (no conclusion, no state) counts as the latest without a time.
+{
+    printf '2%sCheckRun%s%sLint%sSUCCESS%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sLint%sFAILURE%s%s2026-11-25T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sBuild%sFAILURE%s%s0001-01-01T00:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sBuild%sSUCCESS%s%s2026-11-25T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sDocs%sSUCCESS%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sDocs%sFAILURE%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sFmt%sFAILURE%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sFmt%sSUCCESS%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+} > "$work/checks-notime.tsv"
+gh_checks "$work/checks-notime.tsv"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | awk '/^RED CHECKS/ { on = 1; print; next } on && /^#/ { print; next } { on = 0 }' > "$work/red.txt"
+printf 'RED CHECKS on open pull requests:\n#2 failing: Lint, Docs\n' | cmp -s - "$work/red.txt"; expect "report: a finished check with no time is older than one with a time" 0 $?
+# The same holds for commit statuses: a finished status with no time is older than one with a
+# time, in either line order.
+{
+    printf '2%sStatusContext%s%sci/x%s%sSUCCESS%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/x%s%sFAILURE%s2026-11-25T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/y%s%sFAILURE%s2026-11-25T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/y%s%sSUCCESS%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+} > "$work/checks-notime-status.tsv"
+gh_checks "$work/checks-notime-status.tsv"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | awk '/^RED CHECKS/ { on = 1; print; next } on && /^#/ { print; next } { on = 0 }' > "$work/red.txt"
+printf 'RED CHECKS on open pull requests:\n#2 failing: ci/x, ci/y\n' | cmp -s - "$work/red.txt"; expect "report: a finished status with no time is older than one with a time" 0 $?
+# A check not started yet is the latest in either line order.
+{
+    printf '2%sCheckRun%s%sLint%s%s%s\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sLint%sFAILURE%s%s2026-11-25T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sBuild%s%s%s0001-01-01T00:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sBuild%sFAILURE%s%s2026-11-25T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+} > "$work/checks-order.tsv"
+gh_checks "$work/checks-order.tsv"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+expect_absent "report: a check not started yet is the latest, also when listed first" GitHub "RED CHECKS" "$out"
+# Two red checks of the same name in two workflows are told apart, and a red check with no name
+# is said.
+{
+    printf '9%sCheckRun%sCI%sbuild%sFAILURE%s%s2026-11-25T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '9%sCheckRun%sDocs%sbuild%sFAILURE%s%s2026-11-25T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '9%sCheckRun%s%slint%sFAILURE%s%s2026-11-25T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+    printf '9%sCheckRun%s%s%sFAILURE%s%s2026-11-25T10:00:00Z\n' "$t" "$t" "$t" "$t" "$t" "$t"
+} > "$work/checks-names.tsv"
+gh_checks "$work/checks-names.tsv"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | awk '/^RED CHECKS/ { on = 1; print; next } on && /^#/ { print; next } { on = 0 }' > "$work/red.txt"
+printf 'RED CHECKS on open pull requests:\n#9 failing: CI / build, Docs / build, lint, (no name)\n' | cmp -s - "$work/red.txt"; expect "report: red checks named with workflow, empty name said" 0 $?
+# A failing gh pr list is said, never silent.
+printf '#!/bin/sh\ncase "$*" in\n  "auth status"*) exit 0 ;;\n  *"pr list"*) echo "API rate limit exceeded" >&2; exit 1 ;;\n  *) exit 0 ;;\nesac\n' > "$work/ghshim/gh"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | grep -qx "open pull requests not read (gh pr list failed)"; expect "report: a failing gh pr list says open pull requests not read" 0 $?
+expect_absent "report: a failing gh pr list does not say no open pull requests" GitHub "^no open pull requests" "$out"
+# A failing gh run list is said too, and does not claim there are no runs.
+printf '#!/bin/sh\ncase "$*" in\n  "auth status"*) exit 0 ;;\n  *"run list"*) echo "HTTP 502" >&2; exit 1 ;;\n  *) exit 0 ;;\nesac\n' > "$work/ghshim/gh"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | grep -qx "CI runs not read (gh run list failed)"; expect "report: a failing gh run list says CI runs not read" 0 $?
+expect_absent "report: a failing gh run list does not say no CI runs" GitHub "^no CI runs on main" "$out"
+# A gh run list with runs prints them, exactly, under the heading. With no runs it says so.
+printf '#!/bin/sh\ncase "$*" in\n  "auth status"*) exit 0 ;;\n  *"run list"*) printf "%%s\\n" "2026-11-25 completed/success: Run one" "2026-11-24 in_progress/-: Run two" ;;\n  *) exit 0 ;;\nesac\n' > "$work/ghshim/gh"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | awk '/^last CI runs on main:$/ { on = 1; print; next } on { print }' > "$work/runs.txt"
+printf 'last CI runs on main:\n2026-11-25 completed/success: Run one\n2026-11-24 in_progress/-: Run two\n' | cmp -s - "$work/runs.txt"; expect "report: last CI runs listed under the heading" 0 $?
+printf '#!/bin/sh\ncase "$*" in\n  "auth status"*) exit 0 ;;\n  *) exit 0 ;;\nesac\n' > "$work/ghshim/gh"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | grep -qx "no CI runs on main"; expect "report: no CI runs said" 0 $?
+# Only green, pending and running checks: the GitHub section runs, and has no RED CHECKS line.
+{
+    printf '2%sCheckRun%s%sBuild%sSUCCESS%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sFmt%sNEUTRAL%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sFuzz%sSKIPPED%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sCheckRun%s%sStill running%s%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/c%s%sPENDING\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/d%s%sSUCCESS\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/e%s%sEXPECTED\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sStatusContext%s%sci/f%s%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sOther%s%sunk/a%s%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sOther%s%sunk/b%sSUCCESS%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sOther%s%sunk/c%s%sEXPECTED\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sOther%s%sunk/d%sSKIPPED%sPENDING\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sOther%s%sunk/e%sEXPECTED%s\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sOther%s%sunk/f%s%sSUCCESS\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sOther%s%sunk/g%s%sNEUTRAL\n' "$t" "$t" "$t" "$t" "$t"
+    printf '2%sOther%s%sunk/h%s%sSKIPPED\n' "$t" "$t" "$t" "$t" "$t"
+} > "$work/checks-green.tsv"
+gh_checks "$work/checks-green.tsv"
+out=$(PATH="$work/ghshim:$PATH" sh scripts/audit-status.sh 2>&1)
+report_section GitHub "$out" | grep -qx "#2 open step/x updated 2026-11-24: Test"; expect "report: GitHub section ran with the gh stub" 0 $?
+report_section GitHub "$out" | grep -qx "open pull requests:"; expect "report: open pull requests heading printed" 0 $?
+expect_absent "report: no red checks, no RED CHECKS line" GitHub "RED CHECKS" "$out"
+# Unfinished local work: uncommitted changes, stashes, unpushed and not pulled commits.
+new_repo
+commit a
+out=$(sh scripts/audit-status.sh 2>&1)
+report_section "Unfinished local work" "$out" | grep -qx "working tree clean"; expect "report: clean working tree said" 0 $?
+expect_absent "report: clean tree, no uncommitted changes" "Unfinished local work" "^uncommitted changes:" "$out"
+expect_absent "report: no stash, no stashes line" "Unfinished local work" "^stashes:" "$out"
+report_section "Unfinished local work" "$out" | grep -qx "branch main: no upstream"; expect "report: no upstream said" 0 $?
+echo changed > a.txt; echo new > new.txt
+out=$(sh scripts/audit-status.sh 2>&1)
+report_section "Unfinished local work" "$out" | grep -A2 -x "uncommitted changes:" > "$work/dirty.txt"
+printf 'uncommitted changes:\n M a.txt\n?? new.txt\n' | cmp -s - "$work/dirty.txt"; expect "report: uncommitted changes listed" 0 $?
+expect_absent "report: changes, no working tree clean" "Unfinished local work" "^working tree clean$" "$out"
+git stash push -q -m "test stash"
+out=$(sh scripts/audit-status.sh 2>&1)
+report_section "Unfinished local work" "$out" | grep -A1 -x "stashes:" > "$work/stashes.txt"
+printf 'stashes:\nstash@{0}: On main: test stash\n' | cmp -s - "$work/stashes.txt"; expect "report: stash listed" 0 $?
+git stash drop -q; rm -f new.txt
+# Upstream counts: commits not pushed, and commits fetched but not pulled.
+git init -q --bare -b main "$work/up.git"; git remote add origin "$work/up.git"
+git push -q -u origin main 2>/dev/null
+commit b; commit c
+report_section "Unfinished local work" "$(sh scripts/audit-status.sh 2>&1)" | grep -qx "branch main: 2 unpushed, 0 not pulled"; expect "report: unpushed commits counted" 0 $?
+git clone -q "$work/up.git" "$work/other" 2>/dev/null
+(cd "$work/other" && commit x && commit y && commit z && git push -q origin main 2>/dev/null)
+git fetch -q origin
+report_section "Unfinished local work" "$(sh scripts/audit-status.sh 2>&1)" | grep -qx "branch main: 2 unpushed, 3 not pulled"; expect "report: not pulled commits counted" 0 $?
+rm -rf "$work/up.git" "$work/other"
 
 echo "scripts tests: $passed passed, $failed failed"
 [ "$failed" -eq 0 ]

@@ -54,8 +54,9 @@ Read first: `CLAUDE.md`, `docs/design.md`, `docs/roadmap.md`, the latest report 
    - every commit after 79025cd (audit 0010) follows an APPROVED verdict that a comment ties to
      it. Earlier commits predate the rule. The one exception is an audit report: a commit that
      adds only one file under `docs/audits/` (check with `git show --stat`);
-   - for every such commit from 2852907 on, the tree its last APPROVED verdict comment quotes
-     equals `git rev-parse <commit>^{tree}`. When that comment quotes a subject line, it equals
+   - for every such commit from 2852907 on, the tree in its last APPROVED verdict comment
+     equals `git rev-parse <commit>^{tree}`. The comment that names the commit quotes the same
+     tree. From 39635f6 on, the verdict comment also quotes the subject line. It equals
      `git log -1 --format=%s <commit>`;
    - every finding of the previous audit and of the reviews is closed in one of these ways:
      - fixed and reviewed;

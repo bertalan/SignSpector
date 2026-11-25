@@ -7,7 +7,8 @@
 #                           other remotes never hide commits
 #       BASE = tip          TIP only (scheduled runs)
 #     For each commit: the files it adds or changes, its message, author and committer;
-#     then the whole tree of TIP, and the tag message and tagger when TIP is an annotated tag.
+#     then the whole tree of TIP, and when TIP is an annotated tag, the message and tagger of
+#     that tag and of every tag it points to through other tags.
 #     Shallow clones are refused (exit 2): they cannot see the history.
 #   scripts/check-public.sh --message FILE    a commit message being written (commit-msg hook)
 # Exit 0 clean, 1 content blocked, 2 cannot check (bad revision, git error): never a silent pass.
@@ -100,7 +101,8 @@ check_meta() {
 
 # Files a commit adds or changes (whole tree for merges).
 commit_files() {
-    parents=$(git rev-list --parents -n 1 "$1" | wc -w) || cannot "git rev-list failed on $1"
+    line=$(git rev-list --parents -n 1 "$1") || cannot "git rev-list failed on $1"
+    parents=$(printf '%s\n' "$line" | wc -w)
     if [ "$parents" -gt 2 ]; then
         git -c core.quotepath=off ls-tree -r --name-only "$1" || cannot "git ls-tree failed on $1"
     else
@@ -136,10 +138,15 @@ case "${1:-}" in
         files=$(tree_files "$tip") || exit 2
         check_files "$tip:" "$files"
         check_meta "$tip"
-        if [ "$(git cat-file -t "$tip")" = tag ]; then
-            git cat-file -p "$tip" > "$tmp" || cannot "cannot read tag $tip"
-            scan_tmp "tag $tip"
-        fi
+        # A tag can point to another tag: every message and tagger down the chain is published.
+        obj=$tip
+        while :; do
+            kind=$(git cat-file -t "$obj") || cannot "cannot read object $obj"
+            [ "$kind" = tag ] || break
+            git cat-file tag "$obj" > "$tmp" || cannot "cannot read tag $obj"
+            scan_tmp "tag $obj"
+            obj=$(sed -n '1s/^object //p' "$tmp")   # if empty, the next cat-file -t fails: exit 2
+        done
         echo "public check: $n commits and the tree of $(git rev-parse --short "$tip") scanned" ;;
     --message)
         [ -f "${2:-}" ] && [ -r "$2" ] || cannot "message file missing or not a file"

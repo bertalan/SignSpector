@@ -60,7 +60,23 @@ esac
 
 section() { printf '\n== %s\n' "$1"; }
 
-if [ "$(git config core.hooksPath)" != .githooks ]; then
+# The hooks run from this repository's .githooks folder, named relative or by absolute path.
+hooks_path=$(git config core.hooksPath || true)
+hooks_ok=no
+if [ "$hooks_path" = .githooks ]; then
+    hooks_ok=yes
+else
+    case "$hooks_path" in
+        /*|[A-Za-z]:/*|[A-Za-z]:\\*)
+            # Same folder by identity (-ef), not by path text. On Windows runners the temporary
+            # folder may be reached by a short 8.3 name (RUNNER~1) on one side and the long name
+            # on the other.
+            hooks_top=$(git rev-parse --show-toplevel)
+            [ -d "$hooks_path" ] && [ -d "$hooks_top/.githooks" ] &&
+                [ "$hooks_path" -ef "$hooks_top/.githooks" ] && hooks_ok=yes ;;
+    esac
+fi
+if [ "$hooks_ok" != yes ]; then
     echo "HOOKS NOT ENABLED in this clone: nothing stops a commit or push with personal data."
     echo "Run: git config core.hooksPath .githooks"
 fi
@@ -136,23 +152,103 @@ exec </dev/null
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
     # Only collaborators may open PRs, issues and comments; GitHub limits this to 6 months.
     repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null)
-    expires=$(gh api "repos/$repo/interaction-limits" --jq '.expires_at // ""' 2>/dev/null | cut -c1-10)
+    # A failing gh api is said: it is not a missing limit.
+    limit_read=yes
+    expires=$(gh api "repos/$repo/interaction-limits" --jq '.expires_at // ""' 2>/dev/null) ||
+        limit_read=no
+    expires=$(printf '%s' "$expires" | cut -c1-10)
     warn_from=$(date -u -v+30d +%Y-%m-%d 2>/dev/null || date -u -d '+30 days' +%Y-%m-%d)
-    if [ -z "$expires" ]; then
+    if [ "$limit_read" = no ]; then
+        echo "interaction limit not read (gh api failed)"
+    elif [ -z "$expires" ]; then
         echo "INTERACTION LIMIT NOT ACTIVE: anyone can open PRs and issues. Renew it on GitHub:"
         echo "  Settings > Moderation options > Interaction limits > Limit to repository collaborators (6 months)"
     elif [ "$expires" != "$warn_from" ] && [ "$(printf '%s\n%s\n' "$expires" "$warn_from" | sort | head -n 1)" = "$expires" ]; then
         echo "INTERACTION LIMIT EXPIRES on $expires: renew it on GitHub (Settings > Moderation options)."
     fi
-    prs=$(gh pr list --state open --json number,title,isDraft,updatedAt,headRefName \
-        --jq '.[] | "#\(.number) \(if .isDraft then "DRAFT" else "open" end) \(.headRefName) updated \(.updatedAt[:10]): \(.title)"' 2>/dev/null)
-    [ -n "$prs" ] && { echo "open pull requests:"; printf '%s\n' "$prs"; } || echo "no open pull requests"
-    failing=$(gh pr list --state open --json number,statusCheckRollup \
-        --jq '.[] | select([.statusCheckRollup[]? | select(.conclusion == "FAILURE")] | length > 0) | "#\(.number) failing: \([.statusCheckRollup[] | select(.conclusion == "FAILURE") | .name] | join(", "))"' 2>/dev/null)
-    [ -n "$failing" ] && { echo "RED CHECKS on open pull requests:"; printf '%s\n' "$failing"; }
-    runs=$(gh run list --branch main --limit 3 --json conclusion,status,displayTitle,createdAt \
-        --jq '.[] | "\(.createdAt[:10]) \(.status)/\(.conclusion // "-"): \(.displayTitle)"' 2>/dev/null)
-    [ -n "$runs" ] && { echo "last CI runs on main:"; printf '%s\n' "$runs"; } || echo "no CI runs on main"
+    if prs=$(gh pr list --state open --json number,title,isDraft,updatedAt,headRefName \
+        --jq '.[] | "#\(.number) \(if .isDraft then "DRAFT" else "open" end) \(.headRefName) "
+            + "updated \(.updatedAt[:10]): \(.title)"' 2>/dev/null); then
+        if [ -n "$prs" ]; then
+            echo "open pull requests:"; printf '%s\n' "$prs"
+        else
+            echo "no open pull requests"
+        fi
+    else
+        echo "open pull requests not read (gh pr list failed)"
+    fi
+    # Everything that is not green is red (owner's decision, 2026-11-24). gh gives one line per
+    # attempt of a check: PR number, type, workflow, name, conclusion of a check run, state of
+    # a commit status, start time.
+    # The rule is an allowlist, compared whole:
+    # - A check run is red when its conclusion is not empty and not SUCCESS, NEUTRAL or SKIPPED.
+    # - A commit status is red when its state is not empty and not SUCCESS, PENDING or EXPECTED.
+    # - A row of any other type is red when its conclusion or its state is not empty and not one
+    #   of the green values of either list (SUCCESS, NEUTRAL, SKIPPED, PENDING, EXPECTED).
+    # So STALE, and any value GitHub adds later, is red. Running and pending checks are not red
+    # yet. NEUTRAL and SKIPPED stay green because the owner's rule is read as GitHub's branch
+    # protection reads it: skipped and neutral jobs pass.
+    # The workflow is the name of the workflow of a check run. It is empty for a check that is
+    # not from a workflow, and for a commit status. Two checks of the same name in different
+    # workflows are different checks. gh gives no event for them.
+    # Only the latest attempt of each check counts (owner's decision, 2026-11-25): a failure
+    # re-run green is not red. A check is one PR, type, workflow and name. The latest attempt
+    # is the one that started last.
+    # The start times are ISO 8601 in UTC and are compared as strings. That is correct for
+    # GitHub's times, which have whole seconds.
+    # An attempt not started yet (no conclusion, no state, and no time or GitHub's zero time)
+    # is the latest. A finished attempt with no time is older than any attempt with a time.
+    # On equal times, and between attempts with no time, the later line wins.
+    if rollup=$(gh pr list --state open --json number,statusCheckRollup \
+        --jq '.[] | .number as $n | .statusCheckRollup[]?
+            | [$n, .__typename, (.workflowName // ""), (.name // .context // ""),
+               (.conclusion // ""), (.state // ""), (.startedAt // "")] | @tsv' 2>/dev/null); then
+        failing=$(printf '%s\n' "$rollup" |
+        awk -F '\t' '
+            {
+                notime = ($7 == "" || $7 ~ /^0001-/)
+                if (!notime) at = $7
+                else if ($5 == "" && $6 == "") at = "9999"
+                else at = ""
+                key = $1 SUBSEP $2 SUBSEP $3 SUBSEP $4
+                if (!(key in when)) {
+                    keys[++k] = key; pr[key] = $1
+                    name[key] = ($3 != "" ? $3 " / " : "") ($4 != "" ? $4 : "(no name)")
+                }
+                else if (at < when[key]) next
+                when[key] = at
+                red[key] = ($2 == "CheckRun" && $5 != "" && $5 !~ /^(SUCCESS|NEUTRAL|SKIPPED)$/) ||
+                           ($2 == "StatusContext" && $6 != "" &&
+                            $6 !~ /^(SUCCESS|PENDING|EXPECTED)$/) ||
+                           ($2 != "CheckRun" && $2 != "StatusContext" &&
+                            (($5 != "" && $5 !~ /^(SUCCESS|NEUTRAL|SKIPPED|PENDING|EXPECTED)$/) ||
+                             ($6 != "" && $6 !~ /^(SUCCESS|NEUTRAL|SKIPPED|PENDING|EXPECTED)$/)))
+            }
+            END {
+                for (i = 1; i <= k; i++) {
+                    key = keys[i]
+                    if (!red[key]) continue
+                    p = pr[key]
+                    if (!(p in list)) { order[++n] = p; list[p] = name[key] }
+                    else list[p] = list[p] ", " name[key]
+                }
+                for (i = 1; i <= n; i++) print "#" order[i] " failing: " list[order[i]]
+            }')
+        [ -n "$failing" ] && { echo "RED CHECKS on open pull requests:"; printf '%s\n' "$failing"; }
+    else
+        echo "checks not read (gh pr list failed)"
+    fi
+    if runs=$(gh run list --branch main --limit 3 --json conclusion,status,displayTitle,createdAt \
+        --jq '.[] | "\(.createdAt[:10]) \(.status)/\(.conclusion // "-"): "
+            + "\(.displayTitle)"' 2>/dev/null); then
+        if [ -n "$runs" ]; then
+            echo "last CI runs on main:"; printf '%s\n' "$runs"
+        else
+            echo "no CI runs on main"
+        fi
+    else
+        echo "CI runs not read (gh run list failed)"
+    fi
 else
     echo "gh not available or not logged in: pull requests and CI not checked"
 fi

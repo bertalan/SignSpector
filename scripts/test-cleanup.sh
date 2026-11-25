@@ -30,6 +30,18 @@ skipped=0
 skip() { skipped=$((skipped + $1)); echo "SKIP ($1 checks): $2" >&2; }
 on_windows=0
 case $(uname -s) in MINGW*|MSYS*|CYGWIN*) on_windows=1 ;; esac
+# A block that cannot run on Windows:
+#   if off_windows <checks> <reason>; then ...; end_off_windows; fi
+# On Windows it counts <checks> as skipped. Elsewhere the block runs, and end_off_windows
+# fails if the block did not run exactly <checks> checks: a wrong skip count is noticed.
+off_windows() {
+    if [ "$on_windows" -eq 1 ]; then skip "$1" "$2"; return 1; fi
+    block_checks=$1; block_start=$((passed + failed)); return 0
+}
+end_off_windows() {
+    ran=$((passed + failed - block_start))
+    [ "$ran" -eq "$block_checks" ] || bad "skip count: the block says $block_checks checks, it ran $ran"
+}
 
 git init -q --bare "$work/remote.git"
 mkdir -p "$work/r/scripts" && cd "$work/r" || exit 2
@@ -156,7 +168,7 @@ check "same-named tag: current branch said as checked out here" 'printf "%s" "$o
 git switch -q main; git branch -q -D cur; git tag -d cur >/dev/null
 
 # Names git has to quote (backslash, double quote): never removed, listed on one line.
-if [ "$on_windows" -eq 1 ]; then skip 4 "names with a backslash cannot exist on Windows"; else
+if off_windows 4 "names with a backslash cannot exist on Windows"; then
 echo mine > 'odd\nname.txt'; echo junk > 'odd\name.orig'
 out=$(sh scripts/cleanup.sh 2>&1)
 check "quoted name: junk not removed"         '[ -f "odd\\name.orig" ]'
@@ -164,6 +176,7 @@ check "quoted name: not reported as removed"  '! printf "%s\n" "$out" | grep -q 
 check "quoted name: listed for review"        'printf "%s\n" "$out" | grep -q "^review (special characters, not removed): .*odd.*name.orig"'
 check "quoted name: printed on one line"      'printf "%s\n" "$out" | grep -q "^review.*odd.*nname.txt"'
 rm -f 'odd\nname.txt' 'odd\name.orig'
+end_off_windows
 fi
 
 # Names that must not be expanded, split or matched loosely.
@@ -208,6 +221,25 @@ sh scripts/cleanup.sh >/dev/null 2>&1
 check "main kept when run from another branch" 'git rev-parse -q --verify refs/heads/main >/dev/null'
 git switch -q main
 
+# A branch just created at main, with no commit of its own, is removed (audit 0003, F6). It
+# looks the same as a branch fast-forwarded into main, and it holds no commit that main lacks.
+git branch born main
+out=$(sh scripts/cleanup.sh --plan 2>&1)
+check "branch created at main: listed for removal" 'printf "%s\n" "$out" | grep -q "^would remove local branch (merged): born$"'
+out=$(sh scripts/cleanup.sh 2>&1); r=$?
+check "branch created at main: removed"       '[ $r -eq 0 ] && printf "%s\n" "$out" | grep -q "^removed local branch (merged): born$" && ! git rev-parse -q --verify refs/heads/born >/dev/null'
+
+# Detached HEAD at a commit that no branch holds: cleanup.sh does not touch HEAD or that
+# commit, lists only real branches as not merged, and still removes merged branches.
+git switch -q --detach main && echo d > d.txt && git add d.txt && git commit -qm detached
+head=$(git rev-parse HEAD)
+git branch gone main
+out=$(sh scripts/cleanup.sh 2>&1); r=$?
+check "detached unmerged HEAD: exit 0, merged branch removed" '[ $r -eq 0 ] && ! git rev-parse -q --verify refs/heads/gone >/dev/null'
+check "detached unmerged HEAD: HEAD and its commit kept" '! git symbolic-ref -q HEAD >/dev/null && [ "$(git rev-parse HEAD)" = "$head" ] && [ -f d.txt ]'
+check "detached unmerged HEAD: only real branches listed" 'printf "%s\n" "$out" | grep -q "^keep local branch (not merged): wip$" && ! printf "%s\n" "$out" | grep -q "(HEAD"'
+git switch -q main
+
 # Inside a hook (temporary index): refuse, delete nothing.
 echo junk > f.orig
 # env: a variable put before a shell function would stay set for the rest of this file.
@@ -223,11 +255,12 @@ check "outside a repository: exit 2"          '[ $r -eq 2 ]'
 check "unknown option refused"                '! sh scripts/cleanup.sh --force >/dev/null 2>&1'
 
 # A removal that fails is reported in the exit status.
-if [ "$on_windows" -eq 1 ]; then skip 1 "a read-only folder does not stop rm on Windows"; else
+if off_windows 1 "a read-only folder does not stop rm on Windows"; then
 mkdir -p locked && echo junk > locked/g.orig && chmod 555 locked
 sh scripts/cleanup.sh >/dev/null 2>&1; r=$?
 chmod 755 locked
 check "failed removal: exit 1"                '[ $r -eq 1 ] && [ -f locked/g.orig ]'
+end_off_windows
 fi
 rm -rf locked f.orig
 
@@ -238,6 +271,32 @@ git switch -q main && git merge -q --ff-only merged-later && git switch -q side
 out=$(sh scripts/cleanup.sh 2>&1); r=$?
 check "merged into main, not into HEAD: removed" '[ $r -eq 0 ] && ! git rev-parse -q --verify refs/heads/merged-later >/dev/null'
 git switch -q main
+
+# Race: a branch merged when listed gets a new commit before it is deleted. It is checked
+# again just before deletion, so it is kept. The listing comes before the GitHub section and
+# the deletion after it, so a gh stand-in adds the commit in between: no seam in cleanup.sh.
+# Variant 2 adds a tag with the branch's name at main and a tag "main" at the new commit: a
+# check with short names would read the tags and delete the branch.
+mkdir -p "$work/raceshim"
+cat > "$work/raceshim/gh" <<'SHIM'
+#!/bin/sh
+# Signed in. On "pr list", move the branch named in RACE_BRANCH to a new commit.
+[ "$1" = pr ] || exit 0
+b=$RACE_BRANCH
+new=$(git commit-tree -p "refs/heads/$b" -m race "refs/heads/$b^{tree}") || exit 1
+git update-ref "refs/heads/$b" "$new" || exit 1
+if [ "$RACE_TAGS" -eq 1 ]; then git tag "$b" refs/heads/main && git tag main "$new"; fi
+exit 0
+SHIM
+chmod +x "$work/raceshim/gh"
+for variant in 1 2; do
+    git branch "racer$variant" main
+    out=$(env RACE_BRANCH="racer$variant" RACE_TAGS=$((variant - 1)) PATH="$work/raceshim:$PATH" sh scripts/cleanup.sh 2>&1); r=$?
+    check "race $variant: listed as merged, then kept" 'printf "%s\n" "$out" | grep -q "^keep branch (no longer merged into main, or git refused): racer$variant$"'
+    check "race $variant: not removed, exit 1"   '[ $r -eq 1 ] && ! printf "%s\n" "$out" | grep -q "^removed local branch (merged): racer$variant$"'
+    check "race $variant: new commit still on the branch" '[ "$(git log -1 --format=%s "refs/heads/racer$variant" 2>/dev/null)" = race ]'
+    git branch -q -D "racer$variant"; git tag -d "racer$variant" main >/dev/null 2>&1
+done
 
 # Without a local main there is nothing to compare with: stop before removing anything.
 git branch -q -m main trunk
