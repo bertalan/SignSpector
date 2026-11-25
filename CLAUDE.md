@@ -8,7 +8,9 @@ macOS and Linux.
 It is a new project in Rust. It takes the idea of an earlier Windows-only tool by the same
 author (`p7m-extract`, in C#, kept outside this repository in `../SignSpector-legacy/`), but it
 is not a port. Requirements and design are in `docs/design.md`, the order of work in
-`docs/roadmap.md`: read both first. Look at the old code only when the user asks to.
+`docs/roadmap.md`: read both first. Lessons learnt on the way of working are in
+`docs/lessons.md`: read them at the start of a session. Look at the old code only when the user
+asks to.
 
 After cloning, enable the hooks once: `git config core.hooksPath .githooks`.
 

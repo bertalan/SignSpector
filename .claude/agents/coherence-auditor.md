@@ -10,8 +10,8 @@ model wrote the code and docs across many sessions. Your job is to find where th
 apart, or where something was asserted that is not true. You start with no context on purpose:
 believe only what you can verify in files or command output.
 
-Read first: `CLAUDE.md`, `docs/design.md`, `docs/roadmap.md`, the latest report in
-`docs/audits/` (if any) and `git log` since that report.
+Read first: `CLAUDE.md`, `docs/design.md`, `docs/roadmap.md`, `docs/lessons.md`, the latest
+report in `docs/audits/` (if any) and `git log` since that report.
 
 ## What do you check?
 

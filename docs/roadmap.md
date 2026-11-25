@@ -151,9 +151,9 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
     R28–R34. The rule scripts and the hooks protect, so this step decides whether they count as
     routine code. Reviews and audits stay on Fable. A PR holds about 400 changed lines; a bigger
     step is split into slices, and the PR says what is left.
-  - `docs/lessons.md`: lessons learnt on the way of working, each with its date and what to do.
-    Agents never watch CI themselves; only the main session does, so that GitHub's API limit is
-    not used up. The first lessons come from audit 0011:
+  - `docs/lessons.md`: lessons learnt on the way of working, each with its date, its source and
+    what to do. Agents never watch CI themselves; only the main session does, so that GitHub's
+    API limit is not used up. The first lessons come from audit 0011:
     - post each review verdict on the PR when its round ends, not together with the commit (F4);
     - give the owner's decisions in English in PR texts and comments (F5).
 
