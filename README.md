@@ -31,6 +31,8 @@ For each folder, SignSpector:
 - checks whether the certificate was revoked, from data in the signature or the CA's
   revocation list (CRL): not one query per signature;
 - verifies countersignatures and RFC 3161 time stamps;
+- counts the signatures inside a PDF (PAdES) found in an envelope and reports them as not
+  verified; version `2.0.0` will verify them;
 - reports the results on the console and in a self-contained HTML report (and JSON for
   scripts);
 - extracts the signed documents beside the originals, only on request:

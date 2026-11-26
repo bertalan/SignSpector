@@ -68,11 +68,16 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
     - `--no-report` (R14, R16);
     - foreign menu items (R41);
     - R34 also tests each kind of sensitive folder selected directly (R28), decided on
-      2026-11-24.
+      2026-11-24;
+    - signatures inside a signed PDF are found and reported as not verified (R50), decided on
+      2026-11-25. Version `2.0.0` verifies them, decided on 2026-11-26;
+    - other signed formats and cases are evaluated for version `2.0.0`, decided on 2026-11-25
+      and 2026-11-26. Signed PDF files on their own joined the list on 2026-11-26. The list is
+      in `docs/design.md`, "What do we evaluate for version 2?".
 
   The questions these decisions opened are in "What is still open?" in `docs/design.md`. Each
-  names the roadmap step that needs the answer: 1.4, 1.5, 1.6, 1.7, 3.1, 3.2, 3.5, 3.6, 3.7,
-  3.9, 4.2, 4.4, 5.1, 5.2, 5.3.
+  names the roadmap step that needs the answer: 1.4, 1.5, 1.6, 1.7, 2.4, 3.1, 3.2, 3.5, 3.6,
+  3.7, 3.9, 4.2, 4.4, 5.1, 5.2, 5.3, 7.1.
 - [x] 0.5 Remaining gaps in the rule-script tests. The reviews of PR #1, PR #2 and PR #3 found
   them. This step closed the ones below that are not listed as known limits. The owner marked
   the step done with these limits listed (2026-11-25). Each known limit needs a test before the
@@ -253,7 +258,8 @@ With pure functions for names and confirmation, and a writer that never overwrit
 
 ## Phase 2: how do we open envelopes end to end?
 
-With a BER reader, a CMS parser and one thin run of the whole flow.
+With a BER reader, a CMS parser, one thin run of the whole flow, and a count of the signatures
+inside a PDF.
 
 - [ ] 2.1 `ber` reader: definite and indefinite lengths, limits on depth and size, checked
   arithmetic; fuzz target.
@@ -264,6 +270,10 @@ With a BER reader, a CMS parser and one thin run of the whole flow.
   - Written documents recorded in the report with SHA-256, and `undo` (R33).
   - The first end-to-end tests in `tests/*.rs` use `assert_cmd` and `predicates`, declared in
     `Cargo.toml` since 0.1 (audit 0001, F12).
+- [ ] 2.4 Signatures inside a signed PDF are found and counted (R50). Until 4.1 and 4.2 exist,
+  the count and "not verified" go into the minimal output of 2.3. First decide the questions
+  "Before 2.4" in `docs/design.md`. Negative tests: a malformed PDF, a PDF with no signature,
+  and a document that only looks like a PDF.
 
 ## Phase 3: how do we verify signatures and time stamps?
 
@@ -305,10 +315,12 @@ One layer at a time: cryptography, certificates, trusted lists, chains, time sta
 
 A console summary, an accessible HTML report, JSON and a translated command line.
 
-- [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).
-- [ ] 4.2 Accessible HTML report, WCAG 2.2 AA (R14, R36), checker in CI (R39). First decide the
-  questions "Before 4.2" in `docs/design.md`.
-- [ ] 4.3 Full `--json` (R15); parallel processing with a stable output order (R23).
+- [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35), with the line on PDF
+  signatures not verified (R50).
+- [ ] 4.2 Accessible HTML report, WCAG 2.2 AA (R14, R36), with the PDF signatures not verified
+  (R50), checker in CI (R39). First decide the questions "Before 4.2" in `docs/design.md`.
+- [ ] 4.3 Full `--json` (R15), with the PDF signatures not verified (R50); parallel processing
+  with a stable output order (R23).
 - [ ] 4.4 Command line and translated help, interactive end of run (R19, R20, R37). First decide
   `--open`, `--threads`, `extract --no-report` and double-click detection (questions "Before
   4.4" in `docs/design.md`).
@@ -336,3 +348,14 @@ As one self-contained executable per platform, tested on the company PC before `
   corpus.
 - [ ] 6.3 Manual accessibility checks, `docs/accessibility.md` (R39); user guide (R37).
 - [ ] 6.4 `1.0.0` when ready to replace the old tool. Before it, every case of R34 has a test.
+
+## Phase 7: what comes in version `2.0.0`?
+
+Version `2.0.0` (R26) comes after `1.0.0`. It verifies the PAdES signatures that R50 only
+reports, and evaluates the formats of "What do we evaluate for version 2?" in `docs/design.md`.
+
+- [ ] 7.1 PAdES: the signatures inside a signed PDF are verified with the CMS verification of
+  phase 3 (R8–R12, R49). First the owner decides the questions "Before 7.1" in
+  `docs/design.md` and updates R50.
+- [ ] 7.2 The other formats and cases of "What do we evaluate for version 2?": each one the
+  owner keeps gets a requirement first, then its own step.
