@@ -153,6 +153,21 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
   - `scripts/merge-ready.sh`, test first. It waits until the four CI jobs are green on the
     exact head of the PR, and stops if the head moves. It also checks that the last verdict
     comment is APPROVED and quotes the tree of that head. The merge goes ahead only after it.
+    Known limits:
+    - the tests' `gh` stand-in returns the output of the `--jq` projections, not GitHub's JSON.
+      So the projections are not tested. They pick the last verdict, and the name, result and
+      start time of each check. A wrong projection shows only on a real pull request;
+    - the author of the verdict comment is not checked. Only collaborators may comment while
+      the interaction limit lasts (`CLAUDE.md`);
+    - checks are told apart by name only. A run started by hand on the same head
+      (`workflow_dispatch`) replaces the pull request run of the job with the same name. A
+      finished attempt with no start time counts as the oldest, so it is ignored when a timed
+      attempt of the same name exists, even when it is red;
+    - the local branch is not compared with the head of the pull request. A local branch that
+      differs from it, ahead or behind, is not noticed. When it is ahead, the protection of
+      `main` refuses the push;
+    - when the head is an audit report pushed alone (`CLAUDE.md`, step 5), no verdict quotes its
+      tree, so the script says "not ready". The owner decides what then (question below).
   - Model by risk. Sonnet writes routine code. Opus writes the code for cryptography and for
     R28–R34. The rule scripts and the hooks protect, so this step decides whether they count as
     routine code. Reviews and audits stay on Fable. A PR holds about 400 changed lines; a bigger
@@ -162,19 +177,24 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
     API limit is not used up. The first lessons come from audit 0011:
     - post each review verdict on the PR when its round ends, not together with the commit (F4);
     - give the owner's decisions in English in PR texts and comments (F5).
-  - Questions for the owner from audit 0012; this step decides them:
+  - Questions for the owner, from audit 0012 and from one review; this step decides them:
     - F1: must the linked-root and corpus-link tests also run on Windows, for example with a
       `find` stand-in? Must `test-scripts.sh` count its skips, as `test-cleanup.sh` does?
     - F2: a missing test moved as a minor point from a0fba6d to the next commit, and two
       behaviour fixes counted as minor rounds. Must `CLAUDE.md` say what separates a missing
       test from "one more assertion"? Or must any behaviour fix get CHANGES NEEDED?
-    - F3: the delegation of 2026-11-25 says "choose the solution that serves the goal and is
-      coherent with earlier choices". Only the message of 72b89f3 and a PR #4 comment record it.
+    - F3: on 2026-11-25 the owner delegated the choices that an audit leaves to the owner:
+      "choose the solution that serves the goal and is coherent with earlier choices". Only the
+      message of 72b89f3 and a PR #4 comment record it.
       Does it stand as a rule, with its limits written in `CLAUDE.md`? Or did it apply to audit
       0011 only?
-    - Note of audit 0012, not a finding: four of the five commits in its range exist mainly to
-      close minor points moved from the commit before. The owner may weigh it when this step
-      sets the size of a PR.
+    - From the review of `scripts/merge-ready.sh`: an audit report pushed alone gets no review,
+      so no verdict quotes its tree. May the merge then go ahead on the verdict of the commit
+      before it, with CI green on the report? Or must the report always be pushed with a
+      reviewed commit?
+    - Note of audit 0012, not a finding. Four of the five commits in its range mainly close
+      minor points moved from the commit before. The owner may weigh it when this step sets the
+      size of a PR.
 
 ## Phase 1: how do we write files safely, before any cryptography?
 

@@ -66,7 +66,11 @@ the CI workflow. There is no exception for "infrastructure".
      confirmation or writing files (R28–R34). They are fixed and reviewed before the commit.
    - The review leaves a trace of what it approved. The reviewer reports the tree of its
      staged copy (`git write-tree`). The verdict comment quotes it, with the subject line of the
-     reviewed commit message. After the commit, `git rev-parse HEAD^{tree}` must give the same
+     reviewed commit message. `scripts/merge-ready.sh` reads that form: the first line holds
+     `, round <n>: APPROVED.`, `, round <n>: APPROVED with ...` or
+     `, round <n>: CHANGES NEEDED.`, and the comment quotes one tree only, as
+     ``Reviewed tree `<tree>` ``. The comment that names the commit says "Its tree" instead, so
+     it is not taken for a verdict. After the commit, `git rev-parse HEAD^{tree}` must give the same
      tree. If it does not, nothing is pushed. Undo the commit with `git reset --soft HEAD~1`,
      which keeps the changes, and send them to a new review. The comment that names the commit
      quotes the tree too.
@@ -107,6 +111,9 @@ do, references point to functions or options that never existed, work is left ha
   (`step/1.1-portable-names`), pushed early as a draft PR. Mark it ready only when both hold:
   - CI is green on all four jobs, read in the job list, never assumed from a pending run;
   - `fable-reviewer` approved, with its verdict posted on the PR.
+
+  `sh scripts/merge-ready.sh <PR number>` checks both on the exact head of the PR. The main
+  session runs it before marking the PR ready and again just before the merge.
 
   Merge it into `main` locally by fast-forward:
   `git switch main && git merge --ff-only step/x && git push`. The merged commits are the same

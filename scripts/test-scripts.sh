@@ -1084,5 +1084,337 @@ else
     expect "markers: symbolic link created" 0 1
 fi
 
+# --- scripts/merge-ready.sh ------------------------------------------------------------------
+# A gh stand-in reads its answers from files in $work/mr. The checks of the pull request come
+# from checks.1, checks.2, ...: one file per call, the last one repeated. Each holds the head,
+# then one row per check (type, name, conclusion or state, start time, separated by tabs), as
+# the script's own gh call returns them. verdict holds the body of the last verdict comment.
+# verdict.N, when it exists, answers the Nth read of the comments instead of verdict. The
+# stand-in answers only "gh pr view 5 --json ..." and records any other call in "bad".
+new_repo
+cp "$src/merge-ready.sh" scripts/ && git add scripts && git commit -qm merge-ready
+mr_head=$(git rev-parse HEAD); mr_tree=$(git rev-parse HEAD^{tree})
+mkdir -p "$work/mrshim"
+cat > "$work/mrshim/gh" <<GH
+#!/bin/sh
+d="$work/mr"
+printf 'LC_ALL=%s GH_PROMPT_DISABLED=%s\n' "\${LC_ALL:-}" "\${GH_PROMPT_DISABLED:-}" >> "\$d/env"
+cat >> "\$d/stdin"
+case "\$*" in
+  "pr view 5 --json "*) ;;
+  *) printf '%s\n' "\$*" >> "\$d/bad"; exit 1 ;;
+esac
+case "\$*" in
+  *statusCheckRollup*)
+    [ -f "\$d/checks-fail" ] && exit 1
+    n=\$(( \$(cat "\$d/calls" 2>/dev/null || echo 0) + 1 )); echo "\$n" > "\$d/calls"
+    m=\$n; while [ "\$m" -gt 1 ] && [ ! -f "\$d/checks.\$m" ]; do m=\$((m - 1)); done
+    cat "\$d/checks.\$m" ;;
+  *comments*)
+    [ -f "\$d/gh-fails" ] || [ -f "\$d/comments-fail" ] && exit 1
+    c=\$(( \$(cat "\$d/ccalls" 2>/dev/null || echo 0) + 1 )); echo "\$c" > "\$d/ccalls"
+    if [ -f "\$d/verdict.\$c" ]; then cat "\$d/verdict.\$c"; else cat "\$d/verdict"; fi ;;
+  *headRefOid*) [ -f "\$d/gh-fails" ] || [ -f "\$d/head-fail" ] && exit 1; cat "\$d/head" ;;
+  *) exit 1 ;;
+esac
+GH
+# sleep only records how long it was asked to wait. date (in mrdate, put on PATH by the test
+# that needs it) answers the seconds listed in $work/mr/dates, one per call, and fails when the
+# list is used up. A run that waits 50 times is stopped by the sleep stand-in, so that a broken
+# time limit fails the tests instead of hanging them.
+cat > "$work/mrshim/sleep" <<SLEEP
+#!/bin/sh
+echo "\$1" >> "$work/mr/sleeps"
+[ "\$(wc -l < "$work/mr/sleeps")" -lt 50 ] || kill -TERM "\$PPID"
+SLEEP
+mkdir -p "$work/mrdate"
+cat > "$work/mrdate/date" <<DATE
+#!/bin/sh
+d="$work/mr"
+n=\$(( \$(cat "\$d/dcalls" 2>/dev/null || echo 0) + 1 )); echo "\$n" > "\$d/dcalls"
+l=\$(sed -n "\${n}p" "\$d/dates"); [ -n "\$l" ] || exit 1; echo "\$l"
+DATE
+chmod +x "$work/mrshim/gh" "$work/mrshim/sleep" "$work/mrdate/date"
+# mr_case: a fresh answer folder; head is the local commit, the verdict approves its tree.
+mr_case() {
+    rm -rf "$work/mr"; mkdir -p "$work/mr"
+    echo "$mr_head" > "$work/mr/head"
+    printf 'Review of the commit, round 2: APPROVED. Reviewed tree `%s`, subject "x".\n' "$mr_tree" \
+        > "$work/mr/verdict"
+}
+# mr_checks <n> <head> <conclusion of the four jobs> [extra rows]: answer of call n.
+mr_checks() {
+    f="$work/mr/checks.$1"; echo "$2" > "$f"
+    for j in "Repository rules" "Test (x86_64-unknown-linux-musl)" "Test (x86_64-pc-windows-gnu)" \
+        "Test (aarch64-apple-darwin)"; do
+        printf 'CheckRun\t%s\t%s\t2026-11-25T10:00:00Z\n' "$j" "$3" >> "$f"
+    done
+    [ -n "${4:-}" ] && printf '%s\n' "$4" >> "$f"
+    return 0
+}
+mr() { PATH="$work/mrshim:$PATH" MERGE_READY_INTERVAL=10 MERGE_READY_TIMEOUT=${mr_timeout:-60} \
+    sh scripts/merge-ready.sh "$@"; }
+mr_timeout=60
+
+sh scripts/merge-ready.sh >/dev/null 2>&1; expect "merge-ready: no pull request number" 2 $?
+sh scripts/merge-ready.sh 5x >/dev/null 2>&1; expect "merge-ready: a number that is not a number" 2 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+out=$(mr 5 2>&1); r=$?
+expect "merge-ready: four green jobs and an approved tree" 0 $r
+printf '%s\n' "$out" | grep -q "^ready: PR #5" ; expect "merge-ready: says ready" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" "" ; mr_checks 2 "$mr_head" SUCCESS
+mr 5 >/dev/null 2>&1; expect "merge-ready: waits for running jobs" 0 $?
+[ "$(cat "$work/mr/calls")" = 2 ]; expect "merge-ready: read the checks again after waiting" 0 $?
+[ "$(cat "$work/mr/sleeps")" = 10 ]; expect "merge-ready: waits MERGE_READY_INTERVAL seconds" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+sed -i.bak '4s/SUCCESS/FAILURE/' "$work/mr/checks.1"
+expect_reason "merge-ready: a red job" "red: Test (x86_64-pc-windows-gnu)" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+sed -i.bak '3s/SUCCESS/NEUTRAL/' "$work/mr/checks.1"
+expect_reason "merge-ready: a required job must succeed, not only be neutral" "red: Test (x86_64-unknown-linux-musl)" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\tGitGuardian Security Checks\tFAILURE\t2026-11-25T10:00:00Z')"
+expect_reason "merge-ready: any other red check blocks" "red: GitGuardian Security Checks" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\tGitGuardian Security Checks\tSKIPPED\t2026-11-25T10:00:00Z')"
+mr 5 >/dev/null 2>&1; expect "merge-ready: another check skipped is not red" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\tRepository rules\tFAILURE\t2026-11-25T09:00:00Z')"
+mr 5 >/dev/null 2>&1; expect "merge-ready: only the latest attempt of a job counts" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\tRepository rules\t\t')"
+mr_timeout=0
+expect_reason "merge-ready: a re-run not started yet is waited for" "timed out" mr 5
+
+mr_timeout=60
+mr_case; mr_checks 1 "$mr_head" "" ; mr_checks 2 "0000000000000000000000000000000000000000" SUCCESS
+expect_reason "merge-ready: the head moved" "head moved" mr 5
+mr_timeout=0
+
+mr_case; mr_checks 1 "$mr_head" ""
+expect_reason "merge-ready: jobs still running at the time limit" "timed out" mr 5
+
+for n in 2 3 4 5; do
+    mr_case; mr_checks 1 "$mr_head" SUCCESS; sed -i.bak "${n}d" "$work/mr/checks.1"
+    expect_reason "merge-ready: a job with no run yet is waited for (row $n)" "timed out" mr 5
+done
+mr_timeout=60
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Review of the commit, round 1: CHANGES NEEDED. Reviewed tree `%s`, subject "x".\n' "$mr_tree" \
+    > "$work/mr/verdict"
+expect_reason "merge-ready: the last verdict asks for changes" "not approved" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Review of the commit, round 2: APPROVED. Reviewed tree `%s`, subject "x".\n' \
+    0123456789012345678901234567890123456789 > "$work/mr/verdict"
+expect_reason "merge-ready: the approved tree is not the tree of the head" "not the tree of the head" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS; : > "$work/mr/verdict"
+expect_reason "merge-ready: no verdict comment" "no verdict" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS; : > "$work/mr/gh-fails"
+mr 5 >/dev/null 2>&1; expect "merge-ready: a failing gh stops with exit 2" 2 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS; echo 1111111111111111111111111111111111111111 > "$work/mr/head"
+mr 5 >/dev/null 2>&1; expect "merge-ready: a head missing locally stops with exit 2" 2 $?
+
+for v in PENDING EXPECTED QUEUED IN_PROGRESS; do
+    mr_timeout=0
+    mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'StatusContext\tci/other\t%s\t' "$v")"
+    expect_reason "merge-ready: a check in state $v is waited for" "timed out" mr 5
+done
+mr_timeout=60
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\tRepository rules\tSUCCESS\t2026-11-25T11:00:00Z')"
+sed -i.bak '2s/SUCCESS/FAILURE/' "$work/mr/checks.1"
+mr 5 >/dev/null 2>&1; expect "merge-ready: a newer attempt listed later counts" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Review of the commit, round 3: CHANGES NEEDED, round 2: APPROVED. Reviewed tree `%s`.\n' \
+    "$mr_tree" > "$work/mr/verdict"
+expect_reason "merge-ready: CHANGES NEEDED wins over APPROVED on the first line" "not approved" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Review of the commit, round 1: in progress. Reviewed tree `%s`.\nReview, round 2: APPROVED.\n' "$mr_tree" \
+    > "$work/mr/verdict"
+expect_reason "merge-ready: APPROVED must be on the first line" "not approved" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS; : > "$work/mr/comments-fail"
+mr 5 >/dev/null 2>&1; expect "merge-ready: failing to read the comments stops with exit 2" 2 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS; : > "$work/mr/checks-fail"
+mr 5 >/dev/null 2>&1; expect "merge-ready: failing to read the checks stops with exit 2" 2 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+err=$(PATH="$work/mrshim:$PATH" MERGE_READY_INTERVAL=x sh scripts/merge-ready.sh 5 2>&1 >/dev/null); r=$?
+[ "$r" = 2 ] && printf '%s\n' "$err" | grep -q "MERGE_READY_INTERVAL is not a number"
+expect "merge-ready: an interval that is not a number says so, exit 2" 0 $?
+PATH="$work/mrshim:$PATH" MERGE_READY_TIMEOUT=-1 sh scripts/merge-ready.sh 5 >/dev/null 2>&1
+expect "merge-ready: a time limit that is not a number stops with exit 2" 2 $?
+for v in 0 9; do
+    PATH="$work/mrshim:$PATH" MERGE_READY_INTERVAL=$v sh scripts/merge-ready.sh 5 >/dev/null 2>&1
+    expect "merge-ready: an interval of ${v}s, under 10, stops with exit 2" 2 $?
+done
+
+# date and awk stand-ins that fail, each alone on PATH before the gh stand-in.
+for t in date awk; do
+    mkdir -p "$work/mrfail-$t"; printf '#!/bin/sh\nexit 1\n' > "$work/mrfail-$t/$t"
+    chmod +x "$work/mrfail-$t/$t"
+    mr_case; mr_checks 1 "$mr_head" SUCCESS
+    PATH="$work/mrfail-$t:$work/mrshim:$PATH" sh scripts/merge-ready.sh 5 >/dev/null 2>&1
+    expect "merge-ready: a failing $t stops with exit 2" 2 $?
+done
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+echo typed | mr 5 >/dev/null 2>&1
+[ ! -s "$work/mr/stdin" ]; expect "merge-ready: gh never reads the caller's input" 0 $?
+[ -s "$work/mr/env" ] && ! grep -qv '^LC_ALL=C GH_PROMPT_DISABLED=1$' "$work/mr/env"
+expect "merge-ready: gh runs with LC_ALL=C and prompts disabled" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS; : > "$work/mr/head-fail"
+err=$(mr 5 2>&1 >/dev/null); r=$?
+[ "$r" = 2 ] && printf '%s\n' "$err" | grep -q "gh pr view failed"
+expect "merge-ready: failing to read the head says gh failed, exit 2" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS; : > "$work/mr/head"
+err=$(mr 5 2>&1 >/dev/null); r=$?
+[ "$r" = 2 ] && printf '%s\n' "$err" | grep -q "has no head"
+expect "merge-ready: an empty head says so, exit 2" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\t\tFAILURE\t2026-11-25T10:00:00Z')"
+expect_reason "merge-ready: a red check with no name blocks" "red: (no name)" mr 5
+
+mr_timeout=0
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'StatusContext\t\tPENDING\t')"
+expect_reason "merge-ready: a running check with no name is waited for" "still running: (no name)" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\tRepository rules\t\t0001-01-01T00:00:00Z')"
+expect_reason "merge-ready: a re-run with the zero start time is waited for" "timed out" mr 5
+
+# A re-run not started yet, listed before the older finished attempt.
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+{ sed -n 1p "$work/mr/checks.1"; printf 'CheckRun\tRepository rules\t\t\n'; sed 1d "$work/mr/checks.1"; } \
+    > "$work/mr/checks.x" && mv "$work/mr/checks.x" "$work/mr/checks.1"
+expect_reason "merge-ready: a re-run not started yet counts even when listed first" "timed out" mr 5
+mr_timeout=60
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\tRepository rules\tFAILURE\t2026-11-25T10:00:00Z')"
+expect_reason "merge-ready: on equal start times the later line counts" "red: Repository rules" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\tGitGuardian Security Checks\tNEUTRAL\t2026-11-25T10:00:00Z')"
+mr 5 >/dev/null 2>&1; expect "merge-ready: another check neutral is not red" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Review of the commit, round 1: NOT APPROVED, see below. Reviewed tree `%s`.\n' "$mr_tree" \
+    > "$work/mr/verdict"
+expect_reason "merge-ready: NOT APPROVED is not approved" "not approved" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Review of the commit, round 2: APPROVED. Reviewed tree `%s`, not %s.\n' \
+    0123456789012345678901234567890123456789 "$mr_tree" > "$work/mr/verdict"
+expect_reason "merge-ready: the head's tree outside the quoted form does not count" "not the tree of the head" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Review of the commit, round 4: APPROVED with two minor points. Reviewed tree `%s`.\n' "$mr_tree" \
+    > "$work/mr/verdict"
+mr 5 >/dev/null 2>&1; expect "merge-ready: APPROVED with minor points is approved" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Review of the commit, round 1: APPROVEDISH. Reviewed tree `%s`.\n' "$mr_tree" > "$work/mr/verdict"
+expect_reason "merge-ready: APPROVED must stand as a word after the colon" "not approved" mr 5
+
+# A verdict posted while the jobs run is read again after the wait.
+mr_case; mr_checks 1 "$mr_head" ""; mr_checks 2 "$mr_head" SUCCESS
+printf 'Review of the commit, round 3: CHANGES NEEDED. Reviewed tree `%s`, subject "x".\n' "$mr_tree" \
+    > "$work/mr/verdict.2"
+expect_reason "merge-ready: a verdict posted during the wait counts" "not approved" mr 5
+
+for v in SKIPPED CANCELLED TIMED_OUT STALE; do
+    mr_case; mr_checks 1 "$mr_head" SUCCESS
+    sed -i.bak "4s/SUCCESS/$v/" "$work/mr/checks.1"
+    expect_reason "merge-ready: a required job ending $v is red" "red: Test (x86_64-pc-windows-gnu)" mr 5
+done
+for row in "CheckRun	ci/other	CANCELLED	2026-11-25T10:00:00Z" \
+    "CheckRun	ci/other	TIMED_OUT	2026-11-25T10:00:00Z" "StatusContext	ci/other	ERROR	" \
+    "StatusContext	ci/other	FAILURE	" "CheckRun	ci/other	SOMETHING_NEW	2026-11-25T10:00:00Z"; do
+    mr_case; mr_checks 1 "$mr_head" SUCCESS "$row"
+    expect_reason "merge-ready: another check ending $(printf '%s' "$row" | cut -f 3) is red" \
+        "red: ci/other" mr 5
+done
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+mr 5 >/dev/null 2>&1
+[ ! -e "$work/mr/bad" ] && [ "$(wc -l < "$work/mr/env")" -eq 4 ]
+expect "merge-ready: every gh call names pull request 5 (head, comments twice, checks)" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" ""; mr_checks 2 "$mr_head" SUCCESS
+PATH="$work/mrshim:$PATH" MERGE_READY_TIMEOUT=60 sh scripts/merge-ready.sh 5 >/dev/null 2>&1
+[ "$(cat "$work/mr/sleeps")" = 60 ]; expect "merge-ready: waits 60 seconds by default" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" ""; printf '0\n3599\n3600\n' > "$work/mr/dates"
+err=$(PATH="$work/mrdate:$work/mrshim:$PATH" sh scripts/merge-ready.sh 5 2>&1 >/dev/null); r=$?
+[ "$r" = 1 ] && printf '%s\n' "$err" | grep -q "timed out after 3600s" &&
+    [ "$(wc -l < "$work/mr/sleeps")" -eq 1 ]
+expect "merge-ready: stops after 3600 seconds by default" 0 $?
+
+for var in MERGE_READY_INTERVAL MERGE_READY_TIMEOUT; do
+    mr_case; mr_checks 1 "$mr_head" SUCCESS
+    err=$(env PATH="$work/mrshim:$PATH" "$var=99999999999999999999" sh scripts/merge-ready.sh 5 2>&1 >/dev/null)
+    r=$?
+    [ "$r" = 2 ] && printf '%s\n' "$err" | grep -q "$var is over"
+    expect "merge-ready: $var too large says so, exit 2" 0 $?
+done
+
+mr_case
+out=$(PATH="$work/mrshim:$PATH" sh scripts/merge-ready.sh 5x 2>&1); r=$?
+[ "$r" = 2 ] && printf '%s\n' "$out" | grep -q "^usage:" && [ ! -e "$work/mr/env" ]
+expect "merge-ready: a pull request that is not a number is refused before gh runs" 0 $?
+
+for var in MERGE_READY_INTERVAL MERGE_READY_TIMEOUT; do
+    mr_case; mr_checks 1 "$mr_head" SUCCESS
+    env PATH="$work/mrshim:$PATH" "$var=999999" sh scripts/merge-ready.sh 5 >/dev/null 2>&1
+    expect "merge-ready: $var of 999999 is accepted" 0 $?
+    err=$(env PATH="$work/mrshim:$PATH" "$var=1000000" sh scripts/merge-ready.sh 5 2>&1 >/dev/null)
+    r=$?
+    [ "$r" = 2 ] && printf '%s\n' "$err" | grep -q "$var is over"
+    expect "merge-ready: $var of 1000000 is refused" 0 $?
+done
+
+# mr_first <row>: put a row of call 1 before the four jobs.
+mr_first() {
+    { sed -n 1p "$work/mr/checks.1"; printf '%s\n' "$1"; sed 1d "$work/mr/checks.1"; } \
+        > "$work/mr/checks.x" && mv "$work/mr/checks.x" "$work/mr/checks.1"
+}
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'StatusContext\tRepository rules\tFAILURE\t')"
+mr 5 >/dev/null 2>&1; expect "merge-ready: a finished attempt with no time, listed last, is the oldest" 0 $?
+mr_case; mr_checks 1 "$mr_head" SUCCESS; mr_first "$(printf 'StatusContext\tRepository rules\tFAILURE\t')"
+mr 5 >/dev/null 2>&1; expect "merge-ready: a finished attempt with no time, listed first, is the oldest" 0 $?
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\tRepository rules\t\t2026-11-25T09:00:00Z')"
+mr 5 >/dev/null 2>&1; expect "merge-ready: an older running attempt listed last does not count" 0 $?
+mr_timeout=0
+mr_case; mr_checks 1 "$mr_head" SUCCESS; mr_first "$(printf 'CheckRun\tRepository rules\t\t2026-11-25T11:00:00Z')"
+expect_reason "merge-ready: a newer running attempt listed first counts" "timed out" mr 5
+mr_timeout=60
+
+mr_case; mr_checks 1 "$mr_head" ""; printf '0\n' > "$work/mr/dates"
+err=$(PATH="$work/mrdate:$work/mrshim:$PATH" sh scripts/merge-ready.sh 5 2>&1 >/dev/null); r=$?
+[ "$r" = 2 ] && printf '%s\n' "$err" | grep -q "date failed"
+expect "merge-ready: a date failing during the wait stops with exit 2" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Review of the commit, round 2: APPROVED. Reviewed tree `%s`. Round 1 had Reviewed tree `%s`.\n' \
+    0123456789012345678901234567890123456789 "$mr_tree" > "$work/mr/verdict"
+expect_reason "merge-ready: a verdict that quotes two trees is not taken" "more than one tree" mr 5
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Earlier round: APPROVED. This round 2: rejected. Reviewed tree `%s`.\n' "$mr_tree" \
+    > "$work/mr/verdict"
+expect_reason "merge-ready: APPROVED must be the verdict of the round" "not approved" mr 5
+
 echo "scripts tests: $passed passed, $failed failed"
 [ "$failed" -eq 0 ]
