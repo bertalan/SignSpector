@@ -56,8 +56,8 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
   - a comment in `rust-toolchain.toml`: targets and R25, how to update the pinned version;
   - a "Rust" section in the session report (`scripts/audit-status.sh`) that names a newer stable
     Rust when one exists;
-  - owner's decisions on requirements, taken in the reviews of this step (2026-11-23 unless
-    dated) and recorded in `docs/design.md`:
+  - owner's decisions on requirements, recorded in `docs/design.md`. Those without a date were
+    taken in the reviews of this step, on 2026-11-23. Later ones carry their date:
     - what `check` writes (R16);
     - risky runs counted on files of any kind (R28);
     - reports never replaced, and the second report (R16, R20, R31, R33);
@@ -71,10 +71,12 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
       2026-11-24;
     - signatures inside a signed PDF are found and reported as not verified (R50), decided on
       2026-11-25. Their verification was decided on 2026-11-25 too, and its version, `2.0.0`,
-      on 2026-11-26;
+      on 2026-11-26. Also on 2026-11-26 the owner decided which ones `2.0.0` verifies: the
+      sub-filters `ETSI.CAdES.detached`, `adbe.pkcs7.detached` and `adbe.pkcs7.sha1`;
     - other signed formats and cases are evaluated for version `2.0.0`, decided on 2026-11-25
-      and 2026-11-26. Signed PDF files on their own joined the list on 2026-11-26. The list is
-      in `docs/design.md`, "What do we evaluate for version 2?".
+      and 2026-11-26. Signed PDF files on their own joined the list on 2026-11-26. The same day
+      `adbe.pkcs7.detached` and `adbe.pkcs7.sha1` left it; only `adbe.x509.rsa_sha1` stays. The
+      list is in `docs/design.md`, "What do we evaluate for version 2?".
 
   The questions these decisions opened are in "What is still open?" in `docs/design.md`. Each
   names the roadmap step that needs the answer: 1.4, 1.5, 1.6, 1.7, 2.4, 3.1, 3.2, 3.5, 3.6,
@@ -167,7 +169,7 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
       the interaction limit lasts (`CLAUDE.md`);
     - checks are told apart by name only. A run started by hand on the same head
       (`workflow_dispatch`) replaces the pull request run of the job with the same name. A
-      finished attempt with no start time counts as the oldest, so it is ignored when a timed
+      finished attempt with no start time counts as the oldest. So it is ignored when a timed
       attempt of the same name exists, even when it is red;
     - the local branch is not compared with the head of the pull request. A local branch that
       differs from it, ahead or behind, is not noticed. When it is ahead, the protection of
@@ -185,6 +187,11 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
     API limit is not used up. The first lessons come from audit 0011:
     - post each review verdict on the PR when its round ends, not together with the commit (F4);
     - give the owner's decisions in English in PR texts and comments (F5).
+  - Two rules the owner added on 2026-11-26 (audit 0013), now in `CLAUDE.md`:
+    - a session that must end commits only an APPROVED tree with no point that never moves;
+      any other work stays uncommitted, with a state comment on the PR (F1);
+    - owner's decisions on requirements taken while a step is open go into that step's branch
+      (F3).
   - Questions for the owner, from audit 0012 and from one review; this step decides them:
     - F1: must the linked-root and corpus-link tests also run on Windows, for example with a
       `find` stand-in? Must `test-scripts.sh` count its skips, as `test-cleanup.sh` does?
@@ -352,11 +359,11 @@ As one self-contained executable per platform, tested on the company PC before `
 
 ## Phase 7: what comes in version `2.0.0`?
 
-Version `2.0.0` (R26) comes after `1.0.0`. It verifies the PAdES signatures that R50 only
-reports, and evaluates the formats of "What do we evaluate for version 2?" in `docs/design.md`.
+Version `2.0.0` (R26) comes after `1.0.0`. It verifies the CMS signatures inside a PDF that R50
+only reports, and evaluates the formats of "What do we evaluate for version 2?" in `docs/design.md`.
 
 - [ ] 7.1 PAdES: the signatures inside a signed PDF are verified with the CMS verification of
   phase 3 (R8–R12, R49). First the owner decides the questions "Before 7.1" in
   `docs/design.md` and updates R50.
-- [ ] 7.2 The other formats and cases of "What do we evaluate for version 2?": each one the
+- [ ] 7.2 The other formats and cases of "What do we evaluate for version 2?". Each one the
   owner keeps gets a requirement first, then its own step.

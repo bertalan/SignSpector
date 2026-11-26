@@ -61,12 +61,14 @@ saves the signed documents beside the originals, ready to open.
 - Revocation is R49.
 - R50. Signatures inside a PDF. The document that R4 reaches may be a PDF with signatures of its
   own (PAdES). Before `2.0.0` they are not verified, but never passed over in silence:
-  - for each such PDF, the console and the report say how many signatures it holds and that
-    SignSpector did not verify them, in words (R35, R36; translated per R27);
+  - for each such PDF, the console and the report say how many signatures it holds. They say
+    in words that SignSpector did not verify them (R35, R36; translated per R27);
   - the layers of the envelope around it are verified as usual (R8–R12, R49);
   - a malformed PDF is a problem line for that file (R7), never a stop.
 
-  Version `2.0.0` verifies the PAdES signatures (roadmap, phase 7).
+  Version `2.0.0` verifies the CMS signatures inside a PDF: the sub-filters `ETSI.CAdES.detached`,
+  `adbe.pkcs7.detached` and `adbe.pkcs7.sha1` (roadmap, phase 7). The owner decided this on
+  2026-11-26.
 
 ### What does it show and write after an analysis?
 - R13. A console summary per file, in the user's language (R27), with colours (R35). Exit codes:
@@ -571,9 +573,9 @@ confirm that antivirus, SmartScreen and AppLocker accept a mingw-built executabl
 
 ## What do we evaluate for version 2?
 
-Version 2 is `2.0.0` (R26), after `1.0.0` (roadmap, phase 7). It verifies the PAdES signatures
-that R50 only reports. It also evaluates the formats and cases below, which no requirement
-covers yet. Each item needs a requirement before any work starts.
+Version 2 is `2.0.0` (R26), after `1.0.0` (roadmap, phase 7). It verifies the CMS signatures
+inside a PDF that R50 only reports. It also evaluates the formats and cases below, which no
+requirement covers yet. Each item needs a requirement before any work starts.
 
 The owner decided on 2026-11-25 to evaluate them for version 2. On 2026-11-26 the owner decided
 that version 2 is `2.0.0`, and added signed PDF files on their own to the list.
@@ -595,9 +597,10 @@ the evaluation.
 - Ed25519 and SHA-3, allowed by the ETSI standards but not listed in R8. Brainpool curves are
   already a question below, "Before 3.1". So are stand-alone time-stamp responses (`.tsr`),
   "Before 1.5".
-- PDF signatures outside the PAdES baseline profiles, which use `ETSI.CAdES.detached`: the older
-  sub-filters `adbe.pkcs7.detached`, `adbe.pkcs7.sha1` and `adbe.x509.rsa_sha1`. Roadmap step
-  7.1 evaluates them with PAdES.
+- PDF signatures outside PAdES: the sub-filter `adbe.x509.rsa_sha1`. Roadmap step 7.1
+  evaluates it. `2.0.0` verifies the other three sub-filters (R50). The signatures of the PAdES
+  baseline profiles use `ETSI.CAdES.detached`. The CMS-based profile of PAdES allows
+  `adbe.pkcs7.detached` and `adbe.pkcs7.sha1`.
 - Evidence records for long-term archives (RFC 4998, `.ers`).
 - Signed PDF files on their own, not inside an envelope. R1a does not see them, so their
   signatures are neither verified nor reported. Roadmap step 7.1 evaluates them with PAdES.
@@ -645,12 +648,11 @@ here.
 - How is a PDF signature found: by reading the form fields of the PDF, or by a search for
   signature dictionaries in its bytes? With which crate, or with own code? Which misses and
   false alarms are acceptable (R50)?
-- Which exit code (R13) does a run give when a PDF holds signatures that were not verified, or
-  when the PDF inside a valid envelope is malformed?
+- Which exit code (R13) does a run give when a PDF holds signatures that were not verified?
+  Which one when the PDF inside a valid envelope is malformed?
 - Does R50 also cover the file that a detached `.p7s` signs (R6)?
-- Does R50 count every signature found in the PDF, whatever its kind: signatures of the PAdES
-  baseline profiles, document time stamps, certification signatures, and the older `adbe.*`
-  sub-filters?
+- Does R50 count every signature found in the PDF, whatever its kind? Does that include document
+  time stamps, certification signatures and every `adbe.*` sub-filter?
 - How are the synthetic PDFs for the tests made, signed and negative (roadmap 2.4)? The
   fixture script of roadmap 0.3 uses `openssl`, which cannot sign a PDF. Does a Rust test
   helper make them, as for the other cases OpenSSL cannot produce ("Which test data do we
@@ -765,6 +767,6 @@ here.
   certification signature, are its limits on later changes checked too?
 - What does the report say when a signature does not cover the whole file, or when the PDF was
   changed after it was signed?
-- Do the PDF signatures outside the PAdES baseline profiles, listed in "What do we evaluate for
-  version 2?", come with it?
+- Does the sub-filter `adbe.x509.rsa_sha1`, outside PAdES and listed in "What do we evaluate
+  for version 2?", come with it?
 - Does `2.0.0` also find signed PDF files on their own, outside an envelope (a change to R1a)?

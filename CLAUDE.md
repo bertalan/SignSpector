@@ -59,11 +59,17 @@ the CI workflow. There is no exception for "infrastructure".
      round, the minor points left move on. Those of the third round move too. No new round runs
      for them. They move to the next commit of the same PR when the author plans more commits
      in it (owner's decision, 2026-11-24). Otherwise they move to the first commit of the next
-     PR. The verdict comment of that round lists them as moved. The commit they move to fixes
-     them or writes them into the roadmap step that will fix them. For a point on the message
-     of a pushed commit, that commit carries the note.
+     PR. A session that must end moves them earlier (see below). The verdict comment of that
+     round lists them as moved. The commit they move to fixes them or writes them into the
+     roadmap step that will fix them. For a point on the message of a pushed commit, that
+     commit carries the note.
    - Some points never move: bugs, missing tests, and points on personal data, or on
      confirmation or writing files (R28–R34). They are fixed and reviewed before the commit.
+   - A session that must end before the rounds are done commits only an APPROVED tree with no
+     point that never moves. Its minor points then move as after the third minor round: to the
+     next commit of the same PR, or to the first commit of the next PR. The verdict comment says
+     so. Any other work stays uncommitted, with a state comment on the
+     PR. The owner decided this on 2026-11-26 (audit 0013, F1).
    - The review leaves a trace of what it approved. The reviewer reports the tree of its
      staged copy (`git write-tree`). The verdict comment quotes it, with the subject line of the
      reviewed commit message. `scripts/merge-ready.sh` reads that form. The first line holds
@@ -118,9 +124,11 @@ do, references point to functions or options that never existed, work is left ha
   Merge it into `main` locally by fast-forward:
   `git switch main && git merge --ff-only step/x && git push`. The merged commits are the same
   ones CI checked, history stays linear and the pre-push hook runs. The GitHub merge button is
-  not used: it rewrites commits. One step is open at a time. A session never ends with a draft
-  PR without a comment saying its state and next step. Abandoned work is closed with the reason,
-  never left open.
+  not used: it rewrites commits. One step is open at a time. Owner's decisions on requirements
+  taken while a step is open go into that step's branch. Its PR description lists them, and
+  roadmap 0.4 records them with their date (owner's decision, 2026-11-26, audit 0013, F3). A
+  session never ends with a draft PR without a comment saying its state and next step.
+  Abandoned work is closed with the reason, never left open.
 - Every 5 commits, a coherence audit by the `coherence-auditor` agent (Fable, a different model
   of equal or higher capability than the author's, fresh context, read-only). It checks
   requirements, tests and code against each other, the existence of every concrete reference,
