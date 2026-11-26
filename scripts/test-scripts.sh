@@ -1416,5 +1416,15 @@ printf 'Earlier round: APPROVED. This round 2: rejected. Reviewed tree `%s`.\n' 
     > "$work/mr/verdict"
 expect_reason "merge-ready: APPROVED must be the verdict of the round" "not approved" mr 5
 
+mr_case; mr_checks 1 "$mr_head" SUCCESS
+printf 'Review of the commit, round 2: APPROVED. Reviewed tree `%s`.\n\nAgain: Reviewed tree `%s`.\n' \
+    "$mr_tree" "$mr_tree" > "$work/mr/verdict"
+mr 5 >/dev/null 2>&1; expect "merge-ready: a verdict that quotes the head's tree twice is approved" 0 $?
+
+mr_case; mr_checks 1 "$mr_head" SUCCESS "$(printf 'CheckRun\tci/other\t\t2026-11-25T10:00:00Z')"
+sed -i.bak '2s/SUCCESS/FAILURE/' "$work/mr/checks.1"
+expect_reason "merge-ready: a red check stops the wait even while another runs" "red: Repository rules" mr 5
+[ ! -s "$work/mr/sleeps" ]; expect "merge-ready: a red check stops before any wait" 0 $?
+
 echo "scripts tests: $passed passed, $failed failed"
 [ "$failed" -eq 0 ]

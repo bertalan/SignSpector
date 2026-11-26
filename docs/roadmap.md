@@ -167,7 +167,9 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
       differs from it, ahead or behind, is not noticed. When it is ahead, the protection of
       `main` refuses the push;
     - when the head is an audit report pushed alone (`CLAUDE.md`, step 5), no verdict quotes its
-      tree, so the script says "not ready". The owner decides what then (question below).
+      tree, so the script says "not ready". The owner decides what then (question below);
+    - only the last verdict counts. A verdict of a commit not yet pushed makes an approved head
+      "not ready" until that commit is pushed.
   - Model by risk. Sonnet writes routine code. Opus writes the code for cryptography and for
     R28–R34. The rule scripts and the hooks protect, so this step decides whether they count as
     routine code. Reviews and audits stay on Fable. A PR holds about 400 changed lines; a bigger
@@ -185,9 +187,8 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
       test from "one more assertion"? Or must any behaviour fix get CHANGES NEEDED?
     - F3: on 2026-11-25 the owner delegated the choices that an audit leaves to the owner:
       "choose the solution that serves the goal and is coherent with earlier choices". Only the
-      message of 72b89f3 and a PR #4 comment record it.
-      Does it stand as a rule, with its limits written in `CLAUDE.md`? Or did it apply to audit
-      0011 only?
+      message of 72b89f3 and a PR #4 comment record it. Does it stand as a rule, with its limits
+      written in `CLAUDE.md`? Or did it apply to audit 0011 only?
     - From the review of `scripts/merge-ready.sh`: an audit report pushed alone gets no review,
       so no verdict quotes its tree. May the merge then go ahead on the verdict of the commit
       before it, with CI green on the report? Or must the report always be pushed with a

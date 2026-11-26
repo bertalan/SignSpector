@@ -66,9 +66,9 @@ the CI workflow. There is no exception for "infrastructure".
      confirmation or writing files (R28–R34). They are fixed and reviewed before the commit.
    - The review leaves a trace of what it approved. The reviewer reports the tree of its
      staged copy (`git write-tree`). The verdict comment quotes it, with the subject line of the
-     reviewed commit message. `scripts/merge-ready.sh` reads that form: the first line holds
+     reviewed commit message. `scripts/merge-ready.sh` reads that form. The first line holds
      `, round <n>: APPROVED.`, `, round <n>: APPROVED with ...` or
-     `, round <n>: CHANGES NEEDED.`, and the comment quotes one tree only, as
+     `, round <n>: CHANGES NEEDED.`. The comment quotes one tree only, as
      ``Reviewed tree `<tree>` ``. The comment that names the commit says "Its tree" instead, so
      it is not taken for a verdict. After the commit, `git rev-parse HEAD^{tree}` must give the same
      tree. If it does not, nothing is pushed. Undo the commit with `git reset --soft HEAD~1`,
