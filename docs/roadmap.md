@@ -70,7 +70,8 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
     - R34 also tests each kind of sensitive folder selected directly (R28), decided on
       2026-11-24;
     - signatures inside a signed PDF are found and reported as not verified (R50), decided on
-      2026-11-25. Version `2.0.0` verifies them, decided on 2026-11-26;
+      2026-11-25. Their verification was decided on 2026-11-25 too, and its version, `2.0.0`,
+      on 2026-11-26;
     - other signed formats and cases are evaluated for version `2.0.0`, decided on 2026-11-25
       and 2026-11-26. Signed PDF files on their own joined the list on 2026-11-26. The list is
       in `docs/design.md`, "What do we evaluate for version 2?".

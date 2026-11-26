@@ -595,9 +595,9 @@ the evaluation.
 - Ed25519 and SHA-3, allowed by the ETSI standards but not listed in R8. Brainpool curves are
   already a question below, "Before 3.1". So are stand-alone time-stamp responses (`.tsr`),
   "Before 1.5".
-- PDF signatures outside PAdES: the older `adbe.pkcs7.sha1` and `adbe.x509.rsa_sha1`, document
-  time stamps (`/DocTimeStamp`) and certification signatures that limit later changes. Roadmap
-  step 7.1 evaluates them with PAdES.
+- PDF signatures outside the PAdES baseline profiles, which use `ETSI.CAdES.detached`: the older
+  sub-filters `adbe.pkcs7.detached`, `adbe.pkcs7.sha1` and `adbe.x509.rsa_sha1`. Roadmap step
+  7.1 evaluates them with PAdES.
 - Evidence records for long-term archives (RFC 4998, `.ers`).
 - Signed PDF files on their own, not inside an envelope. R1a does not see them, so their
   signatures are neither verified nor reported. Roadmap step 7.1 evaluates them with PAdES.
@@ -648,8 +648,13 @@ here.
 - Which exit code (R13) does a run give when a PDF holds signatures that were not verified, or
   when the PDF inside a valid envelope is malformed?
 - Does R50 also cover the file that a detached `.p7s` signs (R6)?
-- Does R50 count every signature found in the PDF, whatever its kind: PAdES, the older
-  `adbe.pkcs7.sha1` and `adbe.x509.rsa_sha1`, and document time stamps?
+- Does R50 count every signature found in the PDF, whatever its kind: signatures of the PAdES
+  baseline profiles, document time stamps, certification signatures, and the older `adbe.*`
+  sub-filters?
+- How are the synthetic PDFs for the tests made, signed and negative (roadmap 2.4)? The
+  fixture script of roadmap 0.3 uses `openssl`, which cannot sign a PDF. Does a Rust test
+  helper make them, as for the other cases OpenSSL cannot produce ("Which test data do we
+  use?")?
 
 ### Before 3.1 (crypto)
 - Brainpool curves: are they needed by the real files?
@@ -754,8 +759,12 @@ here.
   list it (R40, R43)? Does it remove leftover temporary files (R31)?
 
 ### Before 7.1 (PAdES verification, version `2.0.0`)
-- Which PAdES levels are verified (R50)?
+- Which PAdES levels are verified (R50)? Does `2.0.0` also verify document time stamps
+  (`/DocTimeStamp`) and certification signatures, which limit later changes? PAdES defines the
+  first and allows the second, but R50 does not yet say whether it covers them. For a
+  certification signature, are its limits on later changes checked too?
 - What does the report say when a signature does not cover the whole file, or when the PDF was
   changed after it was signed?
-- Do the PDF signatures outside PAdES of "What do we evaluate for version 2?" come with it?
+- Do the PDF signatures outside the PAdES baseline profiles, listed in "What do we evaluate for
+  version 2?", come with it?
 - Does `2.0.0` also find signed PDF files on their own, outside an envelope (a change to R1a)?
