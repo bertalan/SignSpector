@@ -598,9 +598,8 @@ the evaluation.
   already a question below, "Before 3.1". So are stand-alone time-stamp responses (`.tsr`),
   "Before 1.5".
 - PDF signatures outside PAdES: the sub-filter `adbe.x509.rsa_sha1`. Roadmap step 7.1
-  evaluates it. `2.0.0` verifies the other three sub-filters (R50). The signatures of the PAdES
-  baseline profiles use `ETSI.CAdES.detached`. The CMS-based profile of PAdES allows
-  `adbe.pkcs7.detached` and `adbe.pkcs7.sha1`.
+  evaluates it. `2.0.0` verifies the other sub-filters (R50): `ETSI.CAdES.detached` of the PAdES
+  baseline profiles, and `adbe.pkcs7.detached` and `adbe.pkcs7.sha1` of its CMS-based profile.
 - Evidence records for long-term archives (RFC 4998, `.ers`).
 - Signed PDF files on their own, not inside an envelope. R1a does not see them, so their
   signatures are neither verified nor reported. Roadmap step 7.1 evaluates them with PAdES.

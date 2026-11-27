@@ -360,7 +360,8 @@ As one self-contained executable per platform, tested on the company PC before `
 ## Phase 7: what comes in version `2.0.0`?
 
 Version `2.0.0` (R26) comes after `1.0.0`. It verifies the CMS signatures inside a PDF that R50
-only reports, and evaluates the formats of "What do we evaluate for version 2?" in `docs/design.md`.
+only reports. It also evaluates the formats of "What do we evaluate for version 2?" in
+`docs/design.md`.
 
 - [ ] 7.1 PAdES: the signatures inside a signed PDF are verified with the CMS verification of
   phase 3 (R8–R12, R49). First the owner decides the questions "Before 7.1" in

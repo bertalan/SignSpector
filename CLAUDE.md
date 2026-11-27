@@ -66,10 +66,11 @@ the CI workflow. There is no exception for "infrastructure".
    - Some points never move: bugs, missing tests, and points on personal data, or on
      confirmation or writing files (R28–R34). They are fixed and reviewed before the commit.
    - A session that must end before the rounds are done commits only an APPROVED tree with no
-     point that never moves. Its minor points then move as after the third minor round: to the
-     next commit of the same PR, or to the first commit of the next PR. The verdict comment says
-     so. Any other work stays uncommitted, with a state comment on the
-     PR. The owner decided this on 2026-11-26 (audit 0013, F1).
+     point that never moves. Its minor points then move as after the third minor round. They go
+     to the next commit of the same PR, or to the first commit of the next PR. The verdict
+     comment says so. Any other work stays uncommitted, with a state comment on the PR. The
+     owner decided this on 2026-11-26 (audit 0013, F1) and confirmed this wording on
+     2026-11-27.
    - The review leaves a trace of what it approved. The reviewer reports the tree of its
      staged copy (`git write-tree`). The verdict comment quotes it, with the subject line of the
      reviewed commit message. `scripts/merge-ready.sh` reads that form. The first line holds
