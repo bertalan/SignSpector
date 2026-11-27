@@ -14,7 +14,7 @@ A different model wrote the code. Your value is an opinion that is not anchored 
 reasoning. Do not trust comments, commit messages or the brief you were given: check the code
 and the tests yourself.
 
-Read first: `CLAUDE.md` and `docs/design.md` (requirements and safety rules).
+Read first: `CLAUDE.md`, `docs/design.md` (requirements and safety rules) and `docs/lessons.md`.
 
 ## What do you review?
 

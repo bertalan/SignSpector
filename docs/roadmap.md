@@ -23,8 +23,8 @@ Two ideas set it:
 
 ## Phase 0: what must be in place before the code?
 
-The repository, CI, the writing guide and the fixture generator, a list of the known gaps in the
-script tests, and the changes to the way of working adopted on 2026-11-25.
+The repository, CI, the writing guide and the fixture generator. Then a list of the known gaps
+in the script tests, and the changes to the way of working adopted on 2026-11-25.
 
 - [x] 0.1 First commit and push to `main`, after a review of the file list. From then on: one
   branch and one draft PR per step, a coherence audit every 5 commits, merges by local
@@ -56,8 +56,8 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
   - a comment in `rust-toolchain.toml`: targets and R25, how to update the pinned version;
   - a "Rust" section in the session report (`scripts/audit-status.sh`) that names a newer stable
     Rust when one exists;
-  - owner's decisions on requirements, taken in the reviews of this step (2026-11-23 unless
-    dated) and recorded in `docs/design.md`:
+  - owner's decisions on requirements, recorded in `docs/design.md`. Those without a date were
+    taken in the reviews of this step, on 2026-11-23. Later ones carry their date:
     - what `check` writes (R16);
     - risky runs counted on files of any kind (R28);
     - reports never replaced, and the second report (R16, R20, R31, R33);
@@ -68,11 +68,19 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
     - `--no-report` (R14, R16);
     - foreign menu items (R41);
     - R34 also tests each kind of sensitive folder selected directly (R28), decided on
-      2026-11-24.
+      2026-11-24;
+    - signatures inside a signed PDF are found and reported as not verified (R50), decided on
+      2026-11-25. Their verification was decided on 2026-11-25 too, and its version, `2.0.0`,
+      on 2026-11-26. Also on 2026-11-26 the owner decided which ones `2.0.0` verifies: the
+      sub-filters `ETSI.CAdES.detached`, `adbe.pkcs7.detached` and `adbe.pkcs7.sha1`;
+    - other signed formats and cases are evaluated for version `2.0.0`, decided on 2026-11-25
+      and 2026-11-26. Signed PDF files on their own joined the list on 2026-11-26. The same day
+      `adbe.pkcs7.detached` and `adbe.pkcs7.sha1` left it; only `adbe.x509.rsa_sha1` stays. The
+      list is in `docs/design.md`, "What do we evaluate for version 2?".
 
   The questions these decisions opened are in "What is still open?" in `docs/design.md`. Each
-  names the roadmap step that needs the answer: 1.4, 1.5, 1.6, 1.7, 3.1, 3.2, 3.5, 3.6, 3.7,
-  3.9, 4.2, 4.4, 5.1, 5.2, 5.3.
+  names the roadmap step that needs the answer: 1.4, 1.5, 1.6, 1.7, 2.4, 3.1, 3.2, 3.5, 3.6,
+  3.7, 3.9, 4.2, 4.4, 5.1, 5.2, 5.3, 7.1.
 - [x] 0.5 Remaining gaps in the rule-script tests. The reviews of PR #1, PR #2 and PR #3 found
   them. This step closed the ones below that are not listed as known limits. The owner marked
   the step done with these limits listed (2026-11-25). Each known limit needs a test before the
@@ -115,8 +123,6 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
     - a check name with a backslash is printed with the backslash doubled (`@tsv` escapes it);
     - `gh pr list` reads at most 30 open pull requests, its default;
     - the exit status of the `awk` that selects the red checks is not checked;
-    - the marker search prints "none" when `find` or `grep` cannot run. This limit was added
-      after the owner marked the step done, by the review of the commit that closes audit 0011;
     - "Rust" section: the owner decided (2026-11-23) that a breakage of this section that shows
       no bug is listed here, not tested. These are listed:
       - `rustup check` has no time limit. It runs only in report mode, after the hook gates;
@@ -132,22 +138,76 @@ script tests, and the changes to the way of working adopted on 2026-11-25.
       `cd3620d` (`CLAUDE.md`). Encode the exception if a second remote is ever added;
     - `core.commentChar` other than `#`: `git commit -v` is refused (fails closed).
 
-- [ ] 0.6 Way of working: the four changes the owner adopted on 2026-11-25.
+- [ ] 0.6 Way of working: the four changes the owner adopted on 2026-11-25, after one point
+  closed first.
+  - Closed first, test first: the marker search of `audit-status.sh` says when `find` or `grep`
+    fails, never "none". Markers found before the failure are still listed. The report names a
+    root that is a symbolic link on a line of its own and does not follow it. Printing "none"
+    when `find` or `grep` fails had been a known limit of 0.5. The review of the commit that
+    closes audit 0011 added it there, after the owner marked that step done. Two limits remain:
+    - when `find` or `grep` fails, the report does not say which file or folder could not be
+      read;
+    - a symbolic link inside a searched root is not followed, and the report skips it without a
+      line.
+
+    One limit of its tests: on Windows, 8 checks of the marker search may be skipped. That
+    happens when Git Bash's `ln -s` makes a copy instead of a link. They are the test of links
+    into the corpus (2 checks) and the six linked-root tests (6 checks). Those rules are then
+    tested on macOS and Linux only. `test-scripts.sh` counts the skipped checks and prints the
+    number, as `test-cleanup.sh` does. Each block states its number of checks once. A block
+    that runs a different number fails the run, and so does any skip outside Windows (owner's
+    decision, 2026-11-27, audit 0012, F1). A self-test of `skip`, run on every system, checks
+    that it adds the checks of its block; `test-cleanup.sh` has the same self-test.
   - "Done when" for every step: a list of checks that prove the step is done. The PR
     description maps each item to its evidence: a test, a commit or a file. The reviewer and
     the auditor check that list. The open steps get theirs in this step.
   - `scripts/merge-ready.sh`, test first. It waits until the four CI jobs are green on the
     exact head of the PR, and stops if the head moves. It also checks that the last verdict
     comment is APPROVED and quotes the tree of that head. The merge goes ahead only after it.
+    Known limits:
+    - the tests' `gh` stand-in returns the output of the `--jq` projections, not GitHub's JSON.
+      So the projections are not tested. They pick the last verdict, and the name, result and
+      start time of each check. A wrong projection shows only on a real pull request;
+    - the author of the verdict comment is not checked. Only collaborators may comment while
+      the interaction limit lasts (`CLAUDE.md`);
+    - checks are told apart by name only. A run started by hand on the same head
+      (`workflow_dispatch`) replaces the pull request run of the job with the same name. A
+      finished attempt with no start time counts as the oldest. So it is ignored when a timed
+      attempt of the same name exists, even when it is red;
+    - the local branch is not compared with the head of the pull request. A local branch that
+      differs from it, ahead or behind, is not noticed. When it is ahead, the protection of
+      `main` refuses the push;
+    - an audit report has no verdict of its own. It is never pushed alone (`CLAUDE.md`, step 5),
+      so a head that is an audit report does not occur;
+    - only the last verdict counts. A verdict of a commit not yet pushed makes an approved head
+      "not ready" until that commit is pushed.
   - Model by risk. Sonnet writes routine code. Opus writes the code for cryptography and for
-    R28–R34. The rule scripts and the hooks protect, so this step decides whether they count as
-    routine code. Reviews and audits stay on Fable. A PR holds about 400 changed lines; a bigger
-    step is split into slices, and the PR says what is left.
-  - `docs/lessons.md`: lessons learnt on the way of working, each with its date and what to do.
-    Agents never watch CI themselves; only the main session does, so that GitHub's API limit is
-    not used up. The first lessons come from audit 0011:
+    R28–R34. The rule scripts and the hooks protect, so Opus writes them too (owner's decision,
+    2026-11-27). `CLAUDE.md` says so. Reviews and audits stay on Fable. A PR holds about 400
+    changed lines; a bigger step is split into slices, and the PR says what is left.
+  - `docs/lessons.md`: lessons learnt on the way of working, each with its date, its source and
+    what to do. Agents never watch CI themselves; only the main session does, so that GitHub's
+    API limit is not used up. The first lessons come from audit 0011:
     - post each review verdict on the PR when its round ends, not together with the commit (F4);
     - give the owner's decisions in English in PR texts and comments (F5).
+  - Two rules the owner added on 2026-11-26 (audit 0013), now in `CLAUDE.md`:
+    - a session that must end commits only an APPROVED tree with no point that never moves;
+      any other work stays uncommitted, with a state comment on the PR (F1);
+    - owner's decisions on requirements taken while a step is open go into that step's branch
+      (F3).
+  - Questions for the owner, from audit 0012 and from one review. The owner answered them on
+    2026-11-27:
+    - F1: the linked-root and corpus-link tests stay skipped on Windows, and `test-scripts.sh`
+      counts its skips, as `test-cleanup.sh` does;
+    - F2: a test is missing when a rule of the code can be broken on a copy with every test
+      still green. `CLAUDE.md` says so;
+    - F3: the delegation of 2026-11-25 applied to audit 0011 only. The choices an audit leaves
+      to the owner stay with the owner;
+    - from the review of `scripts/merge-ready.sh`: an audit report is never pushed alone. It
+      goes with a reviewed commit, so the head always has a verdict. `CLAUDE.md` says so.
+  - Still open: a note of audit 0012, not a finding. Four of the five commits in its range
+    mainly close minor points moved from the commit before. The PR size of about 400 changed
+    lines is set; the owner may still weigh the note against it.
 
 ## Phase 1: how do we write files safely, before any cryptography?
 
@@ -205,7 +265,8 @@ With pure functions for names and confirmation, and a writer that never overwrit
 
 ## Phase 2: how do we open envelopes end to end?
 
-With a BER reader, a CMS parser and one thin run of the whole flow.
+With a BER reader, a CMS parser, one thin run of the whole flow, and a count of the signatures
+inside a PDF.
 
 - [ ] 2.1 `ber` reader: definite and indefinite lengths, limits on depth and size, checked
   arithmetic; fuzz target.
@@ -216,6 +277,10 @@ With a BER reader, a CMS parser and one thin run of the whole flow.
   - Written documents recorded in the report with SHA-256, and `undo` (R33).
   - The first end-to-end tests in `tests/*.rs` use `assert_cmd` and `predicates`, declared in
     `Cargo.toml` since 0.1 (audit 0001, F12).
+- [ ] 2.4 Signatures inside a signed PDF are found and counted (R50). Until 4.1 and 4.2 exist,
+  the count and "not verified" go into the minimal output of 2.3. First decide the questions
+  "Before 2.4" in `docs/design.md`. Negative tests: a malformed PDF, a PDF with no signature,
+  and a document that only looks like a PDF.
 
 ## Phase 3: how do we verify signatures and time stamps?
 
@@ -257,10 +322,12 @@ One layer at a time: cryptography, certificates, trusted lists, chains, time sta
 
 A console summary, an accessible HTML report, JSON and a translated command line.
 
-- [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35).
-- [ ] 4.2 Accessible HTML report, WCAG 2.2 AA (R14, R36), checker in CI (R39). First decide the
-  questions "Before 4.2" in `docs/design.md`.
-- [ ] 4.3 Full `--json` (R15); parallel processing with a stable output order (R23).
+- [ ] 4.1 Console summary, colours with contrast, exit codes (R13, R35), with the line on PDF
+  signatures not verified (R50).
+- [ ] 4.2 Accessible HTML report, WCAG 2.2 AA (R14, R36), with the PDF signatures not verified
+  (R50), checker in CI (R39). First decide the questions "Before 4.2" in `docs/design.md`.
+- [ ] 4.3 Full `--json` (R15), with the PDF signatures not verified (R50); parallel processing
+  with a stable output order (R23).
 - [ ] 4.4 Command line and translated help, interactive end of run (R19, R20, R37). First decide
   `--open`, `--threads`, `extract --no-report` and double-click detection (questions "Before
   4.4" in `docs/design.md`).
@@ -288,3 +355,15 @@ As one self-contained executable per platform, tested on the company PC before `
   corpus.
 - [ ] 6.3 Manual accessibility checks, `docs/accessibility.md` (R39); user guide (R37).
 - [ ] 6.4 `1.0.0` when ready to replace the old tool. Before it, every case of R34 has a test.
+
+## Phase 7: what comes in version `2.0.0`?
+
+Version `2.0.0` (R26) comes after `1.0.0`. It verifies the CMS signatures inside a PDF that R50
+only reports. It also evaluates the formats of "What do we evaluate for version 2?" in
+`docs/design.md`.
+
+- [ ] 7.1 PAdES: the signatures inside a signed PDF are verified with the CMS verification of
+  phase 3 (R8–R12, R49). First the owner decides the questions "Before 7.1" in
+  `docs/design.md` and updates R50.
+- [ ] 7.2 The other formats and cases of "What do we evaluate for version 2?". Each one the
+  owner keeps gets a requirement first, then its own step.

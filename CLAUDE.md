@@ -8,7 +8,9 @@ macOS and Linux.
 It is a new project in Rust. It takes the idea of an earlier Windows-only tool by the same
 author (`p7m-extract`, in C#, kept outside this repository in `../SignSpector-legacy/`), but it
 is not a port. Requirements and design are in `docs/design.md`, the order of work in
-`docs/roadmap.md`: read both first. Look at the old code only when the user asks to.
+`docs/roadmap.md`: read both first. Lessons learnt on the way of working are in
+`docs/lessons.md`: read them at the start of a session. Look at the old code only when the user
+asks to.
 
 After cloning, enable the hooks once: `git config core.hooksPath .githooks`.
 
@@ -27,7 +29,8 @@ the CI workflow. There is no exception for "infrastructure".
    rule on a copy and seeing at least one test fail. A rule that no test notices gets a test.
    One exception, decided by the owner: in the "Rust" section of `audit-status.sh`, a breakage
    that shows no bug is listed, not tested. The other known limits of the rule scripts are
-   listed in `docs/roadmap.md`, 0.5; the owner marked that step done with them listed.
+   listed in `docs/roadmap.md`, 0.5; the owner marked that step done with them listed. Limits
+   found later are listed in the step that finds them, from 0.6 on.
 5. Independent review, by a newly started `fable-reviewer` agent for every review: a different
    model, of equal or higher capability than the author's. Never resume the reviewer. The brief
    holds only:
@@ -48,22 +51,38 @@ the CI workflow. There is no exception for "infrastructure".
      - declared wrong by the owner, with the reason in a PR comment;
      - for a point on the message of a commit already pushed, a note in the message of a later
        commit. History is not rewritten.
-   - The audit report is committed alone first, without a `fable-reviewer` review. It is pushed
-     with the commit that closes its findings, or alone when no commit is needed.
+   - The audit report is committed alone first, without a `fable-reviewer` review. It is never
+     pushed alone. It goes with the commit that closes its findings. When no finding needs a
+     commit, it goes with the next reviewed commit. So the head of a PR always has a verdict
+     (owner's decision, 2026-11-27).
    - Minor rounds have a limit. A round that is APPROVED with only minor points is a minor
      round. The count is of the minor rounds before one commit. A CHANGES NEEDED round in
      between does not restart it; the next commit starts a new count. After the third minor
      round, the minor points left move on. Those of the third round move too. No new round runs
      for them. They move to the next commit of the same PR when the author plans more commits
      in it (owner's decision, 2026-11-24). Otherwise they move to the first commit of the next
-     PR. The verdict comment of that round lists them as moved. The commit they move to fixes
-     them or writes them into the roadmap step that will fix them. For a point on the message
-     of a pushed commit, that commit carries the note.
+     PR. A session that must end moves them earlier (see below). The verdict comment of that
+     round lists them as moved. The commit they move to fixes them or writes them into the
+     roadmap step that will fix them. For a point on the message of a pushed commit, that
+     commit carries the note.
    - Some points never move: bugs, missing tests, and points on personal data, or on
-     confirmation or writing files (R28–R34). They are fixed and reviewed before the commit.
+     confirmation or writing files (R28–R34). They are fixed and reviewed before the commit. A
+     test is missing when a rule of the code can be broken on a copy with every test still
+     green (owner's decision, 2026-11-27). The exceptions are the ones step 4 names: the
+     listed breakages of the "Rust" section, and the known limits listed in the roadmap.
+   - A session that must end before the rounds are done commits only an APPROVED tree with no
+     point that never moves. Its minor points then move as after the third minor round. They go
+     to the next commit of the same PR, or to the first commit of the next PR. The verdict
+     comment says so. Any other work stays uncommitted, with a state comment on the PR. The
+     owner decided this on 2026-11-26 (audit 0013, F1) and confirmed this wording on
+     2026-11-27.
    - The review leaves a trace of what it approved. The reviewer reports the tree of its
      staged copy (`git write-tree`). The verdict comment quotes it, with the subject line of the
-     reviewed commit message. After the commit, `git rev-parse HEAD^{tree}` must give the same
+     reviewed commit message. `scripts/merge-ready.sh` reads that form. The first line holds
+     `, round <n>: APPROVED.`, `, round <n>: APPROVED with ...` or
+     `, round <n>: CHANGES NEEDED.`. The comment quotes one tree only, as
+     ``Reviewed tree `<tree>` ``. The comment that names the commit says "Its tree" instead, so
+     it is not taken for a verdict. After the commit, `git rev-parse HEAD^{tree}` must give the same
      tree. If it does not, nothing is pushed. Undo the commit with `git reset --soft HEAD~1`,
      which keeps the changes, and send them to a new review. The comment that names the commit
      quotes the tree too.
@@ -86,6 +105,10 @@ the CI workflow. There is no exception for "infrastructure".
    Script and hook tests: `scripts/test-scripts.sh`, `scripts/test-cleanup.sh`,
    `scripts/test-hooks.sh`.
 
+Which model writes what? Sonnet writes routine code. Opus writes the code for cryptography and
+for R28–R34, and the rule scripts and hooks, because they protect. Reviews and audits run on
+Fable (roadmap 0.6, decided on 2026-11-25 and 2026-11-27).
+
 Logic lives in the library (`src/lib.rs` and modules); `src/main.rs` is only the command line.
 Unit tests sit beside the code (`#[cfg(test)]`). End-to-end tests of the executable go in
 `tests/*.rs` (`assert_cmd`). Tools: `bacon` (tests on every save), `cargo nextest run`,
@@ -101,14 +124,24 @@ do, references point to functions or options that never existed, work is left ha
   Unfinished work is: uncommitted changes, stashes, unpushed commits, unmerged branches, open or
   draft PRs, red CI.
 - Branches and PRs (after the first push): one branch per roadmap step
-  (`step/1.1-portable-names`), pushed early as a draft PR. Mark it ready only when two things
-  hold. CI is green on all four jobs, read in the job list, never assumed from a pending run.
-  `fable-reviewer` approved, with its verdict posted on the PR. Merge it into `main` locally by
-  fast-forward: `git switch main && git merge --ff-only step/x && git push`. The merged commits
-  are the same ones CI checked, history stays linear and the pre-push hook runs. The GitHub merge
-  button is not used: it rewrites commits. One step is open at a time. A session never ends with
-  a draft PR without a comment saying its state and next step. Abandoned work is closed with the
-  reason, never left open.
+  (`step/1.1-portable-names`), pushed early as a draft PR. Mark it ready only when both hold:
+  - CI is green on all four jobs, read in the job list, never assumed from a pending run;
+  - `fable-reviewer` approved, with its verdict posted on the PR.
+
+  `sh scripts/merge-ready.sh <PR number>` checks both on the exact head of the PR. The main
+  session runs it before marking the PR ready and again just before the merge.
+
+  A PR holds about 400 changed lines. A bigger step is split into slices, and the PR says what
+  is left (roadmap 0.6, decided on 2026-11-25).
+
+  Merge it into `main` locally by fast-forward:
+  `git switch main && git merge --ff-only step/x && git push`. The merged commits are the same
+  ones CI checked, history stays linear and the pre-push hook runs. The GitHub merge button is
+  not used: it rewrites commits. One step is open at a time. Owner's decisions on requirements
+  taken while a step is open go into that step's branch. Its PR description lists them, and
+  roadmap 0.4 records them with their date (owner's decision, 2026-11-26, audit 0013, F3). A
+  session never ends with a draft PR without a comment saying its state and next step.
+  Abandoned work is closed with the reason, never left open.
 - Every 5 commits, a coherence audit by the `coherence-auditor` agent (Fable, a different model
   of equal or higher capability than the author's, fresh context, read-only). It checks
   requirements, tests and code against each other, the existence of every concrete reference,

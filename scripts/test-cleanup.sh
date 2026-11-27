@@ -321,6 +321,10 @@ sh scripts/cleanup.sh >/dev/null 2>&1; r=$?
 check "case test: the cleanup really ran"     '[ $r -eq 0 ] && [ ! -e y.orig ]'
 check "protection ignores letter case"        '[ -f tests/Corpus/x.orig ] && [ -f tests/OUT/r.orig ] && [ -f TARGET/b.orig ]'
 
+# skip itself, on every system: it adds the number of checks it is given.
+( skipped=4; skip 3 "self-test" 2>/dev/null; [ "$skipped" -eq 7 ] ); r=$?
+check "skip adds the checks it is given"      '[ $r -eq 0 ]'
+
 # Skips are for Windows only: read the system a second way (Windows sets OS=Windows_NT, also
 # in Git Bash), so a broken switch cannot turn the safety checks off everywhere.
 check "no skipped checks outside Windows"     '[ "${OS:-}" = Windows_NT ] || [ "$skipped" -eq 0 ]'

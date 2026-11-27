@@ -31,6 +31,8 @@ For each folder, SignSpector:
 - checks whether the certificate was revoked, from data in the signature or the CA's
   revocation list (CRL): not one query per signature;
 - verifies countersignatures and RFC 3161 time stamps;
+- counts the signatures inside a PDF (PAdES) found in an envelope and reports them as not
+  verified; version `2.0.0` will verify the CMS ones;
 - reports the results on the console and in a self-contained HTML report (and JSON for
   scripts);
 - extracts the signed documents beside the originals, only on request:
@@ -74,8 +76,9 @@ cannot damage them:
   ever replaced are the tool's own cache and its list of what it installed; the full rule is R31
   in [docs/design.md](docs/design.md).
 - Extracted documents are never written outside the chosen folder. File names taken from the
-  signed files are made valid on Windows, macOS and Linux at once: no forbidden characters, no
-  reserved names, no clashes that differ only in letter case or Unicode form.
+  signed files are made valid on Windows, macOS and Linux at once. They have no forbidden
+  characters and are never a reserved name. A new name never differs from another name in its
+  folder only in letter case or Unicode form.
 - Every extracted document is recorded in the report with its SHA-256. An extraction never
   rewrites an earlier report: it writes a new one. `signspector undo` removes only the files
   that are still identical to what SignSpector wrote.
@@ -159,8 +162,9 @@ targets from macOS (mingw-w64, zig, cargo-zigbuild).
   pre-push) refuse it. After cloning, run `git config core.hooksPath .githooks`.
 
 Requirements and design are in [docs/design.md](docs/design.md), the order of work in
-[docs/roadmap.md](docs/roadmap.md), contributor rules in [CLAUDE.md](CLAUDE.md). Every text
-follows the writing guide, [docs/writing.md](docs/writing.md).
+[docs/roadmap.md](docs/roadmap.md). Contributor rules are in [CLAUDE.md](CLAUDE.md), lessons on
+the way of working in [docs/lessons.md](docs/lessons.md). Every text follows the writing guide,
+[docs/writing.md](docs/writing.md).
 
 ## Which licence applies?
 
