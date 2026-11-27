@@ -51,8 +51,10 @@ the CI workflow. There is no exception for "infrastructure".
      - declared wrong by the owner, with the reason in a PR comment;
      - for a point on the message of a commit already pushed, a note in the message of a later
        commit. History is not rewritten.
-   - The audit report is committed alone first, without a `fable-reviewer` review. It is pushed
-     with the commit that closes its findings, or alone when no commit is needed.
+   - The audit report is committed alone first, without a `fable-reviewer` review. It is never
+     pushed alone. It goes with the commit that closes its findings. When no finding needs a
+     commit, it goes with the next reviewed commit. So the head of a PR always has a verdict
+     (owner's decision, 2026-11-27).
    - Minor rounds have a limit. A round that is APPROVED with only minor points is a minor
      round. The count is of the minor rounds before one commit. A CHANGES NEEDED round in
      between does not restart it; the next commit starts a new count. After the third minor
@@ -64,7 +66,10 @@ the CI workflow. There is no exception for "infrastructure".
      roadmap step that will fix them. For a point on the message of a pushed commit, that
      commit carries the note.
    - Some points never move: bugs, missing tests, and points on personal data, or on
-     confirmation or writing files (R28–R34). They are fixed and reviewed before the commit.
+     confirmation or writing files (R28–R34). They are fixed and reviewed before the commit. A
+     test is missing when a rule of the code can be broken on a copy with every test still
+     green (owner's decision, 2026-11-27). The exceptions are the ones step 4 names: the
+     listed breakages of the "Rust" section, and the known limits listed in the roadmap.
    - A session that must end before the rounds are done commits only an APPROVED tree with no
      point that never moves. Its minor points then move as after the third minor round. They go
      to the next commit of the same PR, or to the first commit of the next PR. The verdict
@@ -100,6 +105,10 @@ the CI workflow. There is no exception for "infrastructure".
    Script and hook tests: `scripts/test-scripts.sh`, `scripts/test-cleanup.sh`,
    `scripts/test-hooks.sh`.
 
+Which model writes what? Sonnet writes routine code. Opus writes the code for cryptography and
+for R28–R34, and the rule scripts and hooks, because they protect. Reviews and audits run on
+Fable (roadmap 0.6, decided on 2026-11-25 and 2026-11-27).
+
 Logic lives in the library (`src/lib.rs` and modules); `src/main.rs` is only the command line.
 Unit tests sit beside the code (`#[cfg(test)]`). End-to-end tests of the executable go in
 `tests/*.rs` (`assert_cmd`). Tools: `bacon` (tests on every save), `cargo nextest run`,
@@ -121,6 +130,9 @@ do, references point to functions or options that never existed, work is left ha
 
   `sh scripts/merge-ready.sh <PR number>` checks both on the exact head of the PR. The main
   session runs it before marking the PR ready and again just before the merge.
+
+  A PR holds about 400 changed lines. A bigger step is split into slices, and the PR says what
+  is left (roadmap 0.6, decided on 2026-11-25).
 
   Merge it into `main` locally by fast-forward:
   `git switch main && git merge --ff-only step/x && git push`. The merged commits are the same

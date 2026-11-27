@@ -153,8 +153,11 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
     One limit of its tests: on Windows, 8 checks of the marker search may be skipped. That
     happens when Git Bash's `ln -s` makes a copy instead of a link. They are the test of links
     into the corpus (2 checks) and the six linked-root tests (6 checks). Those rules are then
-    tested on macOS and Linux only. `test-scripts.sh` prints "skipped on Windows" but does not
-    count the skips, so they show only as a lower total (audit 0012, F1).
+    tested on macOS and Linux only. `test-scripts.sh` counts the skipped checks and prints the
+    number, as `test-cleanup.sh` does. Each block states its number of checks once. A block
+    that runs a different number fails the run, and so does any skip outside Windows (owner's
+    decision, 2026-11-27, audit 0012, F1). A self-test of `skip`, run on every system, checks
+    that it adds the checks of its block; `test-cleanup.sh` has the same self-test.
   - "Done when" for every step: a list of checks that prove the step is done. The PR
     description maps each item to its evidence: a test, a commit or a file. The reviewer and
     the auditor check that list. The open steps get theirs in this step.
@@ -174,14 +177,14 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
     - the local branch is not compared with the head of the pull request. A local branch that
       differs from it, ahead or behind, is not noticed. When it is ahead, the protection of
       `main` refuses the push;
-    - when the head is an audit report pushed alone (`CLAUDE.md`, step 5), no verdict quotes its
-      tree, so the script says "not ready". The owner decides what then (question below);
+    - an audit report has no verdict of its own. It is never pushed alone (`CLAUDE.md`, step 5),
+      so a head that is an audit report does not occur;
     - only the last verdict counts. A verdict of a commit not yet pushed makes an approved head
       "not ready" until that commit is pushed.
   - Model by risk. Sonnet writes routine code. Opus writes the code for cryptography and for
-    R28–R34. The rule scripts and the hooks protect, so this step decides whether they count as
-    routine code. Reviews and audits stay on Fable. A PR holds about 400 changed lines; a bigger
-    step is split into slices, and the PR says what is left.
+    R28–R34. The rule scripts and the hooks protect, so Opus writes them too (owner's decision,
+    2026-11-27). `CLAUDE.md` says so. Reviews and audits stay on Fable. A PR holds about 400
+    changed lines; a bigger step is split into slices, and the PR says what is left.
   - `docs/lessons.md`: lessons learnt on the way of working, each with its date, its source and
     what to do. Agents never watch CI themselves; only the main session does, so that GitHub's
     API limit is not used up. The first lessons come from audit 0011:
@@ -192,23 +195,19 @@ in the script tests, and the changes to the way of working adopted on 2026-11-25
       any other work stays uncommitted, with a state comment on the PR (F1);
     - owner's decisions on requirements taken while a step is open go into that step's branch
       (F3).
-  - Questions for the owner, from audit 0012 and from one review; this step decides them:
-    - F1: must the linked-root and corpus-link tests also run on Windows, for example with a
-      `find` stand-in? Must `test-scripts.sh` count its skips, as `test-cleanup.sh` does?
-    - F2: a missing test moved as a minor point from a0fba6d to the next commit, and two
-      behaviour fixes counted as minor rounds. Must `CLAUDE.md` say what separates a missing
-      test from "one more assertion"? Or must any behaviour fix get CHANGES NEEDED?
-    - F3: on 2026-11-25 the owner delegated the choices that an audit leaves to the owner:
-      "choose the solution that serves the goal and is coherent with earlier choices". Only the
-      message of 72b89f3 and a PR #4 comment record it. Does it stand as a rule, with its limits
-      written in `CLAUDE.md`? Or did it apply to audit 0011 only?
-    - From the review of `scripts/merge-ready.sh`: an audit report pushed alone gets no review,
-      so no verdict quotes its tree. May the merge then go ahead on the verdict of the commit
-      before it, with CI green on the report? Or must the report always be pushed with a
-      reviewed commit?
-    - Note of audit 0012, not a finding. Four of the five commits in its range mainly close
-      minor points moved from the commit before. The owner may weigh it when this step sets the
-      size of a PR.
+  - Questions for the owner, from audit 0012 and from one review. The owner answered them on
+    2026-11-27:
+    - F1: the linked-root and corpus-link tests stay skipped on Windows, and `test-scripts.sh`
+      counts its skips, as `test-cleanup.sh` does;
+    - F2: a test is missing when a rule of the code can be broken on a copy with every test
+      still green. `CLAUDE.md` says so;
+    - F3: the delegation of 2026-11-25 applied to audit 0011 only. The choices an audit leaves
+      to the owner stay with the owner;
+    - from the review of `scripts/merge-ready.sh`: an audit report is never pushed alone. It
+      goes with a reviewed commit, so the head always has a verdict. `CLAUDE.md` says so.
+  - Still open: a note of audit 0012, not a finding. Four of the five commits in its range
+    mainly close minor points moved from the commit before. The PR size of about 400 changed
+    lines is set; the owner may still weigh the note against it.
 
 ## Phase 1: how do we write files safely, before any cryptography?
 

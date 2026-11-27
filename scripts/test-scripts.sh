@@ -20,6 +20,29 @@ export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 
 passed=0
 failed=0
+# Windows (Git Bash) may copy a file instead of making a symbolic link. The tests that need a
+# link are then skipped there, and counted. A block states its number of checks once:
+#   block_begin <checks>; if <links made>; then ...; block_end; elif <Windows>; then skip <what>
+# block_end fails if the block did not run exactly <checks> checks; skip counts <checks> as
+# skipped. So the number printed as skipped is the number checked. Every block must end in
+# block_end or skip: the summary checks that too. skip also counts its calls, so that a skip
+# outside Windows is noticed even if the count is wrong, and it fails for a block of no checks.
+skipped=0
+skip_calls=0
+blocks_open=0
+block_begin() { block_checks=$1; block_start=$((passed + failed)); blocks_open=$((blocks_open + 1)); }
+block_end() {
+    blocks_open=$((blocks_open - 1)); ran=$((passed + failed - block_start))
+    [ "$ran" -eq "$block_checks" ] || { failed=$((failed + 1)); echo "FAIL: skip count: the block says $block_checks checks, it ran $ran" >&2; }
+}
+skip() {
+    blocks_open=$((blocks_open - 1)); skip_calls=$((skip_calls + 1))
+    skipped=$((skipped + block_checks))
+    echo "SKIP ($block_checks checks): $1" >&2
+    [ "$block_checks" -gt 0 ] || { failed=$((failed + 1)); echo "FAIL: skip of a block with no checks: $1" >&2; }
+}
+# The branch that reports a missing link outside Windows closes its block too.
+block_close() { blocks_open=$((blocks_open - 1)); }
 expect() { # expect <description> <expected exit> <actual exit>
     if [ "$2" -eq "$3" ]; then passed=$((passed + 1)); else
         failed=$((failed + 1)); echo "FAIL: $1 (expected exit $2, got $3)" >&2; fi
@@ -955,15 +978,17 @@ printf '// TODO kept\n' > src/lib.rs
 printf 'XXX linked corpus\n' > tests/corpus/c.txt
 ln -s corpus/c.txt tests/filelink.txt 2>/dev/null
 ln -s ../tests/corpus src/dirlink 2>/dev/null
+block_begin 2
 if [ -L tests/filelink.txt ] && [ -L src/dirlink ]; then
     out=$(sh scripts/audit-status.sh 2>/dev/null)
     report_section "Markers in code" "$out" | grep -qxF "src/lib.rs:1:// TODO kept"
     expect "markers: links: the search ran" 0 $?
     expect_absent "markers: links into the corpus not followed" "Markers in code" 'linked' "$out"
+    block_end
 elif pwd -W >/dev/null 2>&1; then
-    echo "skipped on Windows: ln -s made no symbolic link"
+    skip "markers: links into the corpus: ln -s made no symbolic link"
 else
-    expect "markers: symbolic links created" 0 1
+    expect "markers: symbolic links created" 0 1; block_close
 fi
 # The files of the two folders are never read, not only hidden from the output. A grep
 # stand-in logs every recursive option and every argument that names an existing file, then
@@ -1042,6 +1067,7 @@ expect "markers: a failing find is said" 0 $?
 new_repo
 mkdir -p real; printf '// TODO behind a link\n' > real/a.rs
 ln -s real src 2>/dev/null
+block_begin 6
 if [ -L src ]; then
     out=$(sh scripts/audit-status.sh 2>/dev/null)
     [ "$(report_section "Markers in code" "$out")" = "src: symbolic link, not searched" ]
@@ -1078,10 +1104,11 @@ some files not read (find or grep failed)" ]
     [ "$(report_section "Markers in code" "$out")" = "src: symbolic link, not searched
 tests: symbolic link, not searched" ]
     expect "markers: two linked roots both named" 0 $?
+    block_end
 elif pwd -W >/dev/null 2>&1; then
-    echo "skipped on Windows: ln -s made no symbolic link"
+    skip "markers: linked roots: ln -s made no symbolic link"
 else
-    expect "markers: symbolic link created" 0 1
+    expect "markers: symbolic link created" 0 1; block_close
 fi
 
 # --- scripts/merge-ready.sh ------------------------------------------------------------------
@@ -1426,5 +1453,20 @@ sed -i.bak '2s/SUCCESS/FAILURE/' "$work/mr/checks.1"
 expect_reason "merge-ready: a red check stops the wait even while another runs" "red: Repository rules" mr 5
 [ ! -s "$work/mr/sleeps" ]; expect "merge-ready: a red check stops before any wait" 0 $?
 
-echo "scripts tests: $passed passed, $failed failed"
+# skip itself, on every system: it adds the checks of its block, counts one call and closes
+# one block. A wrong count would otherwise print a wrong number of skipped checks unnoticed.
+( skipped=4; skip_calls=1; blocks_open=1; block_checks=3; failed=0; skip "self-test" 2>/dev/null
+  [ "$skipped" -eq 7 ] && [ "$skip_calls" -eq 2 ] && [ "$blocks_open" -eq 0 ] && [ "$failed" -eq 0 ] )
+expect "skip adds the checks of its block, one call, one block closed" 0 $?
+( block_checks=0; blocks_open=1; failed=0; skip "self-test" 2>/dev/null; [ "$failed" -eq 1 ] )
+expect "skip of a block with no checks fails" 0 $?
+# Outside Windows nothing may be skipped. OS=Windows_NT reads the system a second way, apart
+# from the pwd -W probe that chose the skips, as test-cleanup.sh does.
+if { [ "$skip_calls" -ne 0 ] || [ "$skipped" -ne 0 ]; } && [ "${OS:-}" != Windows_NT ]; then
+    failed=$((failed + 1)); echo "FAIL: $skip_calls blocks ($skipped checks) skipped outside Windows" >&2
+fi
+if [ "$blocks_open" -ne 0 ]; then
+    failed=$((failed + 1)); echo "FAIL: $blocks_open blocks ended in neither block_end nor skip" >&2
+fi
+echo "scripts tests: $passed passed, $failed failed, $skipped skipped"
 [ "$failed" -eq 0 ]
